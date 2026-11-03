@@ -90,6 +90,10 @@ export function App() {
         return;
       }
 
+      // On the Command Deck, [1..N] only SELECTS (handled by CommandDeck; ENTER launches).
+      // Inside an open tool, [1..N] switches directly between modules.
+      if (activeToolId === null) return;
+
       const matched = TOOL_MODULES.find((m) => m.shortcut === e.key);
       if (matched) {
         e.preventDefault();
@@ -233,6 +237,63 @@ export function App() {
               subwrite.se
             </a>
           </div>
+        </footer>
+
+        {/* ABOUT / CONCEPT FOOTER (crawler-friendly descriptive text) */}
+        <footer className="c64-box about-footer" aria-label="About TechTools">
+          <h2 className="about-title">⚓ ABOUT TECHTOOLS</h2>
+          <p>
+            Built for sysadmins, developers, and support engineers who need fast answers without the bloat,{' '}
+            <a
+              href="https://techtools.subwrite.se"
+              className="provider-link"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              techtools.subwrite.se
+            </a>{' '}
+            is a free toolbox of everyday IT troubleshooting utilities wrapped in a navy retro systems aesthetic.
+            Constructed as a sister ship to{' '}
+            <a href="https://subwrite.se" className="provider-link" target="_blank" rel="noopener noreferrer">
+              subwrite.se
+            </a>
+            , it features a keyboard-first workflow, one-key copying of every result, and a modular framework ready
+            to deploy new tools on the fly.
+          </p>
+          <ul className="about-list">
+            <li>
+              <strong>Password &amp; Token Generator</strong> — secure passwords, passphrases, UUIDs, hex keys and API
+              tokens generated locally in your browser.
+            </li>
+            <li>
+              <strong>DNS &amp; WHOIS Lookup</strong> — A, AAAA, MX, NS, TXT, SOA, CAA and PTR records, SPF and DMARC
+              checks, and domain registration info, queried via Google, Cloudflare or a custom DNS server.
+            </li>
+            <li>
+              <strong>What&apos;s My IP</strong> — your public IP address with reverse DNS, ASN, BGP prefix and IP range
+              owner details.
+            </li>
+            <li>
+              <strong>Certificate &amp; CSR Analyzer</strong> — decode X.509 certificates, CSRs and public keys: subject,
+              SAN names, expiry, trust status and full chain export. Private keys are never processed.
+            </li>
+            <li>
+              <strong>Email Header Analyzer</strong> — trace message hops and delays and audit SPF, DKIM, DMARC and
+              ARC results.
+            </li>
+          </ul>
+          <p className="dim-note">
+            Open source on{' '}
+            <a
+              href="https://github.com/sgt-nylle/techtools"
+              className="provider-link"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              GitHub
+            </a>
+            . No accounts, no tracking of the data you analyze.
+          </p>
         </footer>
       </div>
     </div>

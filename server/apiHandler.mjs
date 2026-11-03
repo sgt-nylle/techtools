@@ -1,6 +1,12 @@
 import dns from 'node:dns';
 import net from 'node:net';
 import https from 'node:https';
+import http from 'node:http';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import { execSync } from 'node:child_process';
 import { domainToASCII } from 'node:url';
 
 const defaultResolver = new dns.promises.Resolver({ timeout: 3000, tries: 2 });
@@ -133,7 +139,7 @@ function fetchJsonHttps(urlStr, timeoutMs = 5000) {
         family: 4,
         timeout: timeoutMs,
         headers: {
-          'User-Agent': 'SubWrite-TechTools/0.1.2 (+https://techtools.subwrite.se)',
+          'User-Agent': 'SubWrite-TechTools/0.2.1 (+https://techtools.subwrite.se)',
           Accept: 'application/json',
         },
       },
@@ -963,13 +969,369 @@ async function handleIpLookup(req, targetParam) {
 }
 
 // ============================================================================
+// MODULE 4 BACKEND: CERTIFICATE & CSR & CHAIN ANALYZER
+// ============================================================================
+function readRequestBodyJson(req) {
+  return new Promise((resolve, reject) => {
+    let body = '';
+    req.on('data', (chunk) => {
+      body += chunk;
+      if (body.length > 512_000) {
+        req.destroy(new Error('Request body exceeded 512 KB'));
+      }
+    });
+    req.on('end', () => {
+      if (!body.trim()) return resolve({});
+      try {
+        resolve(JSON.parse(body));
+      } catch (err) {
+        reject(err);
+      }
+    });
+    req.on('error', reject);
+  });
+}
+
+function fetchHttpBuffer(urlStr, timeoutMs = 4000) {
+  return new Promise((resolve, reject) => {
+    const isHttps = urlStr.startsWith('https://');
+    const client = isHttps ? https : http;
+    const req = client.get(urlStr, { timeout: timeoutMs }, (res) => {
+      if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        res.resume();
+        fetchHttpBuffer(res.headers.location, timeoutMs).then(resolve).catch(reject);
+        return;
+      }
+      const chunks = [];
+      res.on('data', (c) => chunks.push(c));
+      res.on('end', () => resolve(Buffer.concat(chunks)));
+      res.on('error', reject);
+    });
+    req.on('timeout', () => req.destroy(new Error('HTTP fetch timed out')));
+    req.on('error', reject);
+  });
+}
+
+function parseOpensslExtensions(text) {
+  const lines = text.split(/\r?\n/);
+  let currentExt = null;
+  const extMap = {};
+
+  for (const rawLine of lines) {
+    const trimmed = rawLine.trim();
+    if (!trimmed) continue;
+
+    const extMatch = rawLine.match(/^\s*(X509v3 [^:]+|Requested Extensions):(?:\s*critical)?\s*(.*)$/i);
+    if (extMatch) {
+      currentExt = extMatch[1].trim();
+      extMap[currentExt] = [];
+      if (extMatch[2]?.trim()) extMap[currentExt].push(extMatch[2].trim());
+    } else if (currentExt) {
+      if (/^\s{4}[A-Za-z0-9 ]+:/.test(rawLine) && !rawLine.startsWith('        ')) {
+        currentExt = null;
+      } else {
+        extMap[currentExt].push(trimmed);
+      }
+    }
+  }
+  return extMap;
+}
+
+function convertDerToPem(buffer) {
+  const b64 = buffer.toString('base64');
+  const formatted = b64.match(/.{1,64}/g)?.join('\n') || b64;
+  return `-----BEGIN CERTIFICATE-----\n${formatted}\n-----END CERTIFICATE-----\n`;
+}
+
+async function discoverAiaCertificateChain(leafPem, maxDepth = 4) {
+  const chainPems = [leafPem.trim()];
+  let currentPem = leafPem.trim();
+
+  for (let i = 0; i < maxDepth; i++) {
+    try {
+      const x = new crypto.X509Certificate(currentPem);
+      if (x.subject === x.issuer) {
+        break; // Reached self-signed root cert
+      }
+      const aiaLine = x.infoAccess?.split('\n').find((l) => l.includes('CA Issuers - URI:'));
+      if (!aiaLine) break;
+      const uri = aiaLine.split('URI:')[1]?.trim();
+      if (!uri || !uri.startsWith('http')) break;
+
+      const buf = await fetchHttpBuffer(uri, 3500);
+      if (!buf || buf.length === 0) break;
+
+      let nextPem = '';
+      if (buf.toString('utf8').includes('BEGIN CERTIFICATE')) {
+        nextPem = buf.toString('utf8').trim();
+      } else {
+        nextPem = convertDerToPem(buf).trim();
+      }
+
+      chainPems.push(nextPem);
+      currentPem = nextPem;
+    } catch {
+      break;
+    }
+  }
+  return chainPems;
+}
+
+function verifyCertificateTrust(chainPems) {
+  if (!chainPems || chainPems.length === 0) {
+    return { trusted: false, status: 'NO_CERTIFICATE', details: 'No certificate to verify.' };
+  }
+  const tmpPath = path.join(os.tmpdir(), `tt_verify_${Date.now()}_${Math.random().toString(36).slice(2)}.pem`);
+  try {
+    fs.writeFileSync(tmpPath, chainPems.join('\n'));
+    const out = execSync(`openssl verify -untrusted "${tmpPath}" "${tmpPath}"`, {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      timeout: 3000,
+    }).toString();
+    if (out.includes('OK')) {
+      return { trusted: true, status: 'TRUSTED_CA', details: 'Chain successfully verified against system Trust Store.' };
+    }
+    return { trusted: false, status: 'VERIFY_FAILED', details: out.trim() };
+  } catch (err) {
+    const stderr = err.stderr ? err.stderr.toString().trim() : err.message;
+    if (stderr.includes('self-signed') || stderr.includes('self signed')) {
+      return { trusted: false, status: 'SELF_SIGNED', details: 'Self-signed certificate (not signed by a public trusted root).' };
+    }
+    if (stderr.includes('expired')) {
+      return { trusted: false, status: 'EXPIRED', details: 'Certificate or intermediate has expired.' };
+    }
+    if (stderr.includes('unable to get local issuer certificate')) {
+      return { trusted: false, status: 'INCOMPLETE_CHAIN', details: 'Issuer not in local trust store (intermediate certificate missing).' };
+    }
+    return { trusted: false, status: 'UNTRUSTED', details: stderr || 'Certificate failed system store verification.' };
+  } finally {
+    try {
+      if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath);
+    } catch {}
+  }
+}
+
+async function handleCertAnalyze(req) {
+  const startedAt = Date.now();
+  const body = await readRequestBodyJson(req);
+  const rawInput = String(body.text || '').trim();
+
+  if (!rawInput) {
+    return { status: 400, body: { error: 'Please paste a base64 certificate, CSR, or public key.' } };
+  }
+
+  // 1.3: Private Key Guard: prompt exact warning and abort immediately
+  if (/-----BEGIN[ A-Z0-9_-]*(?:PRIVATE|ENCRYPTED)[ A-Z0-9_-]*KEY-----/i.test(rawInput)) {
+    return {
+      status: 400,
+      body: {
+        securityAlert: true,
+        error: 'Security alert! We will not process private keys! Abandon Ship!',
+      },
+    };
+  }
+
+  // Attempt format normalization: check if raw input is naked base64
+  let normalized = rawInput;
+  const isPemBlock = /-----BEGIN [A-Z0-9 ]+-----/i.test(rawInput);
+  if (!isPemBlock) {
+    const cleanB64 = rawInput.replace(/\s+/g, '');
+    if (/^[A-Za-z0-9+/]+={0,2}$/.test(cleanB64) && cleanB64.length % 4 === 0 && cleanB64.length >= 32) {
+      // Naked base64: wrap in certificate header for trial
+      const formatted = cleanB64.match(/.{1,64}/g)?.join('\n') || cleanB64;
+      normalized = `-----BEGIN CERTIFICATE-----\n${formatted}\n-----END CERTIFICATE-----\n`;
+    }
+  }
+
+  // 1. Try Certificate (CRT / CER / PEM)
+  try {
+    const certMatches = normalized.match(/-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/gi);
+    if (certMatches && certMatches.length > 0) {
+      const leafPem = certMatches[0];
+      const x509 = new crypto.X509Certificate(leafPem);
+      const textOut = execSync('openssl x509 -text -noout', {
+        input: leafPem,
+        stdio: ['pipe', 'pipe', 'pipe'],
+        timeout: 3000,
+      }).toString();
+
+      const extMap = parseOpensslExtensions(textOut);
+      const sans = extMap['X509v3 Subject Alternative Name']
+        ? extMap['X509v3 Subject Alternative Name'].join(', ').split(',').map((s) => s.trim()).filter(Boolean)
+        : [];
+      const ekus = extMap['X509v3 Extended Key Usage']
+        ? extMap['X509v3 Extended Key Usage'].join(', ').split(',').map((s) => s.trim()).filter(Boolean)
+        : [];
+      const keyUsages = extMap['X509v3 Key Usage']
+        ? extMap['X509v3 Key Usage'].join(', ').split(',').map((s) => s.trim()).filter(Boolean)
+        : [];
+
+      const isCa = x509.ca;
+      const isSelfSigned = x509.subject === x509.issuer;
+      const certRole = isSelfSigned && isCa ? 'ROOT_CA' : isCa ? 'INTERMEDIATE_CA' : 'LEAF_END_ENTITY';
+
+      const validFromDate = new Date(x509.validFrom);
+      const validToDate = new Date(x509.validTo);
+      const now = new Date();
+      const isExpired = now > validToDate;
+      const isNotYetValid = now < validFromDate;
+      const daysRemaining = Math.round((validToDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+      // Build chain if multiple certs pasted or fetch via AIA
+      let chainPems = certMatches.map((c) => c.trim());
+      if (chainPems.length === 1 && !isSelfSigned) {
+        const discovered = await discoverAiaCertificateChain(leafPem, 3);
+        if (discovered.length > 1) {
+          chainPems = discovered;
+        }
+      }
+
+      const trust = verifyCertificateTrust(chainPems);
+
+      return {
+        status: 200,
+        body: {
+          formatType: 'CERTIFICATE',
+          certRole,
+          subject: x509.subject,
+          issuer: x509.issuer,
+          serialNumber: x509.serialNumber,
+          fingerprint256: x509.fingerprint256,
+          validFrom: x509.validFrom,
+          validTo: x509.validTo,
+          validity: {
+            daysRemaining,
+            isExpired,
+            isNotYetValid,
+            status: isExpired ? 'EXPIRED' : isNotYetValid ? 'NOT_YET_VALID' : 'ACTIVE',
+          },
+          publicKey: {
+            type: x509.publicKey.asymmetricKeyType?.toUpperCase() || 'UNKNOWN',
+            details: x509.publicKey.asymmetricKeyDetails || null,
+          },
+          sans,
+          extendedKeyUsage: ekus,
+          keyUsage: keyUsages,
+          isCa,
+          isSelfSigned,
+          trust,
+          chainAvailable: chainPems.length > 1,
+          chainCount: chainPems.length,
+          fullChainPem: chainPems.join('\n'),
+          rawPem: leafPem,
+          opensslText: textOut,
+          durationMs: Date.now() - startedAt,
+        },
+      };
+    }
+  } catch {
+    // Fall through to CSR check
+  }
+
+  // 2. Try Certificate Signing Request (CSR)
+  try {
+    const csrMatch = normalized.match(/-----BEGIN (?:NEW )?CERTIFICATE REQUEST-----[\s\S]+?-----END (?:NEW )?CERTIFICATE REQUEST-----/i);
+    const csrInput = csrMatch ? csrMatch[0] : normalized;
+    const textOut = execSync('openssl req -text -noout', {
+      input: csrInput,
+      stdio: ['pipe', 'pipe', 'pipe'],
+      timeout: 3000,
+    }).toString();
+
+    const subjMatch = textOut.match(/Subject:\s*([^\r\n]+)/i);
+    const subject = subjMatch ? subjMatch[1].trim() : 'Unknown';
+
+    const extMap = parseOpensslExtensions(textOut);
+    const sans = extMap['X509v3 Subject Alternative Name']
+      ? extMap['X509v3 Subject Alternative Name'].join(', ').split(',').map((s) => s.trim()).filter(Boolean)
+      : [];
+    const ekus = extMap['X509v3 Extended Key Usage']
+      ? extMap['X509v3 Extended Key Usage'].join(', ').split(',').map((s) => s.trim()).filter(Boolean)
+      : [];
+
+    const pkMatch = textOut.match(/Public Key Algorithm:\s*([^\r\n]+)/i);
+    const pkBitsMatch = textOut.match(/Public-Key:\s*\(([^)]+)\)/i);
+
+    return {
+      status: 200,
+      body: {
+        formatType: 'CSR',
+        subject,
+        publicKey: {
+          algorithm: pkMatch ? pkMatch[1].trim() : 'Unknown',
+          details: pkBitsMatch ? pkBitsMatch[1].trim() : '',
+        },
+        sans,
+        extendedKeyUsage: ekus,
+        rawPem: csrInput,
+        opensslText: textOut,
+        durationMs: Date.now() - startedAt,
+      },
+    };
+  } catch {
+    // Fall through to Public Key check
+  }
+
+  // 3. Try Public Key (PEM / base64)
+  try {
+    const pubKeyMatch = normalized.match(/-----BEGIN (?:RSA |EC )?PUBLIC KEY-----[\s\S]+?-----END (?:RSA |EC )?PUBLIC KEY-----/i);
+    const pubInput = pubKeyMatch ? pubKeyMatch[0] : normalized;
+    const keyObject = crypto.createPublicKey(pubInput);
+    const textOut = execSync('openssl pkey -pubin -text -noout', {
+      input: pubInput,
+      stdio: ['pipe', 'pipe', 'pipe'],
+      timeout: 3000,
+    }).toString();
+
+    return {
+      status: 200,
+      body: {
+        formatType: 'PUBLIC_KEY',
+        publicKey: {
+          type: keyObject.asymmetricKeyType?.toUpperCase() || 'UNKNOWN',
+          details: keyObject.asymmetricKeyDetails || null,
+        },
+        rawPem: pubInput,
+        opensslText: textOut,
+        durationMs: Date.now() - startedAt,
+      },
+    };
+  } catch {
+    // Neither cert, CSR, nor public key
+  }
+
+  // 1.4: Format not detected -> exact prompt required by user
+  return {
+    status: 400,
+    body: {
+      invalidFormat: true,
+      error: 'Navy Cert Format Not DETECTED!',
+    },
+  };
+}
+
+// ============================================================================
 // MAIN MODULAR API HANDLER (Shared by Vite Dev & Production Node Server)
 // ============================================================================
+function sanitizeBigInt(val) {
+  if (val === null || val === undefined) return val;
+  if (typeof val === 'bigint') return Number(val);
+  if (Array.isArray(val)) return val.map(sanitizeBigInt);
+  if (typeof val === 'object') {
+    const res = {};
+    for (const [k, v] of Object.entries(val)) {
+      res[k] = sanitizeBigInt(v);
+    }
+    return res;
+  }
+  return val;
+}
+
 function sendJson(res, statusCode, payload) {
   res.statusCode = statusCode;
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Cache-Control', 'no-store');
-  res.end(JSON.stringify(payload));
+  res.end(JSON.stringify(sanitizeBigInt(payload)));
 }
 
 export async function handleApiRequest(req, res) {
@@ -985,11 +1347,6 @@ export async function handleApiRequest(req, res) {
     return true;
   }
 
-  if (req.method !== 'GET') {
-    sendJson(res, 405, { error: 'Method not allowed' });
-    return true;
-  }
-
   const clientIp = extractClientIp(req);
   if (!checkRateLimit(clientIp)) {
     sendJson(res, 429, { error: 'Rate limit exceeded (max 60 requests/min). Stand by before retrying.' });
@@ -1000,17 +1357,17 @@ export async function handleApiRequest(req, res) {
   const pathname = urlObj.pathname;
 
   try {
-    if (pathname === '/api/health') {
+    if (pathname === '/api/health' && req.method === 'GET') {
       sendJson(res, 200, {
         ok: true,
         service: 'techtools.subwrite.se',
-        version: '0.1.2',
+        version: '0.2.1',
         timestamp: new Date().toISOString(),
       });
       return true;
     }
 
-    if (pathname === '/api/dns') {
+    if (pathname === '/api/dns' && req.method === 'GET') {
       const domain = urlObj.searchParams.get('domain') || '';
       const serverParam = urlObj.searchParams.get('server') || '';
       const result = await handleDnsLookup(domain, serverParam);
@@ -1018,9 +1375,15 @@ export async function handleApiRequest(req, res) {
       return true;
     }
 
-    if (pathname === '/api/ip') {
+    if (pathname === '/api/ip' && req.method === 'GET') {
       const target = urlObj.searchParams.get('target') || '';
       const result = await handleIpLookup(req, target);
+      sendJson(res, result.status, result.body);
+      return true;
+    }
+
+    if (pathname === '/api/cert' && req.method === 'POST') {
+      const result = await handleCertAnalyze(req);
       sendJson(res, result.status, result.body);
       return true;
     }

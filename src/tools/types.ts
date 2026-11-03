@@ -1,6 +1,6 @@
 import type React from 'react';
 
-export type ToolCategory = 'SECURITY' | 'DNS & MAIL' | 'NETWORK' | 'DIAGNOSTICS';
+export type ToolCategory = 'SECURITY' | 'DNS & MAIL' | 'NETWORK' | 'DIAGNOSTICS' | 'CRYPTO & SSL' | 'MAIL SECURITY';
 
 /**
  * Modular Tool Contract for techtools.subwrite.se.

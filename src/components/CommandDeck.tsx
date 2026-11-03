@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { HmsVastervik } from './HmsVastervik';
 import type { ToolModule } from '../tools/types';
 import { sound } from '../utils/audio';
@@ -9,37 +9,71 @@ interface CommandDeckProps {
   quickIp: string | null;
 }
 
-export const CommandDeck: React.FC<CommandDeckProps> = ({
-  modules,
-  onSelectTool,
-  quickIp,
-}) => {
+/**
+ * Command Deck keyboard model:
+ * - [1]..[N]      -> SELECT module only (focus + scroll into view)
+ * - Arrow keys    -> move selection
+ * - [Enter]       -> LAUNCH the selected module
+ * - [Tab]         -> native focus; focusing a card also selects it and scrolls it into view
+ */
+export const CommandDeck: React.FC<CommandDeckProps> = ({ modules, onSelectTool, quickIp }) => {
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
+  const cardRefs = useRef<Array<HTMLButtonElement | null>>([]);
+
+  const revealCard = useCallback((idx: number, moveFocus: boolean) => {
+    const el = cardRefs.current[idx];
+    if (!el) return;
+    if (moveFocus) el.focus({ preventScroll: true });
+    el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+  }, []);
+
+  const selectIndex = useCallback(
+    (idx: number, moveFocus: boolean) => {
+      setSelectedIndex(idx);
+      revealCard(idx, moveFocus);
+    },
+    [revealCard]
+  );
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement | null)?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return;
+
+      // [1..N] select only (do NOT launch)
+      const digitIdx = modules.findIndex((m) => m.shortcut === e.key);
+      if (digitIdx !== -1) {
+        e.preventDefault();
+        if (digitIdx !== selectedIndex) sound.playClick();
+        selectIndex(digitIdx, true);
+        return;
+      }
 
       if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
         e.preventDefault();
         sound.playClick();
-        setSelectedIndex((prev) => (prev + 1) % modules.length);
+        selectIndex((selectedIndex + 1) % modules.length, true);
       } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
         e.preventDefault();
         sound.playClick();
-        setSelectedIndex((prev) => (prev - 1 + modules.length) % modules.length);
+        selectIndex((selectedIndex - 1 + modules.length) % modules.length, true);
       } else if (e.key === 'Enter') {
+        // A focused card button launches itself through its native click handler.
+        if (tag === 'BUTTON' || tag === 'A') return;
         e.preventDefault();
-        sound.playBlip();
         const chosen = modules[selectedIndex];
-        if (chosen) onSelectTool(chosen.id);
+        if (chosen) {
+          sound.playBlip();
+          onSelectTool(chosen.id);
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [modules, selectedIndex, onSelectTool]);
+  }, [modules, selectedIndex, onSelectTool, selectIndex]);
 
   return (
     <div className="command-deck">
@@ -47,9 +81,7 @@ export const CommandDeck: React.FC<CommandDeckProps> = ({
       <div className="deck-hero c64-box">
         <div className="deck-flair">⚓ ★ ⚓</div>
         <h1 className="deck-title">TECHTOOLS</h1>
-        <div className="deck-subtitle">
-          R136 HMS VÄSTERVIK // NAVAL IT TROUBLESHOOTING CONSOLE
-        </div>
+        <div className="deck-subtitle">R136 HMS VÄSTERVIK // NAVAL IT TROUBLESHOOTING CONSOLE</div>
 
         <HmsVastervik className="deck-vessel-stage" />
 
@@ -67,7 +99,7 @@ export const CommandDeck: React.FC<CommandDeckProps> = ({
       {/* EXTENSIBLE DIAGNOSTIC MODULE SELECTOR */}
       <div className="deck-modules-box c64-box">
         <div className="deck-modules-header">
-          <span>-- SELECT DIAGNOSTIC MODULE [1–{modules.length} / ▲▼ + ENTER] --</span>
+          <span>-- SELECT MODULE [1–{modules.length} / ▲▼ / TAB] • [ENTER] LAUNCH --</span>
           <span className="slot-status">{modules.length} ACTIVE MODULES • EXPANSION READY</span>
         </div>
 
@@ -77,9 +109,14 @@ export const CommandDeck: React.FC<CommandDeckProps> = ({
             return (
               <button
                 key={mod.id}
+                ref={(el) => {
+                  cardRefs.current[idx] = el;
+                }}
                 type="button"
                 className={`module-card ${isSelected ? 'selected' : ''}`}
+                aria-pressed={isSelected}
                 onMouseEnter={() => setSelectedIndex(idx)}
+                onFocus={() => selectIndex(idx, false)}
                 onClick={() => {
                   sound.playBlip();
                   onSelectTool(mod.id);

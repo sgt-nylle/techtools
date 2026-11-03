@@ -2,6 +2,8 @@ import type { ToolModule } from './types';
 import { PassGenTool } from './PassGenTool';
 import { DnsTool } from './DnsTool';
 import { MyIpTool } from './MyIpTool';
+import { CertAnalyzerTool } from './CertAnalyzerTool';
+import { MailHeaderTool } from './MailHeaderTool';
 
 export const TOOL_MODULES: ToolModule[] = [
   {
@@ -27,7 +29,7 @@ export const TOOL_MODULES: ToolModule[] = [
     badge: 'DNS • SPF • WHOIS',
     description:
       'Interrogate authoritative DNS records (A, AAAA, CNAME, PTR, MX, NS, SOA, TXT, CAA), validate SPF & DMARC mail security, and pull WHOIS domain registration records.',
-    capabilities: ['IP (A / AAAA / PTR)', 'MX + Mail Server IPs', 'SPF & DMARC Audit', 'Domain WHOIS Registry'],
+    capabilities: ['Selectable DNS (Google/Cloudflare/Custom)', 'MX + Mail Server IPs', 'SPF & DMARC Audit', 'Domain WHOIS Registry'],
     Component: DnsTool,
   },
   {
@@ -42,6 +44,32 @@ export const TOOL_MODULES: ToolModule[] = [
       'Display your live client public IP address, reverse PTR hostname, routed BGP CIDR prefix, Autonomous System (ASN), and RIR IP block owner details.',
     capabilities: ['Client Public IP', 'ISP / Org & Netname', 'ASN & BGP Prefix', 'Any-IP Range Lookup'],
     Component: MyIpTool,
+  },
+  {
+    id: 'cert-analyzer',
+    code: 'MOD-04',
+    shortcut: '4',
+    title: 'CERTIFICATE & CSR ANALYZER',
+    shortTitle: 'CERT ANALYZER',
+    category: 'CRYPTO & SSL',
+    badge: 'X.509 • CSR • TRUST',
+    description:
+      'Decode Base64 / PEM X.509 certificates, CSRs, and public keys. Inspect SAN names, server/client roles, expiration, trust store status, and export full certificate chains.',
+    capabilities: ['X.509 / CSR / Public Key Detection', 'Subject & SAN Discovery', 'Trust Store Chain Verification', 'Private Key Intercept Guard'],
+    Component: CertAnalyzerTool,
+  },
+  {
+    id: 'mail-header-analyzer',
+    code: 'MOD-05',
+    shortcut: '5',
+    title: 'EMAIL MESSAGE HEADER ANALYZER',
+    shortTitle: 'MAIL HEADERS',
+    category: 'MAIL SECURITY',
+    badge: 'HOPS • SPF • DKIM',
+    description:
+      'Trace chronological mail transport hops, inspect relay delays and TLS ciphers, and audit SPF, DKIM, and DMARC authentication alignment.',
+    capabilities: ['Message Transport Trace', 'Per-Hop Delay & TLS Ciphers', 'SPF / DKIM / DMARC Audit', 'Raw Header Explorer'],
+    Component: MailHeaderTool,
   },
 ];
 

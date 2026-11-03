@@ -1,12 +1,13 @@
 import dns from 'node:dns';
 import net from 'node:net';
+import tls from 'node:tls';
 import https from 'node:https';
 import http from 'node:http';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { execSync } from 'node:child_process';
+import { execSync, execFile } from 'node:child_process';
 import { domainToASCII } from 'node:url';
 
 const defaultResolver = new dns.promises.Resolver({ timeout: 3000, tries: 2 });
@@ -139,7 +140,7 @@ function fetchJsonHttps(urlStr, timeoutMs = 5000) {
         family: 4,
         timeout: timeoutMs,
         headers: {
-          'User-Agent': 'SubWrite-TechTools/0.2.1 (+https://techtools.subwrite.se)',
+          'User-Agent': 'SubWrite-TechTools/0.2.3 (+https://techtools.subwrite.se)',
           Accept: 'application/json',
         },
       },
@@ -1311,6 +1312,1046 @@ async function handleCertAnalyze(req) {
 }
 
 // ============================================================================
+// MODULE 6 BACKEND: EXTERNAL ENDPOINT & TLS PROBE (URL TESTER)
+// ============================================================================
+const PLAIN_BY_DEFAULT_PORTS = new Set([21, 22, 25, 80, 110, 143, 587, 8000, 8008, 8080, 8888]);
+const BLOCKED_INTERNAL_SUFFIXES = ['.local', '.internal', '.lan', '.home.arpa', '.localhost', '.corp', '.intranet'];
+
+function parseProbeUrlAndPort(rawInput, portOverride) {
+  if (!rawInput || typeof rawInput !== 'string') {
+    return { error: 'Please enter a target URL or hostname (e.g. https://subwrite.se or techtools.subwrite.se).' };
+  }
+  const trimmed = rawInput.trim();
+  if (!trimmed || trimmed.length > 2048 || /[\s\r\n\0]/.test(trimmed)) {
+    return { error: 'Invalid URL or hostname format (must not contain spaces or control characters).' };
+  }
+
+  let explicitScheme = null;
+  const schemeMatch = trimmed.match(/^([a-zA-Z][a-zA-Z0-9+.-]*):\/\//);
+  if (schemeMatch) {
+    const scheme = schemeMatch[1].toLowerCase();
+    if (scheme !== 'http' && scheme !== 'https') {
+      return { error: `Unsupported protocol "${scheme}://". Enter an https://, http://, or hostname target.` };
+    }
+    explicitScheme = scheme;
+  }
+
+  let parsed;
+  try {
+    parsed = new URL(explicitScheme ? trimmed : `https://${trimmed}`);
+  } catch {
+    return { error: `Could not parse target URL "${trimmed}".` };
+  }
+
+  if (parsed.username || parsed.password) {
+    return { error: 'Credentials in URLs (user:pass@host) are not permitted.' };
+  }
+
+  let rawHost = parsed.hostname || '';
+  if (rawHost.startsWith('[') && rawHost.endsWith(']')) {
+    rawHost = rawHost.slice(1, -1);
+  }
+  rawHost = rawHost.replace(/\.+$/, '').toLowerCase();
+
+  if (!rawHost) {
+    return { error: 'Target hostname is empty.' };
+  }
+  if (
+    rawHost === 'localhost' ||
+    BLOCKED_INTERNAL_SUFFIXES.some((sfx) => rawHost === sfx.slice(1) || rawHost.endsWith(sfx))
+  ) {
+    return {
+      error: `Target "${rawHost}" uses a reserved local/internal suffix and cannot be probed from the public internet.`,
+    };
+  }
+
+  let hostname = rawHost;
+  const ipVersion = net.isIP(rawHost);
+  if (ipVersion === 0) {
+    const ascii = domainToASCII(rawHost);
+    if (!ascii || !/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(ascii)) {
+      return { error: `Invalid public domain or IP address: "${rawHost}".` };
+    }
+    hostname = ascii.toLowerCase();
+  }
+
+  let port;
+  const hasOverride =
+    portOverride !== undefined && portOverride !== null && String(portOverride).trim() !== '';
+  if (hasOverride) {
+    port = Number(String(portOverride).trim());
+  } else if (parsed.port) {
+    port = Number(parsed.port);
+  } else {
+    port = explicitScheme === 'http' ? 80 : 443;
+  }
+
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    return { error: 'Port must be a valid TCP port number between 1 and 65535.' };
+  }
+
+  const pathWithQuery = `${parsed.pathname || '/'}${parsed.search || ''}`;
+  return {
+    hostname,
+    ipVersion,
+    port,
+    explicitScheme,
+    urlHadExplicitPort: Boolean(parsed.port),
+    pathWithQuery,
+  };
+}
+
+async function resolvePublicTargetIps(hostname) {
+  const dnsStart = Date.now();
+  if (net.isIP(hostname)) {
+    if (!isPublicRoutableIp(hostname)) {
+      return {
+        blocked: true,
+        dnsMs: 0,
+        privateIps: [hostname],
+        reason: `SSRF Guard: "${hostname}" is a private, loopback, or reserved IP address. Only public internet endpoints can be tested.`,
+      };
+    }
+    return {
+      ips: [hostname],
+      ipv4: net.isIP(hostname) === 4 ? [hostname] : [],
+      ipv6: net.isIP(hostname) === 6 ? [hostname] : [],
+      dnsMs: 0,
+    };
+  }
+
+  const [v4Raw, v6Raw] = await Promise.all([
+    withTimeout(defaultResolver.resolve4(hostname), 3200, []),
+    withTimeout(defaultResolver.resolve6(hostname), 3200, []),
+  ]);
+  const dnsMs = Date.now() - dnsStart;
+  const ipv4 = Array.isArray(v4Raw) ? v4Raw : [];
+  const ipv6 = Array.isArray(v6Raw) ? v6Raw : [];
+  const allIps = [...ipv4, ...ipv6];
+
+  if (allIps.length === 0) {
+    return {
+      notFound: true,
+      dnsMs,
+      ips: [],
+      ipv4: [],
+      ipv6: [],
+    };
+  }
+
+  const nonPublic = allIps.filter((ip) => !isPublicRoutableIp(ip));
+  if (nonPublic.length > 0) {
+    return {
+      blocked: true,
+      dnsMs,
+      privateIps: nonPublic,
+      reason: `SSRF Guard: Public DNS resolved "${hostname}" to non-public IP (${nonPublic.join(', ')}). Split-horizon or internal RFC1918 DNS record detected — outbound socket blocked.`,
+    };
+  }
+
+  return {
+    ips: allIps,
+    ipv4,
+    ipv6,
+    dnsMs,
+  };
+}
+
+function classifyTcpError(code, message) {
+  switch (code) {
+    case 'ECONNREFUSED':
+      return 'CONNECTION REFUSED — Host is reachable, but TCP port is closed (RST received).';
+    case 'ETIMEDOUT':
+    case 'TIMEOUT':
+      return 'CONNECTION TIMED OUT — Packets dropped by firewall or host offline (no SYN-ACK).';
+    case 'EHOSTUNREACH':
+    case 'ENETUNREACH':
+      return 'NETWORK / HOST UNREACHABLE — No external route to destination network.';
+    case 'ECONNRESET':
+      return 'CONNECTION RESET — Remote endpoint or firewall forcibly closed the TCP connection.';
+    default:
+      return message || `TCP connection failed (${code || 'UNKNOWN'}).`;
+  }
+}
+
+/**
+ * Active Sonar ICMP Echo Probe (3 pulses, strict argument array, SSRF-guarded).
+ */
+function executeIcmpPing(ip) {
+  return new Promise((resolve) => {
+    if (!ip || !isPublicRoutableIp(ip)) {
+      resolve(null);
+      return;
+    }
+
+    const familyFlag = net.isIP(ip) === 6 ? '-6' : '-4';
+    const args = [familyFlag, '-n', '-c', '3', '-i', '0.25', '-W', '1', '-w', '2', ip];
+
+    execFile('ping', args, { timeout: 2800 }, (err, stdout = '', stderr = '') => {
+      const combined = `${stdout}\n${stderr}`;
+      const pktMatch = combined.match(
+        /(\d+)\s+packets transmitted,\s+(\d+)\s+(?:packets\s+)?received,.*?(\d+(?:\.\d+)?)%\s+packet loss/i
+      );
+      const rttMatch = combined.match(
+        /(?:rtt|round-trip)\s+min\/avg\/max\/(?:mdev|stddev)\s*=\s*([\d.]+)\/([\d.]+)\/([\d.]+)\/([\d.]+)\s*ms/i
+      );
+      const ttlMatch = combined.match(/ttl=(\d+)/i);
+
+      if (!pktMatch && err) {
+        resolve({
+          alive: false,
+          status: 'ICMP UNAVAILABLE',
+          transmitted: 0,
+          received: 0,
+          packetLossPct: 100,
+          minMs: null,
+          avgMs: null,
+          maxMs: null,
+          ttl: null,
+          summary: 'ICMP socket unavailable on probe host.',
+        });
+        return;
+      }
+
+      const transmitted = pktMatch ? Number(pktMatch[1]) : 3;
+      const received = pktMatch ? Number(pktMatch[2]) : 0;
+      const packetLossPct = pktMatch ? Number(pktMatch[3]) : received > 0 ? 0 : 100;
+      const minMs = rttMatch ? Number(rttMatch[1]) : null;
+      const avgMs = rttMatch ? Number(rttMatch[2]) : null;
+      const maxMs = rttMatch ? Number(rttMatch[3]) : null;
+      const ttl = ttlMatch ? Number(ttlMatch[1]) : null;
+      const alive = received > 0;
+
+      resolve({
+        alive,
+        status: alive ? 'PING OK' : 'NO ECHO',
+        transmitted,
+        received,
+        packetLossPct,
+        minMs,
+        avgMs,
+        maxMs,
+        ttl,
+        summary: alive
+          ? `PING OK — ${avgMs !== null ? `${avgMs.toFixed(1)} ms avg` : 'Echo reply received'}${
+              minMs !== null && maxMs !== null ? ` (min ${minMs.toFixed(1)} / max ${maxMs.toFixed(1)} ms)` : ''
+            } • ${received}/${transmitted} replies (${packetLossPct}% loss)${ttl !== null ? ` • TTL ${ttl}` : ''}`
+          : `NO ICMP ECHO — 0/${transmitted} replies (${packetLossPct}% loss) • ICMP blocked by firewall or host silent`,
+      });
+    });
+  });
+}
+
+async function extractLiveTlsCertificate(tlsSocket, hostname) {
+  const protocol = tlsSocket.getProtocol() || 'TLS';
+  const cipherObj = tlsSocket.getCipher() || null;
+  const peer = tlsSocket.getPeerCertificate(true);
+
+  if (!peer || !peer.raw) {
+    return {
+      protocol,
+      cipher: cipherObj
+        ? {
+            name: cipherObj.name || '',
+            standardName: cipherObj.standardName || cipherObj.name || '',
+            version: cipherObj.version || '',
+          }
+        : null,
+      authorizedByNode: Boolean(tlsSocket.authorized),
+      authorizationError: tlsSocket.authorizationError ? String(tlsSocket.authorizationError) : null,
+      certificate: null,
+    };
+  }
+
+  const wireChainPems = [];
+  const chainSummary = [];
+  const seenFingerprints = new Set();
+  let cursor = peer;
+  let depth = 0;
+
+  while (cursor && cursor.raw && depth < 8) {
+    const fp = cursor.fingerprint256 || cursor.raw.toString('hex').slice(0, 64);
+    if (seenFingerprints.has(fp)) break;
+    seenFingerprints.add(fp);
+
+    const pem = convertDerToPem(cursor.raw).trim();
+    wireChainPems.push(pem);
+
+    try {
+      const cx = new crypto.X509Certificate(pem);
+      chainSummary.push({
+        depth,
+        subject: cx.subject,
+        issuer: cx.issuer,
+        validFrom: cx.validFrom,
+        validTo: cx.validTo,
+        isCa: cx.ca,
+        isSelfSigned: cx.subject === cx.issuer,
+        fingerprint256: cx.fingerprint256,
+      });
+    } catch {
+      // Ignore malformed chain entry metadata
+    }
+
+    if (!cursor.issuerCertificate || cursor.issuerCertificate === cursor) break;
+    cursor = cursor.issuerCertificate;
+    depth += 1;
+  }
+
+  const leafPem = wireChainPems[0];
+  const x509 = new crypto.X509Certificate(leafPem);
+
+  let sans = [];
+  let ekus = [];
+  let keyUsages = [];
+  try {
+    const textOut = execSync('openssl x509 -text -noout', {
+      input: leafPem,
+      stdio: ['pipe', 'pipe', 'pipe'],
+      timeout: 2500,
+    }).toString();
+    const extMap = parseOpensslExtensions(textOut);
+    sans = extMap['X509v3 Subject Alternative Name']
+      ? extMap['X509v3 Subject Alternative Name']
+          .join(', ')
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [];
+    ekus = extMap['X509v3 Extended Key Usage']
+      ? extMap['X509v3 Extended Key Usage']
+          .join(', ')
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [];
+    keyUsages = extMap['X509v3 Key Usage']
+      ? extMap['X509v3 Key Usage']
+          .join(', ')
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [];
+  } catch {
+    if (x509.subjectAltName) {
+      sans = x509.subjectAltName.split(',').map((s) => s.trim()).filter(Boolean);
+    }
+  }
+
+  const validFromDate = new Date(x509.validFrom);
+  const validToDate = new Date(x509.validTo);
+  const now = new Date();
+  const isExpired = now > validToDate;
+  const isNotYetValid = now < validFromDate;
+  const daysRemaining = Math.round((validToDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+  let matchedIdentity = undefined;
+  try {
+    matchedIdentity = net.isIP(hostname) ? x509.checkIP(hostname) : x509.checkHost(hostname);
+  } catch {
+    matchedIdentity = undefined;
+  }
+  const hostnameMatch = Boolean(matchedIdentity);
+
+  const wireTrust = verifyCertificateTrust(wireChainPems);
+  let exportChainPems = wireChainPems;
+  let aiaCompletedChain = false;
+
+  if (!wireTrust.trusted && wireTrust.status === 'INCOMPLETE_CHAIN' && wireChainPems.length === 1) {
+    const discovered = await discoverAiaCertificateChain(leafPem, 3);
+    if (discovered.length > 1) {
+      exportChainPems = discovered;
+      aiaCompletedChain = true;
+    }
+  }
+
+  // Combine trust + hostname check for accurate browser/client verdict
+  let overallTrust = { ...wireTrust };
+  if (wireTrust.trusted && !hostnameMatch) {
+    overallTrust = {
+      trusted: false,
+      status: 'HOSTNAME_MISMATCH',
+      details: `Certificate chain is signed by a trusted CA, but "${hostname}" does not match any SAN/CN on the certificate.`,
+    };
+  } else if (aiaCompletedChain && wireTrust.status === 'INCOMPLETE_CHAIN') {
+    overallTrust = {
+      trusted: false,
+      status: 'INCOMPLETE_CHAIN',
+      details:
+        'Server only sent leaf certificate (missing intermediate CA). Browsers may fetch via AIA, but strict TLS clients/APIs will fail.',
+    };
+  }
+
+  return {
+    protocol,
+    cipher: cipherObj
+      ? {
+          name: cipherObj.name || '',
+          standardName: cipherObj.standardName || cipherObj.name || '',
+          version: cipherObj.version || '',
+        }
+      : null,
+    authorizedByNode: Boolean(tlsSocket.authorized),
+    authorizationError: tlsSocket.authorizationError ? String(tlsSocket.authorizationError) : null,
+    certificate: {
+      subject: x509.subject,
+      issuer: x509.issuer,
+      serialNumber: x509.serialNumber,
+      fingerprint256: x509.fingerprint256,
+      validFrom: x509.validFrom,
+      validTo: x509.validTo,
+      daysRemaining,
+      isExpired,
+      isNotYetValid,
+      validityStatus: isExpired ? 'EXPIRED' : isNotYetValid ? 'NOT_YET_VALID' : 'ACTIVE',
+      hostnameMatch,
+      matchedIdentity: matchedIdentity || null,
+      sans,
+      extendedKeyUsage: ekus,
+      keyUsage: keyUsages,
+      isCa: x509.ca,
+      isSelfSigned: x509.subject === x509.issuer,
+      publicKey: {
+        type: x509.publicKey.asymmetricKeyType?.toUpperCase() || 'UNKNOWN',
+        details: x509.publicKey.asymmetricKeyDetails || null,
+      },
+      trust: overallTrust,
+      wireChainCount: wireChainPems.length,
+      aiaCompletedChain,
+      chainSummary,
+      leafPem,
+      fullChainPem: exportChainPems.join('\n'),
+    },
+  };
+}
+
+function sanitizeBannerText(buf) {
+  if (!buf || buf.length === 0) return '';
+  return buf
+    .toString('utf8')
+    .replace(/[^\x20-\x7E\r\n\t]/g, '.')
+    .trim()
+    .slice(0, 320);
+}
+
+function executeSocketProbe({ ip, hostname, port, pathWithQuery, method, useTls }) {
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (result, streamsToDestroy = []) => {
+      if (settled) return;
+      settled = true;
+      for (const s of streamsToDestroy) {
+        try {
+          if (s && !s.destroyed) s.destroy();
+        } catch {}
+      }
+      resolve(result);
+    };
+
+    const tcpStart = Date.now();
+    const family = net.isIP(ip) === 6 ? 6 : 4;
+    const tcpSocket = net.createConnection({ host: ip, port, family });
+    tcpSocket.setNoDelay(true);
+
+    const tcpTimer = setTimeout(() => {
+      const elapsed = Date.now() - tcpStart;
+      finish(
+        {
+          tcpConnected: false,
+          tcpConnectMs: elapsed,
+          tcpErrorCode: 'ETIMEDOUT',
+          tcpErrorMessage: classifyTcpError('ETIMEDOUT'),
+        },
+        [tcpSocket]
+      );
+    }, 5200);
+
+    tcpSocket.once('error', (err) => {
+      clearTimeout(tcpTimer);
+      const code = err?.code || 'TCP_ERROR';
+      finish(
+        {
+          tcpConnected: false,
+          tcpConnectMs: Date.now() - tcpStart,
+          tcpErrorCode: code,
+          tcpErrorMessage: classifyTcpError(code, err?.message),
+        },
+        [tcpSocket]
+      );
+    });
+
+    tcpSocket.once('connect', () => {
+      clearTimeout(tcpTimer);
+      const tcpConnectMs = Date.now() - tcpStart;
+
+      const runHttpOrBannerPhase = (activeSocket, tlsData, tlsHandshakeMs) => {
+        const rawPeekChunks = [];
+        let rawPeekBytes = 0;
+
+        const onRawData = (chunk) => {
+          if (rawPeekBytes < 1024) {
+            const slice = chunk.subarray(0, 1024 - rawPeekBytes);
+            rawPeekChunks.push(Buffer.from(slice));
+            rawPeekBytes += slice.length;
+          }
+        };
+        activeSocket.on('data', onRawData);
+
+        const defaultPort = useTls ? 443 : 80;
+        const formattedHost = net.isIP(hostname) === 6 ? `[${hostname}]` : hostname;
+        const hostHeader = port === defaultPort ? formattedHost : `${formattedHost}:${port}`;
+
+        const httpStart = Date.now();
+        let req;
+        const phaseTimer = setTimeout(() => {
+          const banner = sanitizeBannerText(Buffer.concat(rawPeekChunks));
+          finish(
+            {
+              tcpConnected: true,
+              tcpConnectMs,
+              tlsUsed: useTls,
+              tlsConnected: useTls ? true : false,
+              tlsHandshakeMs,
+              tls: tlsData,
+              httpResponded: false,
+              protocolDetected: banner
+                ? useTls
+                  ? 'TLS_TCP_BANNER'
+                  : 'RAW_TCP_BANNER'
+                : useTls
+                ? 'TLS_OPEN_NO_HTTP'
+                : 'TCP_OPEN_NO_HTTP',
+              banner: banner || null,
+              httpError: banner
+                ? 'Port is open and returned a non-HTTP service banner.'
+                : 'TCP port is open, but remote service did not send an HTTP response within 4.5s.',
+            },
+            [req, activeSocket, tcpSocket]
+          );
+        }, 4500);
+
+        const oneShotAgent = new http.Agent({ keepAlive: false });
+        oneShotAgent.createConnection = () => activeSocket;
+
+        req = http.request(
+          {
+            host: hostname,
+            port,
+            method,
+            path: pathWithQuery,
+            agent: oneShotAgent,
+            headers: {
+              Host: hostHeader,
+              'User-Agent': 'SubWrite-TechTools-Probe/0.2.3 (+https://techtools.subwrite.se)',
+              Accept: 'text/html,application/xhtml+xml,application/json,*/*;q=0.8',
+              'Accept-Encoding': 'identity',
+              Connection: 'close',
+            },
+          },
+          (res) => {
+            const ttfbMs = Date.now() - httpStart;
+            const bodyChunks = [];
+            let bodyBytes = 0;
+            const MAX_PREVIEW_BYTES = 24_576;
+
+            res.on('data', (chunk) => {
+              if (bodyBytes < MAX_PREVIEW_BYTES) {
+                const slice = chunk.subarray(0, MAX_PREVIEW_BYTES - bodyBytes);
+                bodyChunks.push(Buffer.from(slice));
+                bodyBytes += slice.length;
+              } else {
+                res.destroy();
+              }
+            });
+
+            const finalizeHttp = () => {
+              clearTimeout(phaseTimer);
+              const totalHttpMs = Date.now() - httpStart;
+              const rawBody = Buffer.concat(bodyChunks).toString('utf8');
+              const contentType = String(res.headers['content-type'] || '');
+
+              let pageTitle = null;
+              const titleMatch = rawBody.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+              if (titleMatch && titleMatch[1]) {
+                pageTitle = titleMatch[1]
+                  .replace(/\s+/g, ' ')
+                  .replace(/&amp;/gi, '&')
+                  .replace(/&quot;/gi, '"')
+                  .replace(/&#39;|&apos;/gi, "'")
+                  .replace(/&lt;/gi, '<')
+                  .replace(/&gt;/gi, '>')
+                  .replace(/&ndash;/gi, '–')
+                  .replace(/&mdash;/gi, '—')
+                  .trim()
+                  .slice(0, 180);
+              }
+
+              let bodySnippet = null;
+              if (
+                method !== 'HEAD' &&
+                rawBody.trim() &&
+                /json|text\/plain|xml/i.test(contentType)
+              ) {
+                bodySnippet = rawBody.replace(/[^\x20-\x7E\r\n\t]/g, '').trim().slice(0, 360);
+              }
+
+              // Preserve flat header key-value pairs cleanly
+              const headersList = [];
+              for (const [k, v] of Object.entries(res.headers)) {
+                if (v === undefined) continue;
+                headersList.push({
+                  name: k,
+                  value: Array.isArray(v) ? v.join('; ') : String(v),
+                });
+              }
+
+              finish(
+                {
+                  tcpConnected: true,
+                  tcpConnectMs,
+                  tlsUsed: useTls,
+                  tlsConnected: useTls ? true : false,
+                  tlsHandshakeMs,
+                  tls: tlsData,
+                  httpResponded: true,
+                  protocolDetected: useTls ? 'HTTPS' : 'HTTP',
+                  http: {
+                    httpVersion: res.httpVersion || '1.1',
+                    statusCode: res.statusCode || 0,
+                    statusMessage: res.statusMessage || '',
+                    ttfbMs,
+                    totalHttpMs,
+                    headers: headersList,
+                    contentType: contentType || null,
+                    server: res.headers.server ? String(res.headers.server) : null,
+                    location: res.headers.location ? String(res.headers.location) : null,
+                    pageTitle,
+                    bodySnippet,
+                    sampledBytes: bodyBytes,
+                    securityHeaders: {
+                      hsts: res.headers['strict-transport-security']
+                        ? String(res.headers['strict-transport-security'])
+                        : null,
+                      csp: res.headers['content-security-policy']
+                        ? String(res.headers['content-security-policy'])
+                        : null,
+                      xFrameOptions: res.headers['x-frame-options']
+                        ? String(res.headers['x-frame-options'])
+                        : null,
+                      xContentTypeOptions: res.headers['x-content-type-options']
+                        ? String(res.headers['x-content-type-options'])
+                        : null,
+                      referrerPolicy: res.headers['referrer-policy']
+                        ? String(res.headers['referrer-policy'])
+                        : null,
+                    },
+                  },
+                },
+                [activeSocket, tcpSocket]
+              );
+            };
+
+            res.once('end', finalizeHttp);
+            res.once('close', finalizeHttp);
+            res.once('error', finalizeHttp);
+          }
+        );
+
+        req.once('error', (err) => {
+          clearTimeout(phaseTimer);
+          const banner = sanitizeBannerText(Buffer.concat(rawPeekChunks));
+          const isNonHttpProtocol =
+            err?.code === 'HPE_INVALID_CONSTANT' ||
+            err?.code === 'HPE_INVALID_HEADER_TOKEN' ||
+            Boolean(banner);
+
+          finish(
+            {
+              tcpConnected: true,
+              tcpConnectMs,
+              tlsUsed: useTls,
+              tlsConnected: useTls ? true : false,
+              tlsHandshakeMs,
+              tls: tlsData,
+              httpResponded: false,
+              protocolDetected: isNonHttpProtocol
+                ? useTls
+                  ? 'TLS_TCP_BANNER'
+                  : 'RAW_TCP_BANNER'
+                : useTls
+                ? 'TLS_OPEN_NO_HTTP'
+                : 'TCP_OPEN_NO_HTTP',
+              banner: banner || null,
+              httpError: isNonHttpProtocol
+                ? 'TCP connection succeeded — remote port speaks a non-HTTP protocol.'
+                : err?.message || 'HTTP request failed after TCP connect.',
+            },
+            [activeSocket, tcpSocket]
+          );
+        });
+
+        req.end();
+      };
+
+      if (!useTls) {
+        runHttpOrBannerPhase(tcpSocket, null, null);
+        return;
+      }
+
+      const tlsStart = Date.now();
+      const tlsSocket = tls.connect({
+        socket: tcpSocket,
+        servername: net.isIP(hostname) ? undefined : hostname,
+        rejectUnauthorized: false,
+        ALPNProtocols: ['http/1.1'],
+      });
+
+      const tlsTimer = setTimeout(() => {
+        finish(
+          {
+            tcpConnected: true,
+            tcpConnectMs,
+            tlsUsed: true,
+            tlsConnected: false,
+            tlsHandshakeMs: Date.now() - tlsStart,
+            tlsErrorCode: 'TLS_TIMEOUT',
+            tlsErrorMessage: 'TCP connected, but SSL/TLS handshake timed out after 5s.',
+          },
+          [tlsSocket, tcpSocket]
+        );
+      }, 5000);
+
+      tlsSocket.once('error', (err) => {
+        clearTimeout(tlsTimer);
+        finish(
+          {
+            tcpConnected: true,
+            tcpConnectMs,
+            tlsUsed: true,
+            tlsConnected: false,
+            tlsHandshakeMs: Date.now() - tlsStart,
+            tlsErrorCode: err?.code || 'TLS_HANDSHAKE_ERROR',
+            tlsErrorMessage: err?.message || 'SSL/TLS handshake failed.',
+          },
+          [tlsSocket, tcpSocket]
+        );
+      });
+
+      tlsSocket.once('secureConnect', async () => {
+        clearTimeout(tlsTimer);
+        const tlsHandshakeMs = Date.now() - tlsStart;
+        try {
+          const tlsData = await extractLiveTlsCertificate(tlsSocket, hostname);
+          runHttpOrBannerPhase(tlsSocket, tlsData, tlsHandshakeMs);
+        } catch (err) {
+          finish(
+            {
+              tcpConnected: true,
+              tcpConnectMs,
+              tlsUsed: true,
+              tlsConnected: true,
+              tlsHandshakeMs,
+              tlsErrorCode: 'CERT_PARSE_ERROR',
+              tlsErrorMessage: err?.message || 'Connected over TLS, but certificate inspection failed.',
+            },
+            [tlsSocket, tcpSocket]
+          );
+        }
+      });
+    });
+  });
+}
+
+async function probeSingleHop({ hostname, port, pathWithQuery, method, tlsMode, explicitScheme }) {
+  const dnsResult = await resolvePublicTargetIps(hostname);
+  if (dnsResult.blocked) {
+    return { blocked: true, dns: dnsResult, error: dnsResult.reason };
+  }
+  if (dnsResult.notFound) {
+    return {
+      reachability: 'DNS_FAILED',
+      dns: dnsResult,
+      icmp: null,
+      resolvedIp: null,
+      tcpConnected: false,
+      tcpConnectMs: null,
+      tcpErrorCode: 'ENOTFOUND',
+      tcpErrorMessage: `External public DNS (8.8.8.8 / 1.1.1.1) could not resolve "${hostname}" (NXDOMAIN / NODATA).`,
+    };
+  }
+
+  const primaryIp = dnsResult.ipv4[0] || dnsResult.ipv6[0];
+  let preferTls = true;
+  if (tlsMode === 'plain') {
+    preferTls = false;
+  } else if (tlsMode === 'tls') {
+    preferTls = true;
+  } else {
+    // 'auto' mode
+    if (explicitScheme === 'https') preferTls = true;
+    else if (explicitScheme === 'http') preferTls = false;
+    else if (PLAIN_BY_DEFAULT_PORTS.has(port)) preferTls = false;
+    else preferTls = true;
+  }
+
+  // Fire Active Sonar ICMP Ping in parallel with TCP/TLS/HTTP socket probe
+  const icmpPromise = executeIcmpPing(primaryIp);
+
+  let attempt = await executeSocketProbe({
+    ip: primaryIp,
+    hostname,
+    port,
+    pathWithQuery,
+    method,
+    useTls: preferTls,
+  });
+  let tlsFallbackNote = null;
+
+  // In 'auto' mode on custom ports without explicit https://, if TLS fails because remote port speaks plain HTTP/TCP, auto-fallback to plain!
+  if (
+    tlsMode === 'auto' &&
+    preferTls &&
+    explicitScheme !== 'https' &&
+    port !== 443 &&
+    attempt.tcpConnected &&
+    attempt.tlsConnected === false &&
+    /wrong version number|unknown protocol|packet length too long|alert/i.test(
+      String(attempt.tlsErrorMessage || '')
+    )
+  ) {
+    const plainRetry = await executeSocketProbe({
+      ip: primaryIp,
+      hostname,
+      port,
+      pathWithQuery,
+      method,
+      useTls: false,
+    });
+    if (plainRetry.tcpConnected) {
+      attempt = plainRetry;
+      tlsFallbackNote = `Port ${port} did not accept SSL/TLS; automatically probed over plain TCP/HTTP.`;
+    }
+  }
+
+  // Conversely, if plain HTTP on a custom port returns 400 "plain HTTP request was sent to HTTPS port", auto-upgrade in 'auto' mode!
+  if (
+    tlsMode === 'auto' &&
+    !preferTls &&
+    explicitScheme !== 'http' &&
+    attempt.http?.statusCode === 400 &&
+    port !== 80
+  ) {
+    const tlsRetry = await executeSocketProbe({
+      ip: primaryIp,
+      hostname,
+      port,
+      pathWithQuery,
+      method,
+      useTls: true,
+    });
+    if (tlsRetry.tlsConnected) {
+      attempt = tlsRetry;
+      tlsFallbackNote = `Port ${port} required SSL/TLS; automatically upgraded handshake.`;
+    }
+  }
+
+  let reachability = 'TCP_FAILED';
+  if (attempt.tcpConnected) {
+    if (attempt.tlsUsed && !attempt.tlsConnected) {
+      reachability = 'TLS_FAILED';
+    } else if (attempt.httpResponded) {
+      reachability = 'HTTP_OK';
+    } else {
+      reachability = 'TCP_OPEN';
+    }
+  }
+
+  const icmp = await icmpPromise;
+
+  return {
+    reachability,
+    dns: dnsResult,
+    icmp,
+    resolvedIp: primaryIp,
+    tlsFallbackNote,
+    ...attempt,
+  };
+}
+
+function buildDisplayUrl(scheme, hostname, port, pathWithQuery) {
+  const hostPart = net.isIP(hostname) === 6 ? `[${hostname}]` : hostname;
+  const isDefaultPort = (scheme === 'https' && port === 443) || (scheme === 'http' && port === 80);
+  return `${scheme}://${hostPart}${isDefaultPort ? '' : `:${port}`}${pathWithQuery}`;
+}
+
+async function handleUrlProbe(req) {
+  const startedAt = Date.now();
+  const body = await readRequestBodyJson(req);
+
+  const rawUrl = String(body.url || '').trim();
+  const portOverride = body.port;
+  const method = String(body.method || 'GET').toUpperCase() === 'HEAD' ? 'HEAD' : 'GET';
+  const followRedirects = Boolean(body.followRedirects);
+  const rawTlsMode = String(body.tlsMode || 'auto').toLowerCase();
+  const tlsMode = rawTlsMode === 'tls' || rawTlsMode === 'plain' ? rawTlsMode : 'auto';
+
+  const parsedTarget = parseProbeUrlAndPort(rawUrl, portOverride);
+  if (parsedTarget.error) {
+    return { status: 400, body: { error: parsedTarget.error } };
+  }
+
+  const MAX_REDIRECTS = 5;
+  const redirectChain = [];
+  let redirectWarning = null;
+
+  let curHostname = parsedTarget.hostname;
+  let curPort = parsedTarget.port;
+  let curPath = parsedTarget.pathWithQuery;
+  let curExplicitScheme = parsedTarget.explicitScheme;
+  let curTlsMode = tlsMode;
+
+  let finalHop = null;
+
+  for (let hopIdx = 0; hopIdx <= MAX_REDIRECTS; hopIdx++) {
+    const hopStart = Date.now();
+    const hopRes = await probeSingleHop({
+      hostname: curHostname,
+      port: curPort,
+      pathWithQuery: curPath,
+      method,
+      tlsMode: curTlsMode,
+      explicitScheme: curExplicitScheme,
+    });
+
+    if (hopRes.blocked) {
+      if (hopIdx === 0) {
+        return { status: 400, body: { error: hopRes.error } };
+      }
+      redirectWarning = `Redirect hop #${hopIdx} blocked: ${hopRes.error}`;
+      break;
+    }
+
+    const effectiveScheme = hopRes.tlsUsed ? 'https' : 'http';
+    const hopUrl = buildDisplayUrl(effectiveScheme, curHostname, curPort, curPath);
+
+    finalHop = {
+      ...hopRes,
+      url: hopUrl,
+      hostname: curHostname,
+      port: curPort,
+      pathWithQuery: curPath,
+    };
+
+    const statusCode = hopRes.http?.statusCode || 0;
+    const location = hopRes.http?.location || null;
+    const isRedirect =
+      hopRes.httpResponded &&
+      [301, 302, 303, 307, 308].includes(statusCode) &&
+      Boolean(location);
+
+    redirectChain.push({
+      hop: hopIdx + 1,
+      url: hopUrl,
+      hostname: curHostname,
+      resolvedIp: hopRes.resolvedIp,
+      port: curPort,
+      reachability: hopRes.reachability,
+      statusCode: statusCode || null,
+      statusMessage: hopRes.http?.statusMessage || null,
+      location,
+      tlsProtocol: hopRes.tls?.protocol || null,
+      durationMs: Date.now() - hopStart,
+    });
+
+    if (!followRedirects || !isRedirect) {
+      break;
+    }
+
+    if (hopIdx === MAX_REDIRECTS) {
+      redirectWarning = `Maximum redirect limit (${MAX_REDIRECTS} hops) reached.`;
+      break;
+    }
+
+    let nextParsedUrl;
+    try {
+      nextParsedUrl = new URL(location, hopUrl);
+    } catch {
+      redirectWarning = `Malformed Redirect Location header: "${location}"`;
+      break;
+    }
+
+    const nextScheme = nextParsedUrl.protocol.replace(':', '').toLowerCase();
+    if (nextScheme !== 'http' && nextScheme !== 'https') {
+      redirectWarning = `Redirect pointed to non-HTTP scheme "${nextScheme}://" (${location}).`;
+      break;
+    }
+
+    const nextTargetCheck = parseProbeUrlAndPort(nextParsedUrl.toString(), undefined);
+    if (nextTargetCheck.error) {
+      redirectWarning = `Redirect target "${nextParsedUrl.hostname}" is internal or invalid: ${nextTargetCheck.error}`;
+      break;
+    }
+
+    curHostname = nextTargetCheck.hostname;
+    curPort = nextTargetCheck.port;
+    curPath = nextTargetCheck.pathWithQuery;
+    curExplicitScheme = nextScheme;
+    curTlsMode = 'auto';
+  }
+
+  return {
+    status: 200,
+    body: {
+      requestedInput: rawUrl,
+      requestedPort: parsedTarget.port,
+      method,
+      followRedirects,
+      tlsMode,
+      finalUrl: finalHop.url,
+      hostname: finalHop.hostname,
+      port: finalHop.port,
+      path: finalHop.pathWithQuery,
+      reachability: finalHop.reachability,
+      dns: {
+        dnsMs: finalHop.dns.dnsMs,
+        resolvedIp: finalHop.resolvedIp,
+        ipv4: finalHop.dns.ipv4,
+        ipv6: finalHop.dns.ipv6,
+      },
+      icmp: finalHop.icmp || null,
+      tcp: {
+        connected: finalHop.tcpConnected,
+        connectMs: finalHop.tcpConnectMs,
+        errorCode: finalHop.tcpErrorCode || null,
+        errorMessage: finalHop.tcpErrorMessage || null,
+      },
+      tls: finalHop.tlsUsed
+        ? {
+            attempted: true,
+            connected: Boolean(finalHop.tlsConnected),
+            handshakeMs: finalHop.tlsHandshakeMs ?? null,
+            errorCode: finalHop.tlsErrorCode || null,
+            errorMessage: finalHop.tlsErrorMessage || null,
+            protocol: finalHop.tls?.protocol || null,
+            cipher: finalHop.tls?.cipher || null,
+            authorizedByNode: finalHop.tls?.authorizedByNode ?? false,
+            authorizationError: finalHop.tls?.authorizationError || null,
+            certificate: finalHop.tls?.certificate || null,
+          }
+        : null,
+      http: finalHop.http || null,
+      protocolDetected: finalHop.protocolDetected || null,
+      banner: finalHop.banner || null,
+      httpError: finalHop.httpError || null,
+      tlsFallbackNote: finalHop.tlsFallbackNote || null,
+      redirectChain,
+      redirectWarning,
+      totalDurationMs: Date.now() - startedAt,
+    },
+  };
+}
+
+// ============================================================================
 // MAIN MODULAR API HANDLER (Shared by Vite Dev & Production Node Server)
 // ============================================================================
 function sanitizeBigInt(val) {
@@ -1361,7 +2402,7 @@ export async function handleApiRequest(req, res) {
       sendJson(res, 200, {
         ok: true,
         service: 'techtools.subwrite.se',
-        version: '0.2.1',
+        version: '0.2.3',
         timestamp: new Date().toISOString(),
       });
       return true;
@@ -1384,6 +2425,12 @@ export async function handleApiRequest(req, res) {
 
     if (pathname === '/api/cert' && req.method === 'POST') {
       const result = await handleCertAnalyze(req);
+      sendJson(res, result.status, result.body);
+      return true;
+    }
+
+    if (pathname === '/api/probe' && req.method === 'POST') {
+      const result = await handleUrlProbe(req);
       sendJson(res, result.status, result.body);
       return true;
     }

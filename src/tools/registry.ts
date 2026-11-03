@@ -4,6 +4,7 @@ import { DnsTool } from './DnsTool';
 import { MyIpTool } from './MyIpTool';
 import { CertAnalyzerTool } from './CertAnalyzerTool';
 import { MailHeaderTool } from './MailHeaderTool';
+import { UrlProbeTool } from './UrlProbeTool';
 
 export const TOOL_MODULES: ToolModule[] = [
   {
@@ -70,6 +71,19 @@ export const TOOL_MODULES: ToolModule[] = [
       'Trace chronological mail transport hops, inspect relay delays and TLS ciphers, and audit SPF, DKIM, and DMARC authentication alignment.',
     capabilities: ['Message Transport Trace', 'Per-Hop Delay & TLS Ciphers', 'SPF / DKIM / DMARC Audit', 'Raw Header Explorer'],
     Component: MailHeaderTool,
+  },
+  {
+    id: 'url-tester',
+    code: 'MOD-06',
+    shortcut: '6',
+    title: 'EXTERNAL ENDPOINT & TLS PROBE',
+    shortTitle: 'URL TESTER',
+    category: 'DIAGNOSTICS',
+    badge: 'PING • URL • TLS',
+    description:
+      'Test external corporate URLs, ICMP sonar ping, and custom TCP ports (default 443) from outside internal firewalls. Inspect HTTP responses, redirect chains, and live SSL/TLS certificate details.',
+    capabilities: ['Sonar ICMP Ping', 'WAN URL & Port (443)', 'HTTP Status & Redirects', 'Live SSL Cert & Chain'],
+    Component: UrlProbeTool,
   },
 ];
 

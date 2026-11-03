@@ -282,6 +282,11 @@ export function App() {
                 <strong>Email Header Analyzer</strong> — trace message hops and delays and audit SPF, DKIM, DMARC and
                 ARC results.
               </li>
+              <li>
+                <strong>URL Tester (External Endpoint &amp; TLS Probe)</strong> — test public corporate URLs, ICMP sonar
+                ping, and custom TCP ports (default 443) from outside internal firewalls, with HTTP response telemetry
+                and live SSL/TLS certificate inspection.
+              </li>
             </ul>
             <p className="dim-note">
               Open source on{' '}

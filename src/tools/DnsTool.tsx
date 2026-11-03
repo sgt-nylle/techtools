@@ -1,13 +1,21 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { CopyableIntelSection } from '../components/CopyableIntelSection';
 import { sound } from '../utils/audio';
 
 type DnsViewTab = 'all' | 'ip' | 'mail' | 'authority' | 'whois';
+type DnsServerPreset = 'google' | 'cloudflare' | 'custom';
 
 interface DnsResultPayload {
   query: string;
   isIpQuery: boolean;
   apexDomain: string | null;
   nsInheritedFrom?: string | null;
+  dnsServer?: {
+    ip: string;
+    label: string;
+    preset: DnsServerPreset;
+    resolvedFrom: string | null;
+  };
   durationMs: number;
   records: {
     A: Array<{ address: string; ttl: number } | string>;
@@ -66,41 +74,90 @@ interface DnsResultPayload {
 
 export const DnsTool: React.FC = () => {
   const [domainInput, setDomainInput] = useState<string>('subwrite.se');
+  const [dnsPreset, setDnsPreset] = useState<DnsServerPreset>('google');
+  const [customDnsInput, setCustomDnsInput] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<DnsResultPayload | null>(null);
   const [activeTab, setActiveTab] = useState<DnsViewTab>('all');
   const [showRawWhois, setShowRawWhois] = useState<boolean>(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
   const inputRef = useRef<HTMLInputElement>(null);
+  const customDnsRef = useRef<HTMLInputElement>(null);
 
-  const runLookup = useCallback(async (targetOverride?: string) => {
-    const queryTarget = (targetOverride ?? domainInput).trim();
-    if (!queryTarget) return;
+  const runLookup = useCallback(
+    async (targetOverride?: string, serverOverride?: string) => {
+      const queryTarget = (targetOverride ?? domainInput).trim();
+      if (!queryTarget) return;
 
-    setLoading(true);
-    setError(null);
-    sound.playRadarPing();
+      const resolvedServerParam =
+        serverOverride !== undefined
+          ? serverOverride
+          : dnsPreset === 'google'
+          ? '8.8.8.8'
+          : dnsPreset === 'cloudflare'
+          ? '1.1.1.1'
+          : customDnsInput.trim();
 
-    try {
-      const res = await fetch(`/api/dns?domain=${encodeURIComponent(queryTarget)}`);
-      const json = await res.json();
-      if (!res.ok) {
-        setError(json.error || 'DNS lookup failed.');
+      if (dnsPreset === 'custom' && serverOverride === undefined && !resolvedServerParam) {
+        setError('Enter a custom public DNS server IP or hostname (e.g. 9.9.9.9), or select Google / Cloudflare.');
         sound.playError();
-      } else {
-        setData(json as DnsResultPayload);
-        setShowRawWhois(false);
+        customDnsRef.current?.focus();
+        return;
       }
-    } catch {
-      setError('Network error contacting diagnostic backend.');
-      sound.playError();
-    } finally {
-      setLoading(false);
-    }
-  }, [domainInput]);
 
-  const copyValue = async (val: string, key: string) => {
+      setLoading(true);
+      setError(null);
+      sound.playRadarPing();
+
+      try {
+        const params = new URLSearchParams({
+          domain: queryTarget,
+          server: resolvedServerParam,
+        });
+        const res = await fetch(`/api/dns?${params.toString()}`);
+        const json = await res.json();
+        if (!res.ok) {
+          setError(json.error || 'DNS lookup failed.');
+          sound.playError();
+        } else {
+          setData(json as DnsResultPayload);
+          setShowRawWhois(false);
+        }
+      } catch {
+        setError('Network error contacting diagnostic backend.');
+        sound.playError();
+      } finally {
+        setLoading(false);
+      }
+    },
+    [domainInput, dnsPreset, customDnsInput]
+  );
+
+  const selectDnsPreset = useCallback(
+    (preset: DnsServerPreset) => {
+      sound.playClick();
+      setDnsPreset(preset);
+      setError(null);
+
+      if (preset === 'custom') {
+        window.setTimeout(() => {
+          customDnsRef.current?.focus();
+          customDnsRef.current?.select();
+        }, 0);
+        return;
+      }
+
+      const nextServer = preset === 'google' ? '8.8.8.8' : '1.1.1.1';
+      if (data && !loading && domainInput.trim()) {
+        void runLookup(domainInput, nextServer);
+      }
+    },
+    [data, loading, domainInput, runLookup]
+  );
+
+  const copyValue = useCallback(async (val: string, key: string) => {
     try {
       await navigator.clipboard.writeText(val);
       sound.playCopy();
@@ -111,16 +168,232 @@ export const DnsTool: React.FC = () => {
     } catch {
       sound.playError();
     }
-  };
+  }, []);
 
   const quickQuery = (sample: string) => {
     setDomainInput(sample);
     void runLookup(sample);
   };
 
+  // Single-letter shortcuts for DNS & WHOIS tool
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
+      const target = e.target as HTMLElement | null;
+      const isTextInput =
+        (target?.tagName === 'INPUT' &&
+          (target as HTMLInputElement).type !== 'checkbox' &&
+          (target as HTMLInputElement).type !== 'range') ||
+        target?.tagName === 'TEXTAREA';
+      if (isTextInput) return;
+
+      const k = e.key.toLowerCase();
+
+      if (k === 'q' || k === '/') {
+        e.preventDefault();
+        sound.playClick();
+        inputRef.current?.focus();
+        inputRef.current?.select();
+        return;
+      }
+
+      if (k === 'g') {
+        e.preventDefault();
+        selectDnsPreset('google');
+        return;
+      }
+
+      if (k === 'f') {
+        e.preventDefault();
+        selectDnsPreset('cloudflare');
+        return;
+      }
+
+      if (k === 'u') {
+        e.preventDefault();
+        selectDnsPreset('custom');
+        return;
+      }
+
+      if (k === 'r') {
+        e.preventDefault();
+        if (!loading) void runLookup();
+        return;
+      }
+
+      if (!data) return;
+
+      if (k === 'a') {
+        e.preventDefault();
+        sound.playClick();
+        setActiveTab('all');
+      } else if (k === 'i') {
+        e.preventDefault();
+        sound.playClick();
+        setActiveTab('ip');
+      } else if (k === 'm') {
+        e.preventDefault();
+        sound.playClick();
+        setActiveTab('mail');
+      } else if (k === 'n') {
+        e.preventDefault();
+        sound.playClick();
+        setActiveTab('authority');
+      } else if (k === 'w') {
+        e.preventDefault();
+        sound.playClick();
+        setActiveTab('whois');
+      } else if (k === 'v' && data.whois?.raw) {
+        e.preventDefault();
+        sound.playClick();
+        setShowRawWhois((v) => !v);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [data, loading, runLookup, selectDnsPreset]);
+
+  // Formatted plain-text clipboard payloads for each Tab-selectable intel section
+  const sectionPayloads = useMemo(() => {
+    if (!data) {
+      return { ip: '', mail: '', whois: '', authority: '' };
+    }
+
+    const resolverLabel = data.dnsServer?.label || 'Google (8.8.8.8)';
+
+    // 1. IP Resolution payload
+    const ipLines: string[] = [
+      `=== IP ADDRESS RESOLUTION (${data.query}) ===`,
+      `DNS Resolver: ${resolverLabel}`,
+    ];
+    if (data.records.CNAME.length > 0) {
+      ipLines.push(`CNAME: ${data.records.CNAME.join(', ')}`);
+    }
+    if (data.records.A.length === 0) {
+      ipLines.push('IPv4 (A): None');
+    } else {
+      for (const rec of data.records.A) {
+        const addr = typeof rec === 'string' ? rec : rec.address;
+        const ttl = typeof rec === 'string' ? null : rec.ttl;
+        ipLines.push(`IPv4 (A): ${addr}${ttl !== null ? ` (TTL ${ttl}s)` : ''}`);
+      }
+    }
+    if (data.records.AAAA.length === 0) {
+      ipLines.push('IPv6 (AAAA): None');
+    } else {
+      for (const rec of data.records.AAAA) {
+        const addr = typeof rec === 'string' ? rec : rec.address;
+        const ttl = typeof rec === 'string' ? null : rec.ttl;
+        ipLines.push(`IPv6 (AAAA): ${addr}${ttl !== null ? ` (TTL ${ttl}s)` : ''}`);
+      }
+    }
+    for (const ptr of data.records.PTR) {
+      ipLines.push(
+        `PTR (${ptr.ip}): ${ptr.hostnames.length > 0 ? ptr.hostnames.join(', ') : '(No PTR record)'}`
+      );
+    }
+
+    // 2. Mail / SPF / DMARC payload
+    const mailLines: string[] = [
+      `=== MAIL SERVERS & SENDER SECURITY (${data.query}) ===`,
+      `DNS Resolver: ${resolverLabel}`,
+    ];
+    if (data.records.MX.length === 0) {
+      mailLines.push('MX Records: None');
+    } else {
+      for (const mx of data.records.MX) {
+        mailLines.push(
+          `MX: PRIO ${mx.priority} ${mx.exchange} (${mx.ips.length > 0 ? mx.ips.join(', ') : 'No IPv4'})`
+        );
+      }
+    }
+    if (data.emailSecurity.spf) {
+      mailLines.push(`SPF [${data.emailSecurity.spf.status}]: ${data.emailSecurity.spf.note}`);
+      if (data.emailSecurity.spf.record) {
+        mailLines.push(`SPF Record: ${data.emailSecurity.spf.record}`);
+      }
+    }
+    if (data.emailSecurity.dmarc) {
+      mailLines.push(
+        `DMARC (${data.emailSecurity.dmarc.host}) [${data.emailSecurity.dmarc.policy}]: ${data.emailSecurity.dmarc.note}`
+      );
+      if (data.emailSecurity.dmarc.record) {
+        mailLines.push(`DMARC Record: ${data.emailSecurity.dmarc.record}`);
+      }
+    }
+
+    // 3. Domain Registry / WHOIS payload
+    const whoisLines: string[] = [];
+    if (data.whois) {
+      whoisLines.push(`=== DOMAIN REGISTRATION INFO (${data.whois.apexDomain.toUpperCase()}) ===`);
+      if (data.whois.whoisServer) {
+        whoisLines.push(`WHOIS Server: ${data.whois.whoisServer}`);
+      }
+      if (data.whois.summary) {
+        const s = data.whois.summary;
+        whoisLines.push(`Domain: ${s.domain}`);
+        whoisLines.push(`Registrar: ${s.registrar || 'Not disclosed by registry'}`);
+        if (s.holder) whoisLines.push(`Holder / Org: ${s.holder}`);
+        whoisLines.push(`Created: ${s.created || '—'}`);
+        whoisLines.push(`Expires: ${s.expires || '—'}`);
+        whoisLines.push(`Last Modified: ${s.updated || '—'}`);
+        whoisLines.push(`DNSSEC: ${s.dnssec || 'unsigned / unspecified'}`);
+        whoisLines.push(`Status: ${s.statuses.length > 0 ? s.statuses.join(', ') : 'ACTIVE'}`);
+        if (s.nameservers.length > 0) {
+          whoisLines.push(`Nameservers: ${s.nameservers.join(', ')}`);
+        }
+      }
+      if (showRawWhois && data.whois.raw) {
+        whoisLines.push('', '--- RAW WHOIS RECORD ---', data.whois.raw.trim());
+      }
+    }
+
+    // 4. Authority (NS / SOA / TXT / CAA) payload
+    const authLines: string[] = [
+      `=== AUTHORITATIVE NAMESERVERS, SOA & TXT (${data.query}) ===`,
+      `DNS Resolver: ${resolverLabel}`,
+    ];
+    authLines.push(
+      `Nameservers (NS)${data.nsInheritedFrom ? ` [zone: ${data.nsInheritedFrom}]` : ''}: ${
+        data.records.NS.length > 0 ? data.records.NS.join(', ') : 'None'
+      }`
+    );
+    if (data.records.SOA) {
+      const soa = data.records.SOA;
+      authLines.push(
+        `SOA: Primary=${soa.nsname} | Hostmaster=${soa.hostmaster} | Serial=${soa.serial} | Refresh=${soa.refresh}s | Retry=${soa.retry}s | MinTTL=${soa.minttl}s`
+      );
+    } else {
+      authLines.push('SOA: None on this node');
+    }
+    if (data.records.TXT.length === 0) {
+      authLines.push('TXT Records: None');
+    } else {
+      for (const txt of data.records.TXT) {
+        authLines.push(`TXT: ${txt}`);
+      }
+    }
+    for (const caa of data.records.CAA) {
+      const tag = caa.issue
+        ? `issue "${caa.issue}"`
+        : caa.issuewild
+        ? `issuewild "${caa.issuewild}"`
+        : `iodef "${caa.iodef || ''}"`;
+      authLines.push(`CAA: flags=${caa.critical} ${tag}`);
+    }
+
+    return {
+      ip: ipLines.join('\n'),
+      mail: mailLines.join('\n'),
+      whois: whoisLines.join('\n'),
+      authority: authLines.join('\n'),
+    };
+  }, [data, showRawWhois]);
+
   return (
     <div className="tool-panel">
-      {/* QUERY BAR */}
+      {/* QUERY BAR + DNS RESOLVER SELECTOR */}
       <form
         className="query-bar c64-box"
         onSubmit={(e) => {
@@ -129,21 +402,66 @@ export const DnsTool: React.FC = () => {
         }}
       >
         <div className="query-input-group">
-          <span className="prompt-chevron">DNS&gt;</span>
+          <span className="prompt-chevron" title="Press [Q] to focus input">
+            DNS [Q]&gt;
+          </span>
           <input
             ref={inputRef}
             type="text"
             value={domainInput}
             onChange={(e) => setDomainInput(e.target.value)}
-            placeholder="Enter domain, subdomain, URL, or IP (e.g. subwrite.se)"
+            placeholder="Enter domain, subdomain, URL, or IP (press ESC to unlock shortcuts)"
             className="navy-input"
             autoCapitalize="none"
             autoCorrect="off"
             spellCheck={false}
           />
           <button type="submit" disabled={loading} className="navy-btn btn-primary">
-            {loading ? 'SCANNING...' : '► SCAN DOMAIN'}
+            {loading ? 'SCANNING...' : '► SCAN [R]'}
           </button>
+        </div>
+
+        {/* DNS SERVER RESOLVER SELECTOR */}
+        <div className="dns-resolver-row">
+          <span className="quick-lbl">DNS SERVER:</span>
+          <div className="preset-buttons">
+            <button
+              type="button"
+              className={`navy-btn btn-sm ${dnsPreset === 'google' ? 'btn-active' : ''}`}
+              onClick={() => selectDnsPreset('google')}
+            >
+              GOOGLE 8.8.8.8 [G]
+            </button>
+            <button
+              type="button"
+              className={`navy-btn btn-sm ${dnsPreset === 'cloudflare' ? 'btn-active' : ''}`}
+              onClick={() => selectDnsPreset('cloudflare')}
+            >
+              CLOUDFLARE 1.1.1.1 [F]
+            </button>
+            <button
+              type="button"
+              className={`navy-btn btn-sm ${dnsPreset === 'custom' ? 'btn-active' : ''}`}
+              onClick={() => selectDnsPreset('custom')}
+            >
+              CUSTOM DNS [U]
+            </button>
+          </div>
+
+          {dnsPreset === 'custom' && (
+            <input
+              ref={customDnsRef}
+              type="text"
+              value={customDnsInput}
+              onChange={(e) => setCustomDnsInput(e.target.value)}
+              placeholder="Public DNS IP or NS host (e.g. 9.9.9.9, 208.67.222.222, ns1.inleed.net)"
+              className="navy-input custom-dns-input"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              aria-label="Custom public DNS server IP or hostname"
+            />
+          )}
         </div>
 
         <div className="quick-samples-row">
@@ -165,14 +483,21 @@ export const DnsTool: React.FC = () => {
 
       {!data && !loading && !error && (
         <div className="empty-prompt c64-box">
-          Enter any domain name above and press <kbd>ENTER</kbd> or <strong>SCAN DOMAIN</strong> to inspect IP
-          records, MX mail routing, SPF/DMARC posture, nameservers, TXT records, and WHOIS domain registry details.
+          Enter any domain name above (<kbd>Q</kbd> to focus), pick a DNS resolver (<kbd>G</kbd> Google{' '}
+          <code>8.8.8.8</code>, <kbd>F</kbd> Cloudflare <code>1.1.1.1</code>, or <kbd>U</kbd> Custom), and press{' '}
+          <kbd>ENTER</kbd> or <kbd>R</kbd> to scan.
         </div>
       )}
 
       {loading && (
         <div className="loading-radar c64-box">
-          <span className="radar-spinner">◎</span> INTERROGATING AUTHORITATIVE NAMESERVERS &amp; WHOIS REGISTRY...
+          <span className="radar-spinner">◎</span> QUERYING DNS RESOLVER (
+          {dnsPreset === 'google'
+            ? '8.8.8.8'
+            : dnsPreset === 'cloudflare'
+            ? '1.1.1.1'
+            : customDnsInput.trim() || 'CUSTOM'}
+          ) &amp; WHOIS REGISTRY...
         </div>
       )}
 
@@ -183,6 +508,10 @@ export const DnsTool: React.FC = () => {
             <div className="tele-cell">
               <span className="tele-lbl">TARGET</span>
               <span className="tele-val text-gold">{data.query}</span>
+            </div>
+            <div className="tele-cell">
+              <span className="tele-lbl">DNS SERVER</span>
+              <span className="tele-val text-cyan">{data.dnsServer?.label || 'Google (8.8.8.8)'}</span>
             </div>
             <div className="tele-cell">
               <span className="tele-lbl">IPv4 / IPv6</span>
@@ -210,11 +539,11 @@ export const DnsTool: React.FC = () => {
           <div className="sub-tabs-row">
             {(
               [
-                { id: 'all', label: 'ALL INTEL' },
-                { id: 'ip', label: 'IP / A / AAAA / PTR' },
-                { id: 'mail', label: 'MX / SPF / DMARC' },
-                { id: 'authority', label: 'NS / SOA / TXT' },
-                { id: 'whois', label: 'DOMAIN REGISTRY (WHOIS)' },
+                { id: 'all', label: 'ALL INTEL [A]' },
+                { id: 'ip', label: 'IP / PTR [I]' },
+                { id: 'mail', label: 'MX / SPF / DMARC [M]' },
+                { id: 'authority', label: 'NS / SOA / TXT [N]' },
+                { id: 'whois', label: 'WHOIS REGISTRY [W]' },
               ] as Array<{ id: DnsViewTab; label: string }>
             ).map((tab) => (
               <button
@@ -233,9 +562,11 @@ export const DnsTool: React.FC = () => {
 
           {/* 1. IP RESOLUTION & REVERSE PTR */}
           {(activeTab === 'all' || activeTab === 'ip') && (
-            <section className="intel-section c64-box">
-              <h3 className="section-title">► IP ADDRESS RESOLUTION (A / AAAA / CNAME / PTR)</h3>
-
+            <CopyableIntelSection
+              title="► IP ADDRESS RESOLUTION (A / AAAA / CNAME / PTR)"
+              badge={data.dnsServer?.ip ? `@${data.dnsServer.ip}` : null}
+              copyPayload={sectionPayloads.ip}
+            >
               {data.records.CNAME.length > 0 && (
                 <div className="record-group">
                   <div className="record-badge">CNAME</div>
@@ -266,8 +597,9 @@ export const DnsTool: React.FC = () => {
                             {ttl !== null && <span className="ttl-pill">TTL {ttl}s</span>}
                             <button
                               type="button"
+                              tabIndex={-1}
                               className="navy-btn btn-xs"
-                              onClick={() => copyValue(addr, k)}
+                              onClick={() => void copyValue(addr, k)}
                             >
                               {copiedKey === k ? '✓' : 'COPY'}
                             </button>
@@ -294,8 +626,9 @@ export const DnsTool: React.FC = () => {
                             {ttl !== null && <span className="ttl-pill">TTL {ttl}s</span>}
                             <button
                               type="button"
+                              tabIndex={-1}
                               className="navy-btn btn-xs"
-                              onClick={() => copyValue(addr, k)}
+                              onClick={() => void copyValue(addr, k)}
                             >
                               {copiedKey === k ? '✓' : 'COPY'}
                             </button>
@@ -320,14 +653,16 @@ export const DnsTool: React.FC = () => {
                   ))}
                 </div>
               )}
-            </section>
+            </CopyableIntelSection>
           )}
 
           {/* 2. MAIL ROUTING (MX) & EMAIL AUTHENTICATION (SPF / DMARC) */}
           {(activeTab === 'all' || activeTab === 'mail') && !data.isIpQuery && (
-            <section className="intel-section c64-box">
-              <h3 className="section-title">► MAIL SERVERS (MX) &amp; SENDER SECURITY (SPF / DMARC)</h3>
-
+            <CopyableIntelSection
+              title="► MAIL SERVERS (MX) & SENDER SECURITY (SPF / DMARC)"
+              badge={data.dnsServer?.ip ? `@${data.dnsServer.ip}` : null}
+              copyPayload={sectionPayloads.mail}
+            >
               <div className="sub-card">
                 <div className="sub-card-hdr">MX RECORDS (SORTED BY PRIORITY)</div>
                 {data.records.MX.length === 0 ? (
@@ -391,21 +726,16 @@ export const DnsTool: React.FC = () => {
                   </div>
                 )}
               </div>
-            </section>
+            </CopyableIntelSection>
           )}
 
           {/* 3. DOMAIN REGISTRY / WHOIS */}
           {(activeTab === 'all' || activeTab === 'whois') && data.whois && (
-            <section className="intel-section c64-box">
-              <div className="section-title-row">
-                <h3 className="section-title">
-                  ► DOMAIN REGISTRATION INFO ({data.whois.apexDomain.toUpperCase()})
-                </h3>
-                {data.whois.whoisServer && (
-                  <span className="ttl-pill">SOURCE: {data.whois.whoisServer}</span>
-                )}
-              </div>
-
+            <CopyableIntelSection
+              title={`► DOMAIN REGISTRATION INFO (${data.whois.apexDomain.toUpperCase()})`}
+              badge={data.whois.whoisServer ? `SOURCE: ${data.whois.whoisServer}` : null}
+              copyPayload={sectionPayloads.whois}
+            >
               {data.whois.summary ? (
                 <div className="whois-grid">
                   <div className="whois-item">
@@ -457,27 +787,56 @@ export const DnsTool: React.FC = () => {
 
               {data.whois.raw && (
                 <div className="mt-8">
-                  <button
-                    type="button"
-                    className="navy-btn btn-sm"
-                    onClick={() => {
-                      sound.playClick();
-                      setShowRawWhois((v) => !v);
-                    }}
-                  >
-                    {showRawWhois ? '▼ HIDE RAW WHOIS RECORD' : '► VIEW RAW WHOIS RECORD'}
-                  </button>
-                  {showRawWhois && <pre className="raw-pre-box">{data.whois.raw}</pre>}
+                  <div className="raw-actions-row">
+                    <button
+                      type="button"
+                      className="navy-btn btn-sm"
+                      onClick={() => {
+                        sound.playClick();
+                        setShowRawWhois((v) => !v);
+                      }}
+                    >
+                      {showRawWhois ? '▼ HIDE RAW WHOIS [V]' : '► VIEW RAW WHOIS [V]'}
+                    </button>
+                    {showRawWhois && (
+                      <button
+                        type="button"
+                        tabIndex={-1}
+                        className={`navy-btn btn-xs ${copiedKey === 'raw-whois' ? 'btn-copied' : ''}`}
+                        onClick={() => void copyValue(data.whois?.raw || '', 'raw-whois')}
+                      >
+                        {copiedKey === 'raw-whois' ? '✓ COPIED RAW WHOIS!' : '📋 COPY RAW WHOIS [TAB + C]'}
+                      </button>
+                    )}
+                  </div>
+                  {showRawWhois && (
+                    <pre
+                      tabIndex={0}
+                      className={`raw-pre-box copyable-pre ${copiedKey === 'raw-whois' ? 'row-copied' : ''}`}
+                      aria-label="Raw WHOIS output — Press C to copy raw WHOIS"
+                      onKeyDown={(e) => {
+                        if (!e.metaKey && !e.ctrlKey && !e.altKey && (e.key === 'c' || e.key === 'C')) {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          void copyValue(data.whois?.raw || '', 'raw-whois');
+                        }
+                      }}
+                    >
+                      {data.whois.raw}
+                    </pre>
+                  )}
                 </div>
               )}
-            </section>
+            </CopyableIntelSection>
           )}
 
           {/* 4. AUTHORITY (NS / SOA / TXT / CAA) */}
           {(activeTab === 'all' || activeTab === 'authority') && !data.isIpQuery && (
-            <section className="intel-section c64-box">
-              <h3 className="section-title">► AUTHORITATIVE NAMESERVERS, SOA &amp; TXT RECORDS</h3>
-
+            <CopyableIntelSection
+              title="► AUTHORITATIVE NAMESERVERS, SOA & TXT RECORDS"
+              badge={data.dnsServer?.ip ? `@${data.dnsServer.ip}` : null}
+              copyPayload={sectionPayloads.authority}
+            >
               <div className="record-grid-two">
                 <div className="sub-card">
                   <div className="sub-card-hdr">
@@ -551,7 +910,7 @@ export const DnsTool: React.FC = () => {
                   ))}
                 </div>
               )}
-            </section>
+            </CopyableIntelSection>
           )}
         </>
       )}

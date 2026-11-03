@@ -3,8 +3,8 @@ import net from 'node:net';
 import https from 'node:https';
 import { domainToASCII } from 'node:url';
 
-const resolver = new dns.promises.Resolver();
-resolver.setServers(['1.1.1.1', '8.8.8.8', '9.9.9.9']);
+const defaultResolver = new dns.promises.Resolver({ timeout: 3000, tries: 2 });
+defaultResolver.setServers(['8.8.8.8', '1.1.1.1', '9.9.9.9']);
 
 // ============================================================================
 // SLIDING-WINDOW RATE LIMITER (Protects public DNS/WHOIS/IP endpoints)
@@ -51,8 +51,8 @@ export function normalizeIp(raw) {
 
 export function isPrivateOrLoopbackIp(ip) {
   if (!ip) return true;
-  if (ip === '127.0.0.1' || ip === '::1' || ip === 'localhost') return true;
-  if (ip.startsWith('10.') || ip.startsWith('192.168.') || ip.startsWith('127.')) return true;
+  if (ip === '127.0.0.1' || ip === '::1' || ip === '::' || ip === 'localhost') return true;
+  if (ip.startsWith('10.') || ip.startsWith('192.168.') || ip.startsWith('127.') || ip.startsWith('0.')) return true;
   if (ip.startsWith('169.254.') || ip.startsWith('fe80:') || ip.startsWith('fc') || ip.startsWith('fd')) {
     return true;
   }
@@ -60,6 +60,40 @@ export function isPrivateOrLoopbackIp(ip) {
   if (m172) {
     const second = Number(m172[1]);
     if (second >= 16 && second <= 31) return true;
+  }
+  return false;
+}
+
+/**
+ * Strict SSRF guard for user-supplied custom DNS server IPs.
+ * Allows only globally routable unicast IPv4 / IPv6 addresses.
+ */
+function isPublicRoutableIp(ip) {
+  const ver = net.isIP(ip);
+  if (ver === 4) {
+    const parts = ip.split('.').map(Number);
+    if (parts.length !== 4 || parts.some((n) => Number.isNaN(n) || n < 0 || n > 255)) return false;
+    const [a, b, c] = parts;
+    if (a === 0 || a === 10 || a === 127) return false;
+    if (a === 100 && b >= 64 && b <= 127) return false; // RFC 6598 CGNAT
+    if (a === 169 && b === 254) return false; // Link-local / cloud metadata
+    if (a === 172 && b >= 16 && b <= 31) return false; // RFC 1918
+    if (a === 192 && b === 0 && (c === 0 || c === 2)) return false; // IETF / TEST-NET-1
+    if (a === 192 && b === 168) return false; // RFC 1918
+    if (a === 198 && (b === 18 || b === 19)) return false; // Benchmarking
+    if (a === 198 && b === 51 && c === 100) return false; // TEST-NET-2
+    if (a === 203 && b === 0 && c === 113) return false; // TEST-NET-3
+    if (a >= 224) return false; // Multicast & Reserved
+    return true;
+  }
+  if (ver === 6) {
+    const s = ip.toLowerCase();
+    if (s === '::' || s === '::1' || s.startsWith('::ffff:')) return false;
+    if (s.startsWith('fc') || s.startsWith('fd')) return false; // ULA fc00::/7
+    if (/^fe[89ab]/.test(s)) return false; // Link-local fe80::/10
+    if (s.startsWith('ff')) return false; // Multicast ff00::/8
+    if (s.startsWith('2001:db8:') || s.startsWith('2001:0db8:')) return false; // Documentation
+    return true;
   }
   return false;
 }
@@ -99,7 +133,7 @@ function fetchJsonHttps(urlStr, timeoutMs = 5000) {
         family: 4,
         timeout: timeoutMs,
         headers: {
-          'User-Agent': 'SubWrite-TechTools/0.1 (+https://techtools.subwrite.se)',
+          'User-Agent': 'SubWrite-TechTools/0.1.2 (+https://techtools.subwrite.se)',
           Accept: 'application/json',
         },
       },
@@ -323,14 +357,117 @@ function sanitizeDomainInput(raw) {
     }
   }
   input = input.split('/')[0].split('?')[0].split('#')[0].trim();
-  // Strip port if not IPv6
-  if (!input.includes(':') || /^\S+:\d+$/.test(input)) {
-    input = input.replace(/:\d+$/, '');
+  // Handle bracketed IPv6 e.g. [2001:4860:4860::8888]:53
+  if (input.startsWith('[')) {
+    const closeIdx = input.indexOf(']');
+    if (closeIdx !== -1) {
+      input = input.slice(1, closeIdx);
+    }
+  } else {
+    const colonCount = (input.match(/:/g) || []).length;
+    if (colonCount === 1 && /^\S+:\d+$/.test(input)) {
+      input = input.replace(/:\d+$/, '');
+    }
   }
   input = input.replace(/\.+$/, '').toLowerCase();
   if (!input || input.length > 253 || /[\s\r\n\0]/.test(input)) return '';
+  if (net.isIP(input)) return input;
   const ascii = domainToASCII(input);
   return ascii || '';
+}
+
+const KNOWN_DNS_LABELS = new Map([
+  ['8.8.8.8', 'Google (8.8.8.8)'],
+  ['8.8.4.4', 'Google Secondary (8.8.4.4)'],
+  ['2001:4860:4860::8888', 'Google IPv6 (2001:4860:4860::8888)'],
+  ['1.1.1.1', 'Cloudflare (1.1.1.1)'],
+  ['1.0.0.1', 'Cloudflare Secondary (1.0.0.1)'],
+  ['2606:4700:4700::1111', 'Cloudflare IPv6 (2606:4700:4700::1111)'],
+  ['9.9.9.9', 'Quad9 (9.9.9.9)'],
+  ['208.67.222.222', 'OpenDNS (208.67.222.222)'],
+]);
+
+async function resolveRequestedDnsServer(rawServerParam) {
+  const raw = String(rawServerParam || '').trim();
+  if (!raw || raw === '8.8.8.8' || raw.toLowerCase() === 'google') {
+    return {
+      ip: '8.8.8.8',
+      label: 'Google (8.8.8.8)',
+      preset: 'google',
+      resolvedFrom: null,
+    };
+  }
+  if (raw === '1.1.1.1' || raw.toLowerCase() === 'cloudflare') {
+    return {
+      ip: '1.1.1.1',
+      label: 'Cloudflare (1.1.1.1)',
+      preset: 'cloudflare',
+      resolvedFrom: null,
+    };
+  }
+
+  const cleanedServer = sanitizeDomainInput(raw);
+  if (!cleanedServer) {
+    return { error: 'Enter a valid public DNS server IP address (e.g. 9.9.9.9) or hostname.' };
+  }
+
+  if (net.isIP(cleanedServer)) {
+    if (!isPublicRoutableIp(cleanedServer)) {
+      return {
+        error: `DNS server "${cleanedServer}" is not a public routable IP address (private, loopback, and reserved ranges are blocked).`,
+      };
+    }
+    return {
+      ip: cleanedServer,
+      label: KNOWN_DNS_LABELS.get(cleanedServer) || `Custom (${cleanedServer})`,
+      preset: 'custom',
+      resolvedFrom: null,
+    };
+  }
+
+  if (!/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(cleanedServer)) {
+    return { error: `Invalid custom DNS server "${raw}". Enter an IPv4/IPv6 address or DNS hostname.` };
+  }
+
+  const v4 = await withTimeout(defaultResolver.resolve4(cleanedServer), 3000, []);
+  const v6 = v4?.length ? [] : await withTimeout(defaultResolver.resolve6(cleanedServer), 3000, []);
+  const resolvedIp = (Array.isArray(v4) && v4[0]) || (Array.isArray(v6) && v6[0]) || '';
+  if (!resolvedIp) {
+    return { error: `Could not resolve custom DNS server hostname "${cleanedServer}".` };
+  }
+  if (!isPublicRoutableIp(resolvedIp)) {
+    return {
+      error: `Custom DNS hostname "${cleanedServer}" resolved to non-public IP ${resolvedIp}, which is not permitted.`,
+    };
+  }
+
+  return {
+    ip: resolvedIp,
+    label: `${cleanedServer} (${resolvedIp})`,
+    preset: 'custom',
+    resolvedFrom: cleanedServer,
+  };
+}
+
+function queryWithErrorCapture(promise, timeoutMs, fallbackValue, errorSet) {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      errorSet.add('ETIMEOUT');
+      resolve(fallbackValue);
+    }, timeoutMs);
+    promise
+      .then((val) => {
+        clearTimeout(timer);
+        errorSet.add('OK');
+        resolve(val);
+      })
+      .catch((err) => {
+        clearTimeout(timer);
+        const code = err && typeof err.code === 'string' ? err.code : 'ERROR';
+        errorSet.add(code);
+        resolve(fallbackValue);
+      });
+  });
 }
 
 function analyzeSpf(txtRecords) {
@@ -409,22 +546,59 @@ function analyzeDmarc(dmarcTxtRecords, queriedHost) {
   };
 }
 
-async function handleDnsLookup(rawTarget) {
+async function handleDnsLookup(rawTarget, rawServerParam) {
   const startedAt = Date.now();
   const cleaned = sanitizeDomainInput(rawTarget);
   if (!cleaned) {
     return { status: 400, body: { error: 'Please enter a valid domain name, hostname, or IP address.' } };
   }
 
+  const dnsServerInfo = await resolveRequestedDnsServer(rawServerParam);
+  if (dnsServerInfo.error) {
+    return { status: 400, body: { error: dnsServerInfo.error } };
+  }
+
+  const activeResolver = new dns.promises.Resolver({ timeout: 2200, tries: 1 });
+  try {
+    const serverAddr = net.isIP(dnsServerInfo.ip) === 6 ? `[${dnsServerInfo.ip}]` : dnsServerInfo.ip;
+    activeResolver.setServers([serverAddr]);
+  } catch {
+    return { status: 400, body: { error: `Unable to configure DNS resolver "${dnsServerInfo.ip}".` } };
+  }
+
+  const dnsOutcomes = new Set();
+
   // If user entered a raw IP address in DNS tool, perform reverse PTR + IP summary
   if (net.isIP(cleaned)) {
-    const ptr = (await withTimeout(resolver.reverse(cleaned), 3500, [])) || [];
+    const ptr =
+      (await queryWithErrorCapture(activeResolver.reverse(cleaned), 3200, [], dnsOutcomes)) || [];
+
+    if (!dnsOutcomes.has('OK') && !dnsOutcomes.has('ENOTFOUND') && !dnsOutcomes.has('ENODATA')) {
+      if (dnsOutcomes.has('EREFUSED')) {
+        return {
+          status: 502,
+          body: {
+            error: `DNS server ${dnsServerInfo.label} refused reverse query for ${cleaned} (recursion disabled or restricted).`,
+          },
+        };
+      }
+      if (dnsOutcomes.has('ETIMEOUT') || dnsOutcomes.has('ECONNREFUSED')) {
+        return {
+          status: 502,
+          body: {
+            error: `DNS server ${dnsServerInfo.label} did not respond on port 53 (unreachable or timed out).`,
+          },
+        };
+      }
+    }
+
     return {
       status: 200,
       body: {
         query: cleaned,
         isIpQuery: true,
         apexDomain: null,
+        dnsServer: dnsServerInfo,
         durationMs: Date.now() - startedAt,
         records: {
           A: net.isIP(cleaned) === 4 ? [cleaned] : [],
@@ -453,22 +627,52 @@ async function handleDnsLookup(rawTarget) {
 
   const [aRes, aaaaRes, cnameRes, mxRes, nsRes, txtRes, soaRes, caaRes, dmarcRes, whoisData] =
     await Promise.all([
-      withTimeout(resolver.resolve4(cleaned, { ttl: true }), 4000, []),
-      withTimeout(resolver.resolve6(cleaned, { ttl: true }), 4000, []),
-      withTimeout(resolver.resolveCname(cleaned), 4000, []),
-      withTimeout(resolver.resolveMx(cleaned), 4000, []),
-      withTimeout(resolver.resolveNs(cleaned), 4000, []),
-      withTimeout(resolver.resolveTxt(cleaned), 4000, []),
-      withTimeout(resolver.resolveSoa(cleaned), 4000, null),
-      withTimeout(resolver.resolveCaa(cleaned), 4000, []),
-      withTimeout(resolver.resolveTxt(dmarcHost), 3500, null),
+      queryWithErrorCapture(activeResolver.resolve4(cleaned, { ttl: true }), 3200, [], dnsOutcomes),
+      queryWithErrorCapture(activeResolver.resolve6(cleaned, { ttl: true }), 3200, [], dnsOutcomes),
+      queryWithErrorCapture(activeResolver.resolveCname(cleaned), 3200, [], dnsOutcomes),
+      queryWithErrorCapture(activeResolver.resolveMx(cleaned), 3200, [], dnsOutcomes),
+      queryWithErrorCapture(activeResolver.resolveNs(cleaned), 3200, [], dnsOutcomes),
+      queryWithErrorCapture(activeResolver.resolveTxt(cleaned), 3200, [], dnsOutcomes),
+      queryWithErrorCapture(activeResolver.resolveSoa(cleaned), 3200, null, dnsOutcomes),
+      queryWithErrorCapture(activeResolver.resolveCaa(cleaned), 3200, [], dnsOutcomes),
+      withTimeout(activeResolver.resolveTxt(dmarcHost), 3000, null),
       lookupDomainWhois(cleaned),
     ]);
+
+  // Surface clear error if the chosen DNS server itself is unreachable or refuses queries
+  const answeredAnyDnsPacket =
+    dnsOutcomes.has('OK') || dnsOutcomes.has('ENOTFOUND') || dnsOutcomes.has('ENODATA');
+  if (!answeredAnyDnsPacket) {
+    if (dnsOutcomes.has('EREFUSED')) {
+      return {
+        status: 502,
+        body: {
+          error: `DNS server ${dnsServerInfo.label} refused the query (EREFUSED — recursion disabled or not authoritative for "${cleaned}").`,
+        },
+      };
+    }
+    if (dnsOutcomes.has('ETIMEOUT') || dnsOutcomes.has('ECONNREFUSED')) {
+      return {
+        status: 502,
+        body: {
+          error: `DNS server ${dnsServerInfo.label} did not respond on port 53 (unreachable or timed out).`,
+        },
+      };
+    }
+    if (dnsOutcomes.has('ESERVFAIL')) {
+      return {
+        status: 502,
+        body: {
+          error: `DNS server ${dnsServerInfo.label} returned SERVFAIL for "${cleaned}".`,
+        },
+      };
+    }
+  }
 
   let effectiveDmarcTxt = dmarcRes ? dmarcRes.map((chunks) => chunks.join('')) : [];
   let effectiveDmarcHost = dmarcHost;
   if (effectiveDmarcTxt.length === 0 && apexDomain !== cleaned) {
-    const fallbackDmarc = await withTimeout(resolver.resolveTxt(apexDmarcHost), 3000, []);
+    const fallbackDmarc = await withTimeout(activeResolver.resolveTxt(apexDmarcHost), 2800, []);
     if (fallbackDmarc && fallbackDmarc.length > 0) {
       effectiveDmarcTxt = fallbackDmarc.map((chunks) => chunks.join(''));
       effectiveDmarcHost = apexDmarcHost;
@@ -479,7 +683,7 @@ async function handleDnsLookup(rawTarget) {
   let nsList = Array.isArray(nsRes) ? [...nsRes].sort() : [];
   let nsInheritedFrom = null;
   if (nsList.length === 0 && apexDomain !== cleaned) {
-    const apexNs = await withTimeout(resolver.resolveNs(apexDomain), 3000, []);
+    const apexNs = await withTimeout(activeResolver.resolveNs(apexDomain), 2800, []);
     if (Array.isArray(apexNs) && apexNs.length > 0) {
       nsList = [...apexNs].sort();
       nsInheritedFrom = apexDomain;
@@ -498,13 +702,13 @@ async function handleDnsLookup(rawTarget) {
   const [ptrEntries, mxWithIps] = await Promise.all([
     Promise.all(
       allIps.map(async (ip) => {
-        const hosts = (await withTimeout(resolver.reverse(ip), 2500, [])) || [];
+        const hosts = (await withTimeout(activeResolver.reverse(ip), 2500, [])) || [];
         return { ip, hostnames: hosts };
       })
     ),
     Promise.all(
       sortedMx.slice(0, 8).map(async (mx) => {
-        const ips = (await withTimeout(resolver.resolve4(mx.exchange), 2500, [])) || [];
+        const ips = (await withTimeout(activeResolver.resolve4(mx.exchange), 2500, [])) || [];
         return {
           priority: mx.priority,
           exchange: mx.exchange,
@@ -517,7 +721,7 @@ async function handleDnsLookup(rawTarget) {
   const flatTxt = Array.isArray(txtRes) ? txtRes.map((chunks) => chunks.join('')) : [];
   let spf = analyzeSpf(flatTxt);
   if (!spf.present && apexDomain !== cleaned) {
-    const apexTxtRaw = await withTimeout(resolver.resolveTxt(apexDomain), 3000, []);
+    const apexTxtRaw = await withTimeout(activeResolver.resolveTxt(apexDomain), 2800, []);
     const apexTxt = Array.isArray(apexTxtRaw) ? apexTxtRaw.map((c) => c.join('')) : [];
     const apexSpf = analyzeSpf(apexTxt);
     if (apexSpf.present) {
@@ -534,6 +738,7 @@ async function handleDnsLookup(rawTarget) {
       isIpQuery: false,
       apexDomain,
       nsInheritedFrom,
+      dnsServer: dnsServerInfo,
       durationMs: Date.now() - startedAt,
       records: {
         A: aRecords,
@@ -690,8 +895,8 @@ async function handleIpLookup(req, targetParam) {
     if (net.isIP(cleaned)) {
       targetIp = cleaned;
     } else if (/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(cleaned)) {
-      const v4 = await withTimeout(resolver.resolve4(cleaned), 3500, []);
-      const v6 = v4?.length ? [] : await withTimeout(resolver.resolve6(cleaned), 3500, []);
+      const v4 = await withTimeout(defaultResolver.resolve4(cleaned), 3500, []);
+      const v6 = v4?.length ? [] : await withTimeout(defaultResolver.resolve6(cleaned), 3500, []);
       const chosen = (v4 && v4[0]) || (v6 && v6[0]) || '';
       if (!chosen) {
         return { status: 404, body: { error: `Could not resolve IP address for host "${cleaned}".` } };
@@ -715,7 +920,7 @@ async function handleIpLookup(req, targetParam) {
   const canQueryPublicRir = ipVer !== 0 && !isPrivateOrLoopbackIp(targetIp);
 
   const [ptrHostnames, networkIntel] = await Promise.all([
-    ipVer !== 0 ? withTimeout(resolver.reverse(targetIp), 3000, []) : Promise.resolve([]),
+    ipVer !== 0 ? withTimeout(defaultResolver.reverse(targetIp), 3000, []) : Promise.resolve([]),
     canQueryPublicRir ? fetchRipeIpIntel(targetIp) : Promise.resolve(null),
   ]);
 
@@ -796,13 +1001,19 @@ export async function handleApiRequest(req, res) {
 
   try {
     if (pathname === '/api/health') {
-      sendJson(res, 200, { ok: true, service: 'techtools.subwrite.se', timestamp: new Date().toISOString() });
+      sendJson(res, 200, {
+        ok: true,
+        service: 'techtools.subwrite.se',
+        version: '0.1.2',
+        timestamp: new Date().toISOString(),
+      });
       return true;
     }
 
     if (pathname === '/api/dns') {
       const domain = urlObj.searchParams.get('domain') || '';
-      const result = await handleDnsLookup(domain);
+      const serverParam = urlObj.searchParams.get('server') || '';
+      const result = await handleDnsLookup(domain, serverParam);
       sendJson(res, result.status, result.body);
       return true;
     }

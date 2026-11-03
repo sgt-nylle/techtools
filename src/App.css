@@ -719,6 +719,21 @@
   gap: 6px;
 }
 
+.dns-resolver-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(30, 64, 175, 0.55);
+}
+
+.custom-dns-input {
+  min-width: 240px;
+  padding: 6px 10px;
+  font-size: 14px;
+}
+
 .quick-lbl {
   font-family: var(--font-arcade);
   font-size: 8px;
@@ -752,6 +767,92 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.section-header-right {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.raw-actions-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* =========================================================================
+   KEYBOARD FOCUS & TAB-SELECTABLE INTEL SECTIONS ([TAB] + [C])
+   ========================================================================= */
+
+.navy-btn:focus-visible,
+.navy-tab-btn:focus-visible,
+.mod-nav-btn:focus-visible,
+.navy-chip-btn:focus-visible,
+.retro-header-btn:focus-visible,
+.brand-home-btn:focus-visible,
+.module-card:focus-visible {
+  outline: 2px solid var(--navy-gold);
+  outline-offset: 2px;
+  box-shadow: 0 0 12px rgba(254, 204, 2, 0.35);
+}
+
+.retro-check:focus-within {
+  border-color: var(--navy-gold);
+  box-shadow: 0 0 10px rgba(254, 204, 2, 0.25);
+}
+
+.focusable-row {
+  transition: border-color 0.12s ease, box-shadow 0.12s ease, background-color 0.12s ease;
+  outline: none;
+}
+
+.focusable-row:focus,
+.focusable-row:focus-visible {
+  border-color: var(--navy-gold);
+  background-color: #081e3f;
+  box-shadow: 0 0 14px rgba(254, 204, 2, 0.3);
+}
+
+.copyable-section {
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+  outline: none;
+}
+
+.copyable-section:focus,
+.copyable-section:focus-visible {
+  border-color: var(--navy-gold);
+  box-shadow:
+    0 0 18px rgba(254, 204, 2, 0.32),
+    inset 0 0 16px rgba(30, 64, 175, 0.65);
+}
+
+.copyable-section:focus > .section-title-row .section-copy-btn:not(.btn-copied),
+.copyable-section:focus > .ip-hero-main .section-copy-btn:not(.btn-copied),
+.copyable-section:focus-visible > .section-title-row .section-copy-btn:not(.btn-copied),
+.copyable-section:focus-visible > .ip-hero-main .section-copy-btn:not(.btn-copied) {
+  background-color: #1e3a8a;
+  border-color: var(--navy-gold);
+  color: var(--navy-gold);
+}
+
+.copyable-pre {
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+  outline: none;
+}
+
+.copyable-pre:focus,
+.copyable-pre:focus-visible {
+  border-color: var(--navy-gold);
+  box-shadow: 0 0 14px rgba(254, 204, 2, 0.32);
+}
+
+.section-just-copied,
+.row-copied {
+  border-color: var(--navy-green) !important;
+  box-shadow: 0 0 16px rgba(74, 222, 128, 0.32) !important;
 }
 
 .section-title {

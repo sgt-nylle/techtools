@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { sound } from '../utils/audio';
 
 type GenMode = 'password' | 'passphrase' | 'tokens';
@@ -48,7 +48,6 @@ const WORDLIST = [
   'viper', 'visby', 'voltage', 'vortex', 'voyager', 'warden', 'wave', 'zephyr',
 ];
 
-/** Unbiased CSPRNG integer in [0, maxExclusive) using rejection sampling */
 function secureRandomInt(maxExclusive: number): number {
   if (maxExclusive <= 1) return 0;
   const maxUint32 = 0xffffffff;
@@ -128,6 +127,7 @@ export const PassGenTool: React.FC = () => {
   // Token state
   const [apiPrefix, setApiPrefix] = useState<string>('sw_live_');
   const [tokNonce, setTokNonce] = useState<number>(0);
+  const prefixInputRef = useRef<HTMLInputElement>(null);
 
   // Copy feedback
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -146,7 +146,6 @@ export const PassGenTool: React.FC = () => {
   }, []);
 
   const { passwords, poolSize } = useMemo(() => {
-    // Reference pwNonce to trigger fresh CSPRNG draw on demand
     void pwNonce;
     const filterChars = (str: string) =>
       excludeAmbiguous ? [...str].filter((c) => !AMBIGUOUS.has(c)).join('') : str;
@@ -213,7 +212,7 @@ export const PassGenTool: React.FC = () => {
     };
   }, [apiPrefix, tokNonce]);
 
-  const applyPreset = (preset: 'pin' | 'readable' | 'standard' | 'fortress') => {
+  const applyPreset = useCallback((preset: 'pin' | 'readable' | 'standard' | 'fortress') => {
     sound.playBlip();
     setMode('password');
     if (preset === 'pin') {
@@ -246,7 +245,167 @@ export const PassGenTool: React.FC = () => {
       setExcludeAmbiguous(false);
     }
     setPwNonce((n) => n + 1);
-  };
+  }, []);
+
+  // Determine which preset currently matches active password configuration
+  const activePreset = useMemo(() => {
+    if (length === 8 && !useUpper && !useLower && useDigits && !useSymbols && !excludeAmbiguous) {
+      return 'pin';
+    }
+    if (length === 14 && useUpper && useLower && useDigits && !useSymbols && excludeAmbiguous) {
+      return 'readable';
+    }
+    if (length === 20 && useUpper && useLower && useDigits && useSymbols && excludeAmbiguous) {
+      return 'standard';
+    }
+    if (length === 32 && useUpper && useLower && useDigits && useSymbols && !excludeAmbiguous) {
+      return 'fortress';
+    }
+    return null;
+  }, [length, useUpper, useLower, useDigits, useSymbols, excludeAmbiguous]);
+
+  // Keyboard shortcuts for PassGenTool
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
+      const target = e.target as HTMLElement | null;
+      const isTextInput =
+        (target?.tagName === 'INPUT' &&
+          (target as HTMLInputElement).type !== 'checkbox' &&
+          (target as HTMLInputElement).type !== 'range') ||
+        target?.tagName === 'TEXTAREA';
+      if (isTextInput) return;
+
+      const k = e.key.toLowerCase();
+
+      // Mode switching: [P] Passwords, [W] Passphrases, [T] Tokens
+      if (k === 'p') {
+        e.preventDefault();
+        sound.playClick();
+        setMode('password');
+        return;
+      }
+      if (k === 'w') {
+        e.preventDefault();
+        sound.playClick();
+        setMode('passphrase');
+        return;
+      }
+      if (k === 't') {
+        e.preventDefault();
+        sound.playClick();
+        setMode('tokens');
+        return;
+      }
+
+      // [R] Regenerate / Roll active mode
+      if (k === 'r') {
+        e.preventDefault();
+        sound.playBlip();
+        if (mode === 'password') setPwNonce((n) => n + 1);
+        else if (mode === 'passphrase') setPpNonce((n) => n + 1);
+        else setTokNonce((n) => n + 1);
+        return;
+      }
+
+      // [C] Copy primary item when no specific secret row handled it
+      if (k === 'c') {
+        e.preventDefault();
+        if (mode === 'password' && passwords[0]) {
+          void copyText(passwords[0], 'pw-0');
+        } else if (mode === 'passphrase' && passphrases[0]) {
+          void copyText(passphrases[0], 'pp-0');
+        } else if (mode === 'tokens') {
+          void copyText(tokens.uuid, 'tok-uuid');
+        }
+        return;
+      }
+
+      // [A] Copy All
+      if (k === 'a') {
+        if (mode === 'password' && passwords.length > 0) {
+          e.preventDefault();
+          void copyText(passwords.join('\n'), 'pw-all');
+        } else if (mode === 'passphrase' && passphrases.length > 0) {
+          e.preventDefault();
+          void copyText(passphrases.join('\n'), 'pp-all');
+        }
+        return;
+      }
+
+      if (mode === 'password') {
+        if (k === 'n') {
+          e.preventDefault();
+          applyPreset('pin');
+        } else if (k === 'e') {
+          e.preventDefault();
+          applyPreset('readable');
+        } else if (k === 'd') {
+          e.preventDefault();
+          applyPreset('standard');
+        } else if (k === 'f') {
+          e.preventDefault();
+          applyPreset('fortress');
+        } else if (k === '-') {
+          e.preventDefault();
+          sound.playClick();
+          setLength((l) => Math.max(6, l - 2));
+        } else if (k === '+' || k === '=') {
+          e.preventDefault();
+          sound.playClick();
+          setLength((l) => Math.min(64, l + 2));
+        } else if (k === 'u') {
+          e.preventDefault();
+          sound.playClick();
+          setUseUpper((v) => !v);
+        } else if (k === 'l') {
+          e.preventDefault();
+          sound.playClick();
+          setUseLower((v) => !v);
+        } else if (k === 'g') {
+          e.preventDefault();
+          sound.playClick();
+          setUseDigits((v) => !v);
+        } else if (k === 'y') {
+          e.preventDefault();
+          sound.playClick();
+          setUseSymbols((v) => !v);
+        } else if (k === 'x') {
+          e.preventDefault();
+          sound.playClick();
+          setExcludeAmbiguous((v) => !v);
+        }
+      } else if (mode === 'passphrase') {
+        if (k === '-') {
+          e.preventDefault();
+          sound.playClick();
+          setWordCount((w) => Math.max(3, w - 1));
+        } else if (k === '+' || k === '=') {
+          e.preventDefault();
+          sound.playClick();
+          setWordCount((w) => Math.min(8, w + 1));
+        } else if (k === 'k') {
+          e.preventDefault();
+          sound.playClick();
+          setCapitalizeWords((v) => !v);
+        } else if (k === 'g') {
+          e.preventDefault();
+          sound.playClick();
+          setAppendDigits((v) => !v);
+        }
+      } else if (mode === 'tokens') {
+        if (k === 'q' || k === '/') {
+          e.preventDefault();
+          sound.playClick();
+          prefixInputRef.current?.focus();
+          prefixInputRef.current?.select();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [mode, passwords, passphrases, tokens.uuid, copyText, applyPreset]);
 
   const entropyBits =
     mode === 'password'
@@ -278,7 +437,7 @@ export const PassGenTool: React.FC = () => {
             setMode('password');
           }}
         >
-          🔑 PASSWORDS
+          🔑 PASSWORDS [P]
         </button>
         <button
           type="button"
@@ -288,7 +447,7 @@ export const PassGenTool: React.FC = () => {
             setMode('passphrase');
           }}
         >
-          📜 PASSPHRASES
+          📜 PASSPHRASES [W]
         </button>
         <button
           type="button"
@@ -298,7 +457,7 @@ export const PassGenTool: React.FC = () => {
             setMode('tokens');
           }}
         >
-          🪙 API TOKENS & KEYS
+          🪙 API TOKENS &amp; KEYS [T]
         </button>
       </div>
 
@@ -329,17 +488,33 @@ export const PassGenTool: React.FC = () => {
             <div className="preset-bar">
               <span className="control-heading">COMPLEXITY PRESETS:</span>
               <div className="preset-buttons">
-                <button type="button" className="navy-btn btn-sm" onClick={() => applyPreset('pin')}>
-                  PIN (8 NUM)
+                <button
+                  type="button"
+                  className={`navy-btn btn-sm ${activePreset === 'pin' ? 'btn-active' : ''}`}
+                  onClick={() => applyPreset('pin')}
+                >
+                  PIN (8) [N]
                 </button>
-                <button type="button" className="navy-btn btn-sm" onClick={() => applyPreset('readable')}>
-                  EASY-READ (14)
+                <button
+                  type="button"
+                  className={`navy-btn btn-sm ${activePreset === 'readable' ? 'btn-active' : ''}`}
+                  onClick={() => applyPreset('readable')}
+                >
+                  EASY-READ (14) [E]
                 </button>
-                <button type="button" className="navy-btn btn-sm" onClick={() => applyPreset('standard')}>
-                  STANDARD IT (20)
+                <button
+                  type="button"
+                  className={`navy-btn btn-sm ${activePreset === 'standard' ? 'btn-active' : ''}`}
+                  onClick={() => applyPreset('standard')}
+                >
+                  STANDARD IT (20) [D]
                 </button>
-                <button type="button" className="navy-btn btn-sm btn-gold" onClick={() => applyPreset('fortress')}>
-                  ★ FORTRESS (32)
+                <button
+                  type="button"
+                  className={`navy-btn btn-sm ${activePreset === 'fortress' ? 'btn-active' : ''}`}
+                  onClick={() => applyPreset('fortress')}
+                >
+                  FORTRESS (32) [F]
                 </button>
               </div>
             </div>
@@ -347,18 +522,19 @@ export const PassGenTool: React.FC = () => {
             <div className="slider-grid">
               <div className="slider-block">
                 <label htmlFor="pw-len">
-                  LENGTH: <strong className="text-gold">{length} CHARS</strong>
+                  LENGTH [- / +]: <strong className="text-gold">{length} CHARS</strong>
                 </label>
                 <div className="range-row">
                   <button
                     type="button"
                     className="navy-btn btn-sm"
+                    title="Decrease length [-]"
                     onClick={() => {
                       sound.playClick();
                       setLength((l) => Math.max(6, l - 2));
                     }}
                   >
-                    -
+                    [-]
                   </button>
                   <input
                     id="pw-len"
@@ -371,12 +547,13 @@ export const PassGenTool: React.FC = () => {
                   <button
                     type="button"
                     className="navy-btn btn-sm"
+                    title="Increase length [+]"
                     onClick={() => {
                       sound.playClick();
                       setLength((l) => Math.min(64, l + 2));
                     }}
                   >
-                    +
+                    [+]
                   </button>
                 </div>
               </div>
@@ -411,7 +588,7 @@ export const PassGenTool: React.FC = () => {
                     setUseUpper(e.target.checked);
                   }}
                 />
-                <span>UPPERCASE (A–Z)</span>
+                <span>UPPERCASE (A–Z) [U]</span>
               </label>
               <label className="retro-check">
                 <input
@@ -422,7 +599,7 @@ export const PassGenTool: React.FC = () => {
                     setUseLower(e.target.checked);
                   }}
                 />
-                <span>LOWERCASE (a–z)</span>
+                <span>LOWERCASE (a–z) [L]</span>
               </label>
               <label className="retro-check">
                 <input
@@ -433,7 +610,7 @@ export const PassGenTool: React.FC = () => {
                     setUseDigits(e.target.checked);
                   }}
                 />
-                <span>DIGITS (0–9)</span>
+                <span>DIGITS (0–9) [G]</span>
               </label>
               <label className="retro-check">
                 <input
@@ -444,7 +621,7 @@ export const PassGenTool: React.FC = () => {
                     setUseSymbols(e.target.checked);
                   }}
                 />
-                <span>SYMBOLS (!@#$%...)</span>
+                <span>SYMBOLS (!@#...) [Y]</span>
               </label>
               <label className="retro-check">
                 <input
@@ -455,7 +632,7 @@ export const PassGenTool: React.FC = () => {
                     setExcludeAmbiguous(e.target.checked);
                   }}
                 />
-                <span>NO AMBIGUOUS (0OIl1|)</span>
+                <span>NO AMBIGUOUS [X]</span>
               </label>
             </div>
 
@@ -468,15 +645,15 @@ export const PassGenTool: React.FC = () => {
                   setPwNonce((n) => n + 1);
                 }}
               >
-                ⟳ REGENERATE PASSWORDS
+                ⟳ REGENERATE [R]
               </button>
               {passwords.length > 1 && (
                 <button
                   type="button"
-                  className="navy-btn"
+                  className={`navy-btn ${copiedId === 'pw-all' ? 'btn-copied' : ''}`}
                   onClick={() => copyText(passwords.join('\n'), 'pw-all')}
                 >
-                  {copiedId === 'pw-all' ? '✓ COPIED ALL' : '📋 COPY ALL'}
+                  {copiedId === 'pw-all' ? '✓ COPIED ALL' : '📋 COPY ALL [A]'}
                 </button>
               )}
             </div>
@@ -491,15 +668,27 @@ export const PassGenTool: React.FC = () => {
               passwords.map((pw, idx) => {
                 const id = `pw-${idx}`;
                 return (
-                  <div key={id} className="secret-row">
+                  <div
+                    key={id}
+                    tabIndex={0}
+                    className={`secret-row focusable-row ${copiedId === id ? 'row-copied' : ''}`}
+                    onKeyDown={(e) => {
+                      if (!e.metaKey && !e.ctrlKey && !e.altKey && (e.key === 'c' || e.key === 'C' || e.key === 'Enter')) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        void copyText(pw, id);
+                      }
+                    }}
+                  >
                     <span className="secret-idx">#{idx + 1}</span>
                     <code className="secret-code">{pw}</code>
                     <button
                       type="button"
+                      tabIndex={-1}
                       className={`navy-btn btn-sm ${copiedId === id ? 'btn-copied' : ''}`}
                       onClick={() => copyText(pw, id)}
                     >
-                      {copiedId === id ? '✓ COPIED' : 'COPY'}
+                      {copiedId === id ? '✓ COPIED' : 'COPY [C]'}
                     </button>
                   </div>
                 );
@@ -516,16 +705,38 @@ export const PassGenTool: React.FC = () => {
             <div className="slider-grid">
               <div className="slider-block">
                 <label htmlFor="word-cnt">
-                  WORDS: <strong className="text-gold">{wordCount} WORDS</strong>
+                  WORDS [- / +]: <strong className="text-gold">{wordCount} WORDS</strong>
                 </label>
-                <input
-                  id="word-cnt"
-                  type="range"
-                  min={3}
-                  max={8}
-                  value={wordCount}
-                  onChange={(e) => setWordCount(Number(e.target.value))}
-                />
+                <div className="range-row">
+                  <button
+                    type="button"
+                    className="navy-btn btn-sm"
+                    onClick={() => {
+                      sound.playClick();
+                      setWordCount((w) => Math.max(3, w - 1));
+                    }}
+                  >
+                    [-]
+                  </button>
+                  <input
+                    id="word-cnt"
+                    type="range"
+                    min={3}
+                    max={8}
+                    value={wordCount}
+                    onChange={(e) => setWordCount(Number(e.target.value))}
+                  />
+                  <button
+                    type="button"
+                    className="navy-btn btn-sm"
+                    onClick={() => {
+                      sound.playClick();
+                      setWordCount((w) => Math.min(8, w + 1));
+                    }}
+                  >
+                    [+]
+                  </button>
+                </div>
               </div>
               <div className="slider-block">
                 <label>SEPARATOR:</label>
@@ -562,7 +773,7 @@ export const PassGenTool: React.FC = () => {
                     setCapitalizeWords(e.target.checked);
                   }}
                 />
-                <span>CAPITALIZE WORDS</span>
+                <span>CAPITALIZE WORDS [K]</span>
               </label>
               <label className="retro-check">
                 <input
@@ -573,7 +784,7 @@ export const PassGenTool: React.FC = () => {
                     setAppendDigits(e.target.checked);
                   }}
                 />
-                <span>APPEND 2-DIGIT NUMBER</span>
+                <span>APPEND 2-DIGIT NUMBER [G]</span>
               </label>
             </div>
 
@@ -586,7 +797,14 @@ export const PassGenTool: React.FC = () => {
                   setPpNonce((n) => n + 1);
                 }}
               >
-                ⟳ REGENERATE PASSPHRASES
+                ⟳ REGENERATE [R]
+              </button>
+              <button
+                type="button"
+                className={`navy-btn ${copiedId === 'pp-all' ? 'btn-copied' : ''}`}
+                onClick={() => copyText(passphrases.join('\n'), 'pp-all')}
+              >
+                {copiedId === 'pp-all' ? '✓ COPIED ALL' : '📋 COPY ALL [A]'}
               </button>
             </div>
           </div>
@@ -595,15 +813,27 @@ export const PassGenTool: React.FC = () => {
             {passphrases.map((phrase, idx) => {
               const id = `pp-${idx}`;
               return (
-                <div key={id} className="secret-row">
+                <div
+                  key={id}
+                  tabIndex={0}
+                  className={`secret-row focusable-row ${copiedId === id ? 'row-copied' : ''}`}
+                  onKeyDown={(e) => {
+                    if (!e.metaKey && !e.ctrlKey && !e.altKey && (e.key === 'c' || e.key === 'C' || e.key === 'Enter')) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      void copyText(phrase, id);
+                    }
+                  }}
+                >
                   <span className="secret-idx">#{idx + 1}</span>
                   <code className="secret-code">{phrase}</code>
                   <button
                     type="button"
+                    tabIndex={-1}
                     className={`navy-btn btn-sm ${copiedId === id ? 'btn-copied' : ''}`}
                     onClick={() => copyText(phrase, id)}
                   >
-                    {copiedId === id ? '✓ COPIED' : 'COPY'}
+                    {copiedId === id ? '✓ COPIED' : 'COPY [C]'}
                   </button>
                 </div>
               );
@@ -617,8 +847,9 @@ export const PassGenTool: React.FC = () => {
         <>
           <div className="controls-card c64-box">
             <div className="inline-input-row">
-              <label htmlFor="api-prefix">API KEY PREFIX:</label>
+              <label htmlFor="api-prefix">API KEY PREFIX [Q]:</label>
               <input
+                ref={prefixInputRef}
                 id="api-prefix"
                 type="text"
                 maxLength={20}
@@ -635,7 +866,7 @@ export const PassGenTool: React.FC = () => {
                   setTokNonce((n) => n + 1);
                 }}
               >
-                ⟳ ROLL ALL TOKENS
+                ⟳ ROLL ALL TOKENS [R]
               </button>
             </div>
           </div>
@@ -649,15 +880,27 @@ export const PassGenTool: React.FC = () => {
               { id: 'tok-hex-128', label: 'HEX TOKEN (128-BIT / 32 HEX CHARS)', val: tokens.hex128 },
               { id: 'tok-b64-512', label: 'BASE64URL SECRET (512-BIT / HMAC-SHA512)', val: tokens.base64url512 },
             ].map((item) => (
-              <div key={item.id} className="token-card">
+              <div
+                key={item.id}
+                tabIndex={0}
+                className={`token-card focusable-row ${copiedId === item.id ? 'row-copied' : ''}`}
+                onKeyDown={(e) => {
+                  if (!e.metaKey && !e.ctrlKey && !e.altKey && (e.key === 'c' || e.key === 'C' || e.key === 'Enter')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    void copyText(item.val, item.id);
+                  }
+                }}
+              >
                 <div className="token-card-header">
                   <span className="token-label">{item.label}</span>
                   <button
                     type="button"
+                    tabIndex={-1}
                     className={`navy-btn btn-sm ${copiedId === item.id ? 'btn-copied' : ''}`}
                     onClick={() => copyText(item.val, item.id)}
                   >
-                    {copiedId === item.id ? '✓ COPIED' : 'COPY'}
+                    {copiedId === item.id ? '✓ COPIED' : 'COPY [C]'}
                   </button>
                 </div>
                 <code className="secret-code token-code-block">{item.val}</code>

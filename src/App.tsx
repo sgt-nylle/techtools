@@ -52,22 +52,37 @@ export function App() {
     };
   }, []);
 
-  // Global keyboard shortcuts: ESC -> Command Deck, [1..9] -> Module, [S] -> Toggle SFX
+  // Global keyboard shortcuts:
+  // - ESC in text input -> blur input (unlocks single-letter shortcuts)
+  // - ESC outside text input -> return to Command Deck
+  // - [1..9] -> Jump to Module
+  // - [S] -> Toggle SFX
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && activeToolId !== null) {
-        e.preventDefault();
-        sound.playClick();
-        selectTool(null);
-        return;
-      }
-
       const target = e.target as HTMLElement | null;
-      const isTypingField =
-        target?.tagName === 'INPUT' ||
+      const isTextEntry =
+        (target?.tagName === 'INPUT' &&
+          (target as HTMLInputElement).type !== 'checkbox' &&
+          (target as HTMLInputElement).type !== 'range') ||
         target?.tagName === 'TEXTAREA' ||
         target?.isContentEditable;
-      if (isTypingField || e.metaKey || e.ctrlKey || e.altKey) return;
+
+      if (e.key === 'Escape') {
+        if (isTextEntry && target) {
+          e.preventDefault();
+          sound.playClick();
+          target.blur();
+          return;
+        }
+        if (activeToolId !== null) {
+          e.preventDefault();
+          sound.playClick();
+          selectTool(null);
+          return;
+        }
+      }
+
+      if (isTextEntry || e.metaKey || e.ctrlKey || e.altKey) return;
 
       if (e.key === 's' || e.key === 'S') {
         e.preventDefault();
@@ -150,32 +165,24 @@ export function App() {
           </div>
         </header>
 
-        {/* PERSISTENT MODULE SWITCHER BAR */}
-        <nav className="module-switcher-bar c64-box" aria-label="Diagnostic Modules">
-          <button
-            type="button"
-            className={`mod-nav-btn ${activeToolId === null ? 'active' : ''}`}
-            onClick={() => {
-              sound.playClick();
-              selectTool(null);
-            }}
-          >
-            ⚓ DECK
-          </button>
-          {TOOL_MODULES.map((mod) => (
-            <button
-              key={mod.id}
-              type="button"
-              className={`mod-nav-btn ${activeToolId === mod.id ? 'active' : ''}`}
-              onClick={() => {
-                sound.playBlip();
-                selectTool(mod.id);
-              }}
-            >
-              <span className="mod-key">[{mod.shortcut}]</span> {mod.shortTitle}
-            </button>
-          ))}
-        </nav>
+        {/* SUB-ROW MODULE SWITCHER (Shown when a module is open, without redundant DECK button) */}
+        {activeModule && (
+          <nav className="module-switcher-bar c64-box" aria-label="Diagnostic Modules">
+            {TOOL_MODULES.map((mod) => (
+              <button
+                key={mod.id}
+                type="button"
+                className={`mod-nav-btn ${activeToolId === mod.id ? 'active' : ''}`}
+                onClick={() => {
+                  sound.playBlip();
+                  selectTool(mod.id);
+                }}
+              >
+                <span className="mod-key">[{mod.shortcut}]</span> {mod.shortTitle}
+              </button>
+            ))}
+          </nav>
+        )}
 
         {/* MAIN VIEWPORT: COMMAND DECK OR ACTIVE TOOL */}
         <main className="c64-main-stage">
@@ -203,7 +210,8 @@ export function App() {
         <footer className="c64-footer c64-box">
           <div className="footer-left">
             <span>[ESC] DECK</span> | <span>[1–{TOOL_MODULES.length}] MODULES</span> |{' '}
-            <span>[S] AUDIO</span> | <span className="text-gold">{APP_VERSION}</span>
+            <span>[TAB] SELECT + [C] COPY</span> | <span>[S] AUDIO</span> |{' '}
+            <span className="text-gold">{APP_VERSION}</span>
           </div>
           <div className="footer-right">
             Provided by{' '}

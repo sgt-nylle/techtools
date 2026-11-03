@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { CopyableIntelSection } from '../components/CopyableIntelSection';
 import { sound } from '../utils/audio';
 
 interface IpLookupPayload {
@@ -40,6 +41,8 @@ export const MyIpTool: React.FC = () => {
   const [customTarget, setCustomTarget] = useState<string>('');
   const [showRawRir, setShowRawRir] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
+  const [copiedRawRir, setCopiedRawRir] = useState<boolean>(false);
+  const customInputRef = useRef<HTMLInputElement>(null);
 
   const fetchIpIntel = useCallback(async (target?: string) => {
     setLoading(true);
@@ -88,7 +91,7 @@ export const MyIpTool: React.FC = () => {
     };
   }, []);
 
-  const handleCopyIp = async () => {
+  const handleCopyIp = useCallback(async () => {
     if (!data?.ip) return;
     try {
       await navigator.clipboard.writeText(data.ip);
@@ -98,7 +101,129 @@ export const MyIpTool: React.FC = () => {
     } catch {
       sound.playError();
     }
-  };
+  }, [data]);
+
+  const rawRirText = useMemo(() => {
+    if (!data?.network.rawAttributes.length) return '';
+    return data.network.rawAttributes
+      .map((attr) => `${attr.key.padEnd(18, ' ')}: ${attr.value}`)
+      .join('\n');
+  }, [data]);
+
+  const handleCopyRawRir = useCallback(async () => {
+    if (!rawRirText) return;
+    try {
+      await navigator.clipboard.writeText(rawRirText);
+      sound.playCopy();
+      setCopiedRawRir(true);
+      window.setTimeout(() => setCopiedRawRir(false), 1600);
+    } catch {
+      sound.playError();
+    }
+  }, [rawRirText]);
+
+  // Single-letter shortcuts for What's My IP / RIR Range Owner tool
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
+      const target = e.target as HTMLElement | null;
+      const isTextInput =
+        (target?.tagName === 'INPUT' &&
+          (target as HTMLInputElement).type !== 'checkbox' &&
+          (target as HTMLInputElement).type !== 'range') ||
+        target?.tagName === 'TEXTAREA';
+      if (isTextInput) return;
+
+      const k = e.key.toLowerCase();
+
+      if (k === 'q' || k === '/') {
+        e.preventDefault();
+        sound.playClick();
+        customInputRef.current?.focus();
+        customInputRef.current?.select();
+        return;
+      }
+
+      if (k === 'm') {
+        e.preventDefault();
+        if (!loading) {
+          sound.playBlip();
+          setCustomTarget('');
+          void fetchIpIntel('');
+        }
+        return;
+      }
+
+      if (k === 'r') {
+        e.preventDefault();
+        if (!loading) {
+          sound.playRadarPing();
+          void fetchIpIntel(customTarget);
+        }
+        return;
+      }
+
+      if (k === 'c' && data?.ip) {
+        e.preventDefault();
+        void handleCopyIp();
+        return;
+      }
+
+      if (k === 'v' && data?.network.rawAttributes.length) {
+        e.preventDefault();
+        sound.playClick();
+        setShowRawRir((v) => !v);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [data, loading, customTarget, fetchIpIntel, handleCopyIp]);
+
+  const { rangeCopyPayload, headersCopyPayload } = useMemo(() => {
+    if (!data) return { rangeCopyPayload: '', headersCopyPayload: '' };
+
+    const rangeLines: string[] = [
+      `=== IP RANGE OWNER, BGP PREFIX & ASN REGISTRY (${data.ip}) ===`,
+      `IP Address: ${data.ip} (${data.ipVersion})`,
+      `Reverse DNS (PTR): ${data.ptr.length > 0 ? data.ptr.join(', ') : '(None)'}`,
+      `ISP / Organization: ${data.network.organization || data.network.asnHolder || 'Unknown'}`,
+      `ASN: ${
+        data.network.asn
+          ? `${data.network.asn}${data.network.asnHolder ? ` — ${data.network.asnHolder}` : ''}`
+          : 'Unannounced'
+      }`,
+      `Allocated IP Range: ${data.network.ipRange || '—'}`,
+      `BGP Routed Prefix: ${data.network.prefix || '—'}`,
+      `Netname: ${data.network.netname || '—'}`,
+      `Country: ${data.network.country || '—'}`,
+      `RIR: ${data.network.rir || '—'}`,
+      `Status: ${data.network.status || 'ALLOCATED'}`,
+      `Abuse Contact: ${data.network.abuseContact || '—'}`,
+    ];
+
+    if (data.network.descriptions.length > 0) {
+      rangeLines.push(`Descriptions: ${data.network.descriptions.join(' | ')}`);
+    }
+    if (showRawRir && rawRirText) {
+      rangeLines.push('', '--- RAW RIR WHOIS ATTRIBUTES ---', rawRirText);
+    }
+
+    const headerLines: string[] = [];
+    if (data.clientMeta) {
+      headerLines.push(
+        '=== CLIENT HTTP CONNECTION HEADERS ===',
+        `Host / Protocol: ${data.clientMeta.forwardedProto}://${data.clientMeta.host}`,
+        `Accept-Language: ${data.clientMeta.acceptLanguage}`,
+        `User-Agent: ${data.clientMeta.userAgent}`
+      );
+    }
+
+    return {
+      rangeCopyPayload: rangeLines.join('\n'),
+      headersCopyPayload: headerLines.join('\n'),
+    };
+  }, [data, showRawRir, rawRirText]);
 
   return (
     <div className="tool-panel">
@@ -112,7 +237,18 @@ export const MyIpTool: React.FC = () => {
       ) : (
         data && (
           <>
-            <div className="ip-hero-card c64-box">
+            <div
+              tabIndex={0}
+              className={`ip-hero-card copyable-section c64-box ${copied ? 'section-just-copied' : ''}`}
+              aria-label={`Public IP ${data.ip} — Press C to copy IP`}
+              onKeyDown={(e) => {
+                if (!e.metaKey && !e.ctrlKey && !e.altKey && (e.key === 'c' || e.key === 'C')) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  void handleCopyIp();
+                }
+              }}
+            >
               <div className="ip-hero-top">
                 <span className="ip-hero-tag">
                   {data.isCustomTarget
@@ -129,10 +265,11 @@ export const MyIpTool: React.FC = () => {
                 <div className="ip-hero-actions">
                   <button
                     type="button"
-                    className={`navy-btn btn-gold ${copied ? 'btn-copied' : ''}`}
-                    onClick={handleCopyIp}
+                    tabIndex={-1}
+                    className={`navy-btn section-copy-btn ${copied ? 'btn-copied' : ''}`}
+                    onClick={() => void handleCopyIp()}
                   >
-                    {copied ? '✓ IP COPIED' : '📋 COPY IP'}
+                    {copied ? '✓ IP COPIED' : '📋 COPY IP [C]'}
                   </button>
                   {data.isCustomTarget && (
                     <button
@@ -144,7 +281,7 @@ export const MyIpTool: React.FC = () => {
                         void fetchIpIntel('');
                       }}
                     >
-                      ◄ BACK TO MY IP
+                      ◄ BACK TO MY IP [M]
                     </button>
                   )}
                 </div>
@@ -166,12 +303,11 @@ export const MyIpTool: React.FC = () => {
             </div>
 
             {/* NETWORK OWNER / ASN / RIR RANGE DETAILS */}
-            <section className="intel-section c64-box">
-              <div className="section-title-row">
-                <h3 className="section-title">► IP RANGE OWNER, BGP PREFIX &amp; ASN REGISTRY</h3>
-                {data.network.rir && <span className="ttl-pill">RIR: {data.network.rir}</span>}
-              </div>
-
+            <CopyableIntelSection
+              title="► IP RANGE OWNER, BGP PREFIX & ASN REGISTRY"
+              badge={data.network.rir ? `RIR: ${data.network.rir}` : null}
+              copyPayload={rangeCopyPayload}
+            >
               <div className="whois-grid">
                 <div className="whois-item">
                   <span className="tele-lbl">ISP / ORGANIZATION OWNER</span>
@@ -226,31 +362,54 @@ export const MyIpTool: React.FC = () => {
 
               {data.network.rawAttributes.length > 0 && (
                 <div className="mt-8">
-                  <button
-                    type="button"
-                    className="navy-btn btn-sm"
-                    onClick={() => {
-                      sound.playClick();
-                      setShowRawRir((v) => !v);
-                    }}
-                  >
-                    {showRawRir ? '▼ HIDE RAW RIR WHOIS ATTRIBUTES' : '► VIEW RAW RIR WHOIS ATTRIBUTES'}
-                  </button>
+                  <div className="raw-actions-row">
+                    <button
+                      type="button"
+                      className="navy-btn btn-sm"
+                      onClick={() => {
+                        sound.playClick();
+                        setShowRawRir((v) => !v);
+                      }}
+                    >
+                      {showRawRir ? '▼ HIDE RAW RIR WHOIS [V]' : '► VIEW RAW RIR WHOIS [V]'}
+                    </button>
+                    {showRawRir && (
+                      <button
+                        type="button"
+                        tabIndex={-1}
+                        className={`navy-btn btn-xs ${copiedRawRir ? 'btn-copied' : ''}`}
+                        onClick={() => void handleCopyRawRir()}
+                      >
+                        {copiedRawRir ? '✓ COPIED RAW RIR!' : '📋 COPY RAW RIR [TAB + C]'}
+                      </button>
+                    )}
+                  </div>
                   {showRawRir && (
-                    <pre className="raw-pre-box">
-                      {data.network.rawAttributes
-                        .map((attr) => `${attr.key.padEnd(18, ' ')}: ${attr.value}`)
-                        .join('\n')}
+                    <pre
+                      tabIndex={0}
+                      className={`raw-pre-box copyable-pre ${copiedRawRir ? 'row-copied' : ''}`}
+                      aria-label="Raw RIR WHOIS attributes — Press C to copy raw RIR output"
+                      onKeyDown={(e) => {
+                        if (!e.metaKey && !e.ctrlKey && !e.altKey && (e.key === 'c' || e.key === 'C')) {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          void handleCopyRawRir();
+                        }
+                      }}
+                    >
+                      {rawRirText}
                     </pre>
                   )}
                 </div>
               )}
-            </section>
+            </CopyableIntelSection>
 
             {/* CLIENT CONNECTION TELEMETRY (Shown when viewing own IP) */}
             {data.clientMeta && (
-              <section className="intel-section c64-box">
-                <h3 className="section-title">► CLIENT HTTP CONNECTION HEADERS</h3>
+              <CopyableIntelSection
+                title="► CLIENT HTTP CONNECTION HEADERS"
+                copyPayload={headersCopyPayload}
+              >
                 <div className="soa-list">
                   <div>
                     <strong>HOST / PROTOCOL:</strong>{' '}
@@ -265,7 +424,7 @@ export const MyIpTool: React.FC = () => {
                     <strong>USER-AGENT:</strong> <code className="code-wrap-inline">{data.clientMeta.userAgent}</code>
                   </div>
                 </div>
-              </section>
+              </CopyableIntelSection>
             )}
           </>
         )
@@ -281,8 +440,11 @@ export const MyIpTool: React.FC = () => {
         }}
       >
         <div className="query-input-group">
-          <span className="prompt-chevron">IP&gt;</span>
+          <span className="prompt-chevron" title="Press [Q] to focus input">
+            IP [Q]&gt;
+          </span>
           <input
+            ref={customInputRef}
             type="text"
             value={customTarget}
             onChange={(e) => setCustomTarget(e.target.value)}
@@ -293,7 +455,7 @@ export const MyIpTool: React.FC = () => {
             spellCheck={false}
           />
           <button type="submit" disabled={loading} className="navy-btn btn-primary">
-            ► INSPECT IP
+            ► INSPECT [R]
           </button>
           <button
             type="button"
@@ -305,7 +467,7 @@ export const MyIpTool: React.FC = () => {
               void fetchIpIntel('');
             }}
           >
-            ⟳ MY IP
+            ⟳ MY IP [M]
           </button>
         </div>
       </form>

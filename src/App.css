@@ -34,7 +34,7 @@
 .c64-screen-frame {
   position: relative;
   width: 100%;
-  max-width: 1080px;
+  max-width: 1180px;
   background-color: var(--navy-bg);
   border: 12px solid var(--navy-border);
   box-shadow:
@@ -143,12 +143,49 @@
 .mod-nav-btn {
   font-family: var(--font-arcade);
   font-size: 9px;
-  padding: 8px 10px;
+  padding: 8px 8px;
   background-color: #081b36;
   color: var(--navy-primary);
   border: 2px solid #1e40af;
   cursor: pointer;
   transition: all 0.12s ease;
+  white-space: nowrap;
+  flex: 1 1 0px;
+  text-align: center;
+}
+
+@media (max-width: 1180px) {
+  .module-switcher-bar {
+    gap: 6px;
+    padding: 7px 8px;
+  }
+  .mod-nav-btn {
+    font-size: 8.5px;
+    padding: 7px 5px;
+  }
+}
+
+@media (max-width: 1040px) {
+  .module-switcher-bar {
+    gap: 4px;
+    padding: 6px 6px;
+  }
+  .mod-nav-btn {
+    font-size: 7.5px;
+    padding: 6px 3px;
+  }
+}
+
+@media (max-width: 880px) {
+  .module-switcher-bar {
+    gap: 6px;
+    padding: 6px 6px;
+  }
+  .mod-nav-btn {
+    flex: 1 1 calc(33.333% - 6px);
+    font-size: 8px;
+    padding: 7px 4px;
+  }
 }
 
 .mod-nav-btn:hover {
@@ -1360,6 +1397,12 @@
 
   .brand-home-btn {
     font-size: 12px;
+  }
+
+  .mod-nav-btn {
+    flex: 1 1 calc(50% - 6px);
+    font-size: 8px;
+    padding: 8px 4px;
   }
 }
 

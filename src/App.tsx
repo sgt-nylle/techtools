@@ -218,24 +218,35 @@ export function App() {
             <span className="text-gold">{APP_VERSION}</span>
           </div>
           <div className="footer-right">
-            Provided by{' '}
-            <a
-              href="https://github.com/sgt-nylle/techtools"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="provider-link"
-            >
-              Sgt.Moon
-            </a>{' '}
-            •{' '}
-            <a
-              href="https://subwrite.se"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="provider-link"
-            >
-              subwrite.se
-            </a>
+            <span className="footer-credit-item">
+              Provided by{' '}
+              <a
+                href="https://github.com/sgt-nylle/techtools"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="provider-link"
+              >
+                Sgt.Moon
+              </a>
+            </span>
+            <span className="footer-sep" aria-hidden="true">•</span>
+            <span className="footer-credit-item">
+              <a
+                href="https://subwrite.se"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="provider-link"
+              >
+                subwrite.se
+              </a>
+            </span>
+            <span className="footer-sep" aria-hidden="true">•</span>
+            <span className="footer-credit-item">
+              contact:{' '}
+              <a href="mailto:sysop@subwrite.se" className="provider-link">
+                sysop@subwrite.se
+              </a>
+            </span>
           </div>
         </footer>
 
@@ -299,7 +310,10 @@ export function App() {
               >
                 GitHub
               </a>
-              . No accounts, no tracking of the data you analyze.
+              . No accounts, no tracking of the data you analyze. Contact:{' '}
+              <a href="mailto:sysop@subwrite.se" className="provider-link">
+                sysop@subwrite.se
+              </a>
             </p>
           </footer>
         )}

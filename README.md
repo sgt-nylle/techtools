@@ -9,7 +9,7 @@ A modular retro C64 / Swedish Navy (*Kungliga Flottan*) IT troubleshooting web s
 
 ---
 
-## Diagnostic Modules (`v0.2.4`)
+## Diagnostic Modules (`v0.2.5`)
 
 1. **`MOD-01` — Password & Token Generator (`#/password-generator`)**
    - **Generated 100% Locally in Your Browser (Not on the Server):** Uses client-side CSPRNG (`window.crypto.getRandomValues`) with unbiased rejection sampling — zero network traffic, zero server involvement, and zero logging.
@@ -96,6 +96,8 @@ TechTools uses a plugin-style registry so new troubleshooting tools can be added
 
 ## Changelog
 
+- **`v0.2.5`** — Official Domain Contact Footer (`sysop@subwrite.se`):
+  - Added official contact address (`contact: sysop@subwrite.se`) to the persistent C64 bottom footer bar, the starter Command Deck "About TechTools" footer, and repository documentation.
 - **`v0.2.4`** — Password Generator Enhancements, Lighter Marine Blue Theme & Authentic Robotbåt Redesign:
   - **Password & Token Generator (`MOD-01`):**
     - Updated default preset to **`64BIT (16)`** (`16` chars, `A–Z`, `a–z`, `0–9`) and reworked ambiguous filtering into **`NO CONFUSE`** mode (default checked, excluding font-confusable look-alike characters `0, O, o, 1, l, I, |`), honoring user adjustments across visits via cookie (`tt_passgen_prefs`).
@@ -141,3 +143,12 @@ npm run build
 # Start standalone production API/static server (default 127.0.0.1:3001)
 npm start
 ```
+
+---
+
+## Contact
+
+For questions, feedback, or bug reports regarding [techtools.subwrite.se](https://techtools.subwrite.se):
+
+- **Email:** [sysop@subwrite.se](mailto:sysop@subwrite.se)
+- **GitHub:** [sgt-nylle/techtools](https://github.com/sgt-nylle/techtools)

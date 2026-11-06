@@ -1397,10 +1397,26 @@
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px 14px;
   font-family: var(--font-mono);
-  font-size: 14px;
+  font-size: 13px;
   color: var(--navy-dim);
+}
+
+.footer-right {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+.footer-credit-item {
+  white-space: nowrap;
+}
+
+.footer-sep {
+  color: var(--navy-cyan);
+  opacity: 0.75;
 }
 
 .provider-link {

@@ -2402,7 +2402,7 @@ export async function handleApiRequest(req, res) {
       sendJson(res, 200, {
         ok: true,
         service: 'techtools.subwrite.se',
-        version: '0.2.3',
+        version: '0.2.5',
         timestamp: new Date().toISOString(),
       });
       return true;

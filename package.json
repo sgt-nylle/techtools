@@ -1,7 +1,7 @@
 {
   "name": "techtools",
   "private": true,
-  "version": "0.2.5",
+  "version": "0.2.6",
   "author": "Sgt.Moon <sysop@subwrite.se>",
   "homepage": "https://techtools.subwrite.se",
   "type": "module",

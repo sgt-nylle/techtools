@@ -58,12 +58,13 @@ export function normalizeIp(raw) {
 
 export function isPrivateOrLoopbackIp(ip) {
   if (!ip) return true;
-  if (ip === '127.0.0.1' || ip === '::1' || ip === '::' || ip === 'localhost') return true;
-  if (ip.startsWith('10.') || ip.startsWith('192.168.') || ip.startsWith('127.') || ip.startsWith('0.')) return true;
-  if (ip.startsWith('169.254.') || ip.startsWith('fe80:') || ip.startsWith('fc') || ip.startsWith('fd')) {
+  const lower = ip.toLowerCase();
+  if (lower === '127.0.0.1' || lower === '::1' || lower === '::' || lower === 'localhost') return true;
+  if (lower.startsWith('10.') || lower.startsWith('192.168.') || lower.startsWith('127.') || lower.startsWith('0.')) return true;
+  if (lower.startsWith('169.254.') || lower.startsWith('fe80:') || lower.startsWith('fc') || lower.startsWith('fd')) {
     return true;
   }
-  const m172 = ip.match(/^172\.(\d+)\./);
+  const m172 = lower.match(/^172\.(\d+)\./);
   if (m172) {
     const second = Number(m172[1]);
     if (second >= 16 && second <= 31) return true;
@@ -106,15 +107,26 @@ function isPublicRoutableIp(ip) {
 }
 
 export function extractClientIp(req) {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (typeof forwarded === 'string' && forwarded.trim()) {
-    return normalizeIp(forwarded);
+  const socketIp = normalizeIp(req.socket?.remoteAddress || '');
+
+  // Only trust reverse-proxy forwarding headers when arriving from a local/private proxy (e.g. Caddy on 127.0.0.1).
+  // Prioritize X-Real-IP (set by Caddy from verified {client_ip}) and Cf-Connecting-Ip before X-Forwarded-For.
+  if (isPrivateOrLoopbackIp(socketIp)) {
+    const realIp = req.headers['x-real-ip'];
+    if (typeof realIp === 'string' && realIp.trim()) {
+      return normalizeIp(realIp);
+    }
+    const cfIp = req.headers['cf-connecting-ip'];
+    if (typeof cfIp === 'string' && cfIp.trim()) {
+      return normalizeIp(cfIp);
+    }
+    const forwarded = req.headers['x-forwarded-for'];
+    if (typeof forwarded === 'string' && forwarded.trim()) {
+      return normalizeIp(forwarded);
+    }
   }
-  const realIp = req.headers['x-real-ip'] || req.headers['cf-connecting-ip'];
-  if (typeof realIp === 'string' && realIp.trim()) {
-    return normalizeIp(realIp);
-  }
-  return normalizeIp(req.socket?.remoteAddress || '');
+
+  return socketIp;
 }
 
 function withTimeout(promise, ms, fallbackValue = null) {
@@ -2402,7 +2414,7 @@ export async function handleApiRequest(req, res) {
       sendJson(res, 200, {
         ok: true,
         service: 'techtools.subwrite.se',
-        version: '0.2.5',
+        version: '0.2.6',
         timestamp: new Date().toISOString(),
       });
       return true;

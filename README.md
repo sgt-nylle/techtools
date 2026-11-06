@@ -9,7 +9,7 @@ A modular retro C64 / Swedish Navy (*Kungliga Flottan*) IT troubleshooting web s
 
 ---
 
-## Diagnostic Modules (`v0.2.5`)
+## Diagnostic Modules (`v0.2.6`)
 
 1. **`MOD-01` — Password & Token Generator (`#/password-generator`)**
    - **Generated 100% Locally in Your Browser (Not on the Server):** Uses client-side CSPRNG (`window.crypto.getRandomValues`) with unbiased rejection sampling — zero network traffic, zero server involvement, and zero logging.
@@ -96,6 +96,8 @@ TechTools uses a plugin-style registry so new troubleshooting tools can be added
 
 ## Changelog
 
+- **`v0.2.6`** — Cloudflare Trusted Proxy & Real Client IP Resolution (`MOD-03` & Rate Limiter):
+  - Hardened [`extractClientIp`](server/apiHandler.mjs) to trust reverse-proxy headers only from local/private proxy sockets (`127.0.0.1` / loopback) and prioritize Caddy-verified `X-Real-IP` / `Cf-Connecting-Ip` before `X-Forwarded-For`, alongside Cloudflare CIDR `trusted_proxies` in production Caddy.
 - **`v0.2.5`** — Official Domain Contact Footer (`sysop@subwrite.se`):
   - Added official contact address (`contact: sysop@subwrite.se`) to the persistent C64 bottom footer bar, the starter Command Deck "About TechTools" footer, and repository documentation.
 - **`v0.2.4`** — Password Generator Enhancements, Lighter Marine Blue Theme & Authentic Robotbåt Redesign:

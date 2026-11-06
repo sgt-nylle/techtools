@@ -16,8 +16,8 @@ export const TOOL_MODULES: ToolModule[] = [
     category: 'SECURITY',
     badge: 'CSPRNG • LOCAL',
     description:
-      'Generate naval-grade passwords with custom complexity presets, memorable word passphrases, UUIDs, Hex keys, and JWT/API tokens strictly inside your browser.',
-    capabilities: ['Complexity Presets', 'Entropy Meter', 'Passphrases', 'UUID / Hex / JWT / API Keys'],
+      'Generate naval-grade passwords (64BIT & NO CONFUSE by default), multi-branch passphrases, UUIDs, Hex keys, and API tokens 100% locally in your browser — never on the server.',
+    capabilities: ['64BIT (16) & NO CONFUSE Defaults', '100% Local CSPRNG (No Server)', 'Passphrases', 'UUID / Hex / API Keys'],
     Component: PassGenTool,
   },
   {

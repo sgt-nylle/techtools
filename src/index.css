@@ -1,20 +1,24 @@
 :root {
-  --navy-bg: #041022;
-  --navy-panel: #06162e;
-  --navy-subcard: #081d3b;
-  --navy-frame: #0e2c54;
-  --navy-border: #2563eb;
-  --navy-border-bright: #3b82f6;
-  --navy-primary: #93c5fd;
-  --navy-dim: #60a5fa;
-  --navy-muted: #64748b;
-  --navy-cyan: #38bdf8;
+  --navy-bg: #123878;
+  --navy-panel: #174591;
+  --navy-subcard: #1e52ab;
+  --navy-inset: #0e2f66;
+  --navy-deep: #0b2654;
+  --navy-row-hover: #2157b5;
+  --navy-frame: #2563eb;
+  --navy-border: #5494f7;
+  --navy-border-bright: #82b5ff;
+  --navy-cell-border: #3674d9;
+  --navy-primary: #e2eeff;
+  --navy-dim: #bfd9ff;
+  --navy-muted: #a8c9fa;
+  --navy-cyan: #67e8f9;
   --navy-gold: #fecc02;
-  --navy-green: #34d399;
-  --navy-amber: #fbbf24;
-  --navy-red: #f87171;
+  --navy-green: #4ade80;
+  --navy-amber: #fde047;
+  --navy-red: #ff8585;
   --navy-white: #f8fafc;
-  --navy-glow: rgba(56, 189, 248, 0.55);
+  --navy-glow: rgba(103, 232, 249, 0.55);
 
   --font-arcade: 'Press Start 2P', monospace;
   --font-retro: 'VT323', 'Share Tech Mono', monospace;
@@ -31,7 +35,7 @@ html,
 body {
   width: 100%;
   min-height: 100vh;
-  background-color: #020813;
+  background-color: #0d2b5e;
   color: var(--navy-primary);
   font-family: var(--font-retro);
   overflow-x: hidden;
@@ -55,7 +59,7 @@ pre {
 }
 
 ::-webkit-scrollbar-track {
-  background: #030c1a;
+  background: var(--navy-deep);
 }
 
 ::-webkit-scrollbar-thumb {

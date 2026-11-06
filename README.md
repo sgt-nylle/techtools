@@ -2,16 +2,20 @@
 
 > **Swedish Navy Commodore 64 IT Troubleshooting & Diagnostic Suite (`techtools.subwrite.se`)**
 
-A modular retro C64 / Swedish Navy (*Kungliga Flottan*) IT troubleshooting web suite designed as a companion subsite to [subwrite.se](https://subwrite.se), featuring a custom 8-bit pixel-grid SVG sprite of the iconic *Norrköping*-class fast-attack missile boat **Robotbåt R136 HMS Västervik**.
+A modular retro C64 / Swedish Navy (*Kungliga Flottan*) IT troubleshooting web suite designed as a companion subsite to [subwrite.se](https://subwrite.se), featuring a custom pixel-art SVG sprite of the iconic *Norrköping*-class (*Spica II*) fast-attack missile boat **Robotbåt R136 HMS Västervik**.
+
+> [!IMPORTANT]
+> **100% Local Password & Token Generation (Never on the Server):** All passwords, passphrases, UUIDs, cryptographic keys, and API tokens in `MOD-01` are generated **strictly inside your own browser** using the Web Crypto API (`window.crypto.getRandomValues`). No generated secret is ever created on, logged by, or transmitted to the server.
 
 ---
 
-## Diagnostic Modules (`v0.2.3`)
+## Diagnostic Modules (`v0.2.4`)
 
 1. **`MOD-01` — Password & Token Generator (`#/password-generator`)**
-   - **100% Client-Side CSPRNG (`window.crypto.getRandomValues`)** with unbiased rejection sampling—zero network traffic, zero server logging.
-   - Complexity presets (`PIN`, `Easy-Read`, `Standard IT`, `Fortress`), custom length (`6–64`), character class toggles, ambiguous-character filter (`0OIl1|`), live entropy meter, and batch generation.
-   - Memorable word passphrases (`3–8` words) and developer/auth tokens (`UUID v4`, `Hex 128/256-bit`, `Base64URL 256/512-bit`, and custom-prefixed `Base62` API keys).
+   - **Generated 100% Locally in Your Browser (Not on the Server):** Uses client-side CSPRNG (`window.crypto.getRandomValues`) with unbiased rejection sampling — zero network traffic, zero server involvement, and zero logging.
+   - **`64BIT (16)` & `NO CONFUSE` Enabled by Default (Cookie-Persisted):** Opens with **`64BIT (16)`** (`16` chars, `A–Z`, `a–z`, `0–9`) and **`NO CONFUSE`** enabled by default — excluding look-alike characters (`0`, `O`, `o`, `1`, `l`, `I`, `|`) that can be misread across proportional/sans-serif fonts — while saving any user preset or toggle changes in a local preference cookie (`tt_passgen_prefs`).
+   - **Complexity Presets & Strength Tiers:** Presets (`PIN (8)`, `64BIT (16)`, `STANDARD IT (20)`, `FORTRESS (32)`), custom length (`6–64`), character class toggles, batch generation (`1×`, `5×`, `10×`), and live entropy telemetry (`ULTRA NAVY CRYPTO` for `>= 32` char passwords, `NAVY CRYPTO GRADE` for `> 5` word passphrases).
+   - **Multi-Branch Passphrases & Developer Tokens:** Memorable cross-domain word passphrases (`3–8` words blending Navy, Nature, Food, Drinks, Cars, Fitness, and Tech vocabulary) plus developer/auth tokens (`UUID v4`, `Hex 128/256-bit`, `Base64URL 256/512-bit`, and custom-prefixed `Base62` API keys).
 2. **`MOD-02` — DNS & Domain Registry Intel (`#/dns-inspector`)**
    - Selectable DNS resolvers: **Google `8.8.8.8` (default)**, **Cloudflare `1.1.1.1`**, or **Custom** public DNS server IP / authoritative nameserver hostname.
    - Parallel lookups for `A`, `AAAA`, `CNAME`, `PTR`, `MX` (including mail exchanger IPv4 resolution), `NS`, `SOA`, `TXT`, and `CAA`.
@@ -20,7 +24,6 @@ A modular retro C64 / Swedish Navy (*Kungliga Flottan*) IT troubleshooting web s
 3. **`MOD-03` — What's My IP? & Range Owner (`#/whats-my-ip`)**
    - Displays caller's public IPv4/IPv6 address, reverse `PTR` hostname, routed BGP CIDR prefix, Autonomous System (`ASN` + ISP holder), and RIR allocation block owner/netname/country/abuse contact.
    - Includes an external IP/hostname lookup bar to inspect any third-party IP block.
-
 4. **`MOD-04` — Certificate & CSR Analyzer (`#/cert-analyzer`)**
    - Base64 / PEM certificate analyzer detecting X.509 certs, Certificate Signing Requests (CSR), and public keys.
    - Extracts Subject, Issuer, Serial, SHA-256 fingerprint, validity dates, days remaining, SAN names, Key Usage, and Extended Key Usage (Server/Client auth).
@@ -51,9 +54,9 @@ A modular retro C64 / Swedish Navy (*Kungliga Flottan*) IT troubleshooting web s
 | | `Tab` / `Shift+Tab` | Step through buttons, secret rows, and diagnostic intel sections |
 | | `C` | Copy the currently focused intel section / secret row |
 | **MOD-01 (PassGen)** | `P` / `W` / `T` | Switch between Passwords, Passphrases, and API Tokens |
-| | `N` / `E` / `D` / `F` | Apply preset: `PIN`, `Easy-Read`, `Standard IT`, `Fortress` |
+| | `N` / `B` (or `E`) / `D` / `F` | Apply preset: `PIN (8)`, `64BIT (16)`, `STANDARD IT (20)`, `FORTRESS (32)` |
 | | `-` / `+` | Decrease / increase password length or passphrase word count |
-| | `U` / `L` / `G` / `Y` / `X` | Toggle Upper, Lower, Digits, Symbols, or No Ambiguous |
+| | `U` / `L` / `G` / `Y` / `X` | Toggle Upper, Lower, Digits, Symbols, or **`NO CONFUSE`** (`0/O, 1/l/I`) |
 | | `R` / `C` / `A` | Regenerate (`R`), Copy `#1` or focused row (`C`), Copy All (`A`) |
 | **MOD-02 (DNS & WHOIS)** | `Q` (or `/`) / `R` | Focus domain input (`Q`), Run/re-scan DNS & WHOIS (`R`) |
 | | `G` / `F` / `U` | Select DNS resolver: Google `8.8.8.8` (`G`, default), Cloudflare `1.1.1.1` (`F`), Custom DNS (`U`) |
@@ -85,14 +88,24 @@ TechTools uses a plugin-style registry so new troubleshooting tools can be added
 
 ## Security & Architecture
 
+- **100% Local Client-Side Secret Generation:** All passwords, passphrases, UUIDs, hex keys, and API tokens are generated exclusively inside the user's browser via `window.crypto.getRandomValues` — **never on the server** and never transmitted over the network.
 - **Zero External Runtime Dependencies on Backend:** Pure Node.js v20+ (`node:dns`, `node:net`, `node:tls`, `node:https`, `node:http`) with zero third-party API keys required.
 - **Built-In Rate Limiting, SSRF Protection & Input Sanitization:** Per-IP sliding-window rate limiter (`60 req/min/IP`), strict `isPublicRoutableIp` SSRF validation (blocking RFC1918, loopback, link-local/cloud metadata, CGNAT, and internal suffixes on initial targets and all HTTP redirect hops), IP-pinned outbound sockets, and port-43 CRLF stripping.
-- **Zero-Trust Secret Generation:** Passwords, passphrases, and tokens never leave the user's browser.
 
 ---
 
 ## Changelog
 
+- **`v0.2.4`** — Password Generator Enhancements, Lighter Marine Blue Theme & Authentic Robotbåt Redesign:
+  - **Password & Token Generator (`MOD-01`):**
+    - Updated default preset to **`64BIT (16)`** (`16` chars, `A–Z`, `a–z`, `0–9`) and reworked ambiguous filtering into **`NO CONFUSE`** mode (default checked, excluding font-confusable look-alike characters `0, O, o, 1, l, I, |`), honoring user adjustments across visits via cookie (`tt_passgen_prefs`).
+    - Expanded passphrase dictionary across **Navy, Nature, Food, Drinks, Cars, Fitness, and Tech** vocabulary.
+    - Updated strength status tiers: `>= 32` character passwords (`FORTRESS (32)`+) display **`ULTRA NAVY CRYPTO`**, and `> 5` word passphrases (`6–8` words) display **`NAVY CRYPTO GRADE`**.
+    - Highlighted across tool UI and documentation that all passwords, passphrases, and tokens are generated **100% locally in the browser and never on the server**.
+  - **Theme, Robotbåt & UX Polish:**
+    - Lifted console palette to a brighter **Swedish Marine / C64 Royal Blue** theme with softened CRT scanlines/vignette and responsive single-row 6-module desktop navigation.
+    - Redesigned **Robotbåt R136 HMS Västervik** pixel-art SVG faithfully after the *Norrköping*-class (*Spica II*) profile (tandem forward-upward RBS-15 box launchers, open X-braced lattice mast + oval Sea Giraffe radome, tall aft pole mast + 3-tailed Swedish Naval Ensign, stepped bridge + 9LV200 director, Bofors 57 mm cupola gun, and M90 splinter camouflage), added gentle wave bobbing animation, and updated the `1200×630` `og-image.png` social preview.
+    - Cleared pre-filled default domain in `MOD-02` (**DNS & WHOIS**) in favor of a standard input prompt placeholder.
 - **`v0.2.3`** — External Endpoint & TLS Probe (`MOD-06`) & Active Sonar ICMP Ping:
   - Added `MOD-06` **URL Tester — External Endpoint & TLS Probe** (`#/url-tester`) for testing public corporate URLs and custom TCP ports (default `443`) from outside internal networks and firewalls.
   - Added **Active Sonar ICMP Ping (`PING OK`)** running concurrently with DNS/TCP/TLS/HTTP probes (`min / avg / max ms`, packet loss %, `TTL`, and ICMP-filtered firewall detection).

@@ -73,7 +73,7 @@ interface DnsResultPayload {
 }
 
 export const DnsTool: React.FC = () => {
-  const [domainInput, setDomainInput] = useState<string>('subwrite.se');
+  const [domainInput, setDomainInput] = useState<string>('');
   const [dnsPreset, setDnsPreset] = useState<DnsServerPreset>('google');
   const [customDnsInput, setCustomDnsInput] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
@@ -89,7 +89,12 @@ export const DnsTool: React.FC = () => {
   const runLookup = useCallback(
     async (targetOverride?: string, serverOverride?: string) => {
       const queryTarget = (targetOverride ?? domainInput).trim();
-      if (!queryTarget) return;
+      if (!queryTarget) {
+        setError('Enter a domain name, subdomain, or IP address to inspect.');
+        sound.playError();
+        inputRef.current?.focus();
+        return;
+      }
 
       const resolvedServerParam =
         serverOverride !== undefined
@@ -410,7 +415,7 @@ export const DnsTool: React.FC = () => {
             type="text"
             value={domainInput}
             onChange={(e) => setDomainInput(e.target.value)}
-            placeholder="Enter domain, subdomain, URL, or IP (press ESC to unlock shortcuts)"
+            placeholder="Paste domain name, subdomain, or IP to inspect... (ESC unlocks shortcuts)"
             className="navy-input"
             autoCapitalize="none"
             autoCorrect="off"

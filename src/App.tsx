@@ -263,8 +263,9 @@ export function App() {
             </p>
             <ul className="about-list">
               <li>
-                <strong>Password &amp; Token Generator</strong> — secure passwords, passphrases, UUIDs, hex keys and API
-                tokens generated locally in your browser.
+                <strong>Password &amp; Token Generator</strong> — secure passwords (with <code>64BIT (16)</code> &amp;{' '}
+                <code>NO CONFUSE</code> enabled by default), multi-branch passphrases, UUIDs, hex keys and API tokens{' '}
+                <strong>generated 100% locally in your browser and never on the server</strong>.
               </li>
               <li>
                 <strong>DNS &amp; WHOIS Lookup</strong> — A, AAAA, MX, NS, TXT, SOA, CAA and PTR records, SPF and DMARC

@@ -148,9 +148,10 @@ npm start
 
 ---
 
-## Contact
+## Community & Contact
 
-For questions, feedback, or bug reports regarding [techtools.subwrite.se](https://techtools.subwrite.se):
+Join our open Matrix channel or reach out for questions, feedback, or bug reports regarding [techtools.subwrite.se](https://techtools.subwrite.se):
 
+- **Matrix Room (`#subwrite:subwrite.se`):** [https://chat.subwrite.se/#/room/#subwrite:subwrite.se](https://chat.subwrite.se/#/room/#subwrite:subwrite.se) (or via [matrix.to](https://matrix.to/#/#subwrite:subwrite.se) from any Matrix client)
 - **Email:** [sysop@subwrite.se](mailto:sysop@subwrite.se)
 - **GitHub:** [sgt-nylle/techtools](https://github.com/sgt-nylle/techtools)

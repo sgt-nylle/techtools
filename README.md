@@ -148,9 +148,10 @@ npm start
 
 ---
 
-## Contact
+## Community & Contact
 
-For questions, feedback, or bug reports regarding [techtools.subwrite.se](https://techtools.subwrite.se):
+Join our Discord server or reach out for questions, feedback, or bug reports regarding [techtools.subwrite.se](https://techtools.subwrite.se):
 
+- **Discord:** [https://discord.gg/9uXbaunJb](https://discord.gg/9uXbaunJb)
 - **Email:** [sysop@subwrite.se](mailto:sysop@subwrite.se)
 - **GitHub:** [sgt-nylle/techtools](https://github.com/sgt-nylle/techtools)

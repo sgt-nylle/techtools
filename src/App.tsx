@@ -279,8 +279,9 @@ export function App() {
                 <strong>generated 100% locally in your browser and never on the server</strong>.
               </li>
               <li>
-                <strong>DNS &amp; WHOIS Lookup</strong> — A, AAAA, MX, NS, TXT, SOA, CAA and PTR records, SPF and DMARC
-                checks, and domain registration info, queried via Google, Cloudflare or a custom DNS server.
+                <strong>DNS &amp; WHOIS Lookup</strong> — A, AAAA, MX, NS, TXT, SOA, CAA and PTR records, DNSSEC zone
+                key (<code>DNSKEY</code> &amp; <code>DS</code> chain of trust) inspection, SPF and DMARC checks, and
+                domain registration info, queried via Google, Cloudflare or a custom DNS server.
               </li>
               <li>
                 <strong>What&apos;s My IP</strong> — your public IP address with reverse DNS, ASN, BGP prefix and IP range

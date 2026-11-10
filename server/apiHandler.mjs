@@ -2129,7 +2129,7 @@ function executeSocketProbe({ ip, hostname, port, pathWithQuery, method, useTls 
             agent: oneShotAgent,
             headers: {
               Host: hostHeader,
-              'User-Agent': 'SubWrite-TechTools-Probe/0.2.3 (+https://techtools.subwrite.se)',
+              'User-Agent': 'SubWrite-TechTools-Probe/0.2.7 (+https://techtools.subwrite.se)',
               Accept: 'text/html,application/xhtml+xml,application/json,*/*;q=0.8',
               'Accept-Encoding': 'identity',
               Connection: 'close',
@@ -2689,7 +2689,7 @@ export async function handleApiRequest(req, res) {
       sendJson(res, 200, {
         ok: true,
         service: 'techtools.subwrite.se',
-        version: '0.2.6',
+        version: '0.2.7',
         timestamp: new Date().toISOString(),
       });
       return true;

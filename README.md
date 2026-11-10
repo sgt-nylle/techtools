@@ -1,7 +1,7 @@
 # TechTools // HMS Västervik (R136) ⚓
 
 > **🚀 LIVE APPLICATION:** **[https://techtools.subwrite.se](https://techtools.subwrite.se)**  
-> **Swedish Navy Commodore 64 IT Troubleshooting & Diagnostic Suite**
+> **IT Network TechTools for Navy Sailors!**
 
 [![Launch TechTools](https://img.shields.io/badge/LAUNCH_APP-techtools.subwrite.se-2563eb?style=for-the-badge&logo=googlechrome&logoColor=white)](https://techtools.subwrite.se)
 [![Companion: subwrite.se](https://img.shields.io/badge/COMPANION-subwrite.se-facc15?style=for-the-badge)](https://subwrite.se)

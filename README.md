@@ -1,8 +1,12 @@
 # TechTools // HMS Västervik (R136) ⚓
 
-> **Swedish Navy Commodore 64 IT Troubleshooting & Diagnostic Suite (`techtools.subwrite.se`)**
+> **🚀 LIVE APPLICATION:** **[https://techtools.subwrite.se](https://techtools.subwrite.se)**  
+> **Swedish Navy Commodore 64 IT Troubleshooting & Diagnostic Suite**
 
-A modular retro C64 / Swedish Navy (*Kungliga Flottan*) IT troubleshooting web suite designed as a companion subsite to [subwrite.se](https://subwrite.se), featuring a custom pixel-art SVG sprite of the iconic *Norrköping*-class (*Spica II*) fast-attack missile boat **Robotbåt R136 HMS Västervik**.
+[![Launch TechTools](https://img.shields.io/badge/LAUNCH_APP-techtools.subwrite.se-2563eb?style=for-the-badge&logo=googlechrome&logoColor=white)](https://techtools.subwrite.se)
+[![Companion: subwrite.se](https://img.shields.io/badge/COMPANION-subwrite.se-facc15?style=for-the-badge)](https://subwrite.se)
+
+A modular retro C64 / Swedish Navy (*Kungliga Flottan*) IT troubleshooting web suite designed as a companion subsite to [subwrite.se](https://subwrite.se), featuring a custom pixel-art SVG sprite of the iconic *Norrköping*-class (*Spica II*) fast-attack missile boat **Robotbåt R136 HMS Västervik**. Launch and use the full suite directly in your browser at **[https://techtools.subwrite.se](https://techtools.subwrite.se)**.
 
 > [!IMPORTANT]
 > **100% Local Password & Token Generation (Never on the Server):** All passwords, passphrases, UUIDs, cryptographic keys, and API tokens in `MOD-01` are generated **strictly inside your own browser** using the Web Crypto API (`window.crypto.getRandomValues`). No generated secret is ever created on, logged by, or transmitted to the server.
@@ -155,6 +159,16 @@ npm start
 
 Join our Discord server or reach out for questions, feedback, or bug reports regarding [techtools.subwrite.se](https://techtools.subwrite.se):
 
+- **Live Application:** **[https://techtools.subwrite.se](https://techtools.subwrite.se)**
 - **Discord:** [https://discord.gg/9uXbaunJb](https://discord.gg/9uXbaunJb)
 - **Email:** [sysop@subwrite.se](mailto:sysop@subwrite.se)
 - **GitHub:** [sgt-nylle/techtools](https://github.com/sgt-nylle/techtools)
+
+---
+
+## ⚓ Launch TechTools Online
+
+Run all six IT diagnostic utilities instantly in your browser (no installation or registration required):
+
+🚀 **[Launch techtools.subwrite.se ↗](https://techtools.subwrite.se)**
+

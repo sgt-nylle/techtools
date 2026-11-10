@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { CopyableIntelSection } from '../components/CopyableIntelSection';
 import { sound } from '../utils/audio';
+import { useIsPaneActive } from '../utils/paneContext';
 
 interface IpLookupPayload {
   ip: string;
@@ -35,6 +36,7 @@ interface IpLookupPayload {
 }
 
 export const MyIpTool: React.FC = () => {
+  const isPaneActive = useIsPaneActive();
   const [data, setData] = useState<IpLookupPayload | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -124,6 +126,7 @@ export const MyIpTool: React.FC = () => {
 
   // Single-letter shortcuts for What's My IP / RIR Range Owner tool
   useEffect(() => {
+    if (!isPaneActive) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
       const target = e.target as HTMLElement | null;
@@ -178,7 +181,7 @@ export const MyIpTool: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [data, loading, customTarget, fetchIpIntel, handleCopyIp]);
+  }, [isPaneActive, data, loading, customTarget, fetchIpIntel, handleCopyIp]);
 
   const { rangeCopyPayload, headersCopyPayload } = useMemo(() => {
     if (!data) return { rangeCopyPayload: '', headersCopyPayload: '' };

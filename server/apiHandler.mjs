@@ -152,7 +152,7 @@ function fetchJsonHttps(urlStr, timeoutMs = 5000, acceptHeader = 'application/js
         family: 4,
         timeout: timeoutMs,
         headers: {
-          'User-Agent': 'SubWrite-TechTools/0.2.7 (+https://techtools.subwrite.se)',
+          'User-Agent': 'SubWrite-TechTools/0.3.1 (+https://techtools.subwrite.se)',
           Accept: acceptHeader,
         },
       },
@@ -2129,7 +2129,7 @@ function executeSocketProbe({ ip, hostname, port, pathWithQuery, method, useTls 
             agent: oneShotAgent,
             headers: {
               Host: hostHeader,
-              'User-Agent': 'SubWrite-TechTools-Probe/0.2.7 (+https://techtools.subwrite.se)',
+              'User-Agent': 'SubWrite-TechTools-Probe/0.3.1 (+https://techtools.subwrite.se)',
               Accept: 'text/html,application/xhtml+xml,application/json,*/*;q=0.8',
               'Accept-Encoding': 'identity',
               Connection: 'close',
@@ -2222,6 +2222,9 @@ function executeSocketProbe({ ip, hostname, port, pathWithQuery, method, useTls 
                       csp: res.headers['content-security-policy']
                         ? String(res.headers['content-security-policy'])
                         : null,
+                      cspReportOnly: res.headers['content-security-policy-report-only']
+                        ? String(res.headers['content-security-policy-report-only'])
+                        : null,
                       xFrameOptions: res.headers['x-frame-options']
                         ? String(res.headers['x-frame-options'])
                         : null,
@@ -2230,6 +2233,18 @@ function executeSocketProbe({ ip, hostname, port, pathWithQuery, method, useTls 
                         : null,
                       referrerPolicy: res.headers['referrer-policy']
                         ? String(res.headers['referrer-policy'])
+                        : null,
+                      permissionsPolicy: res.headers['permissions-policy']
+                        ? String(res.headers['permissions-policy'])
+                        : null,
+                      crossOriginOpenerPolicy: res.headers['cross-origin-opener-policy']
+                        ? String(res.headers['cross-origin-opener-policy'])
+                        : null,
+                      crossOriginResourcePolicy: res.headers['cross-origin-resource-policy']
+                        ? String(res.headers['cross-origin-resource-policy'])
+                        : null,
+                      crossOriginEmbedderPolicy: res.headers['cross-origin-embedder-policy']
+                        ? String(res.headers['cross-origin-embedder-policy'])
                         : null,
                     },
                   },
@@ -2689,7 +2704,7 @@ export async function handleApiRequest(req, res) {
       sendJson(res, 200, {
         ok: true,
         service: 'techtools.subwrite.se',
-        version: '0.2.7',
+        version: '0.3.1',
         timestamp: new Date().toISOString(),
       });
       return true;

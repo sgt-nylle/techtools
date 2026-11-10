@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { CopyableIntelSection } from '../components/CopyableIntelSection';
 import { sound } from '../utils/audio';
+import { useIsPaneActive } from '../utils/paneContext';
 import { parseEmailMessageHeader, type MailHeaderAnalysis } from './mailHeaderParser';
 
 const SAMPLE_MAIL_HEADERS = `Delivered-To: commander@subwrite.se
@@ -29,6 +30,7 @@ DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=subwrite.se; s=20230601;
         bh=kO8m9...; b=w7Y12a...`;
 
 export const MailHeaderTool: React.FC = () => {
+  const isPaneActive = useIsPaneActive();
   const [headerInput, setHeaderInput] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<MailHeaderAnalysis | null>(null);
@@ -122,6 +124,7 @@ export const MailHeaderTool: React.FC = () => {
 
   // Keyboard shortcuts
   useEffect(() => {
+    if (!isPaneActive) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
       const target = e.target as HTMLElement | null;
@@ -182,7 +185,7 @@ export const MailHeaderTool: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [data, activeTab, analyzeHeaders, copyText, hopsOverallPayload, authOverallPayload]);
+  }, [isPaneActive, data, activeTab, analyzeHeaders, copyText, hopsOverallPayload, authOverallPayload]);
 
   return (
     <div className="tool-panel">

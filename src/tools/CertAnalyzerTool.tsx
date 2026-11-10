@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { CopyableIntelSection } from '../components/CopyableIntelSection';
 import { sound } from '../utils/audio';
+import { useIsPaneActive } from '../utils/paneContext';
 import type { CertAnalysisPayload } from './certTypes';
 
 const SAMPLE_CERT = `-----BEGIN CERTIFICATE-----
@@ -54,6 +55,7 @@ e3X7f2Z4J6A1Z4e3X7f2Z4J6A1Z4e3X7f2Z4J6A1Z4e3X7f2Z4J6A1Z4e3X7==
 -----END CERTIFICATE REQUEST-----`;
 
 export const CertAnalyzerTool: React.FC = () => {
+  const isPaneActive = useIsPaneActive();
   const [certInput, setCertInput] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -132,6 +134,7 @@ export const CertAnalyzerTool: React.FC = () => {
 
   // Keyboard shortcuts
   useEffect(() => {
+    if (!isPaneActive) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
       const target = e.target as HTMLElement | null;
@@ -174,7 +177,7 @@ export const CertAnalyzerTool: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [loading, data, analyzeCertText, handleCopyChain]);
+  }, [isPaneActive, loading, data, analyzeCertText, handleCopyChain]);
 
   // Formatted copy payload
   const formattedSummaryPayload = useMemo(() => {

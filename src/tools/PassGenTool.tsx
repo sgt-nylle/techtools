@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { sound } from '../utils/audio';
+import { useIsPaneActive } from '../utils/paneContext';
 
 type GenMode = 'password' | 'passphrase' | 'tokens';
 type ComplexityPreset = 'pin' | '64bit' | 'standard' | 'fortress';
@@ -237,6 +238,7 @@ function generateUuidV4(): string {
 }
 
 export const PassGenTool: React.FC = () => {
+  const isPaneActive = useIsPaneActive();
   const initialPrefs = useMemo(() => readPassGenCookie(), []);
 
   const [mode, setMode] = useState<GenMode>('password');
@@ -426,6 +428,7 @@ export const PassGenTool: React.FC = () => {
 
   // Keyboard shortcuts for PassGenTool
   useEffect(() => {
+    if (!isPaneActive) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
       const target = e.target as HTMLElement | null;
@@ -565,7 +568,7 @@ export const PassGenTool: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [mode, passwords, passphrases, tokens.uuid, copyText, applyPreset]);
+  }, [isPaneActive, mode, passwords, passphrases, tokens.uuid, copyText, applyPreset]);
 
   const entropyBits =
     mode === 'password'

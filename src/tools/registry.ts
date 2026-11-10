@@ -5,6 +5,9 @@ import { MyIpTool } from './MyIpTool';
 import { CertAnalyzerTool } from './CertAnalyzerTool';
 import { MailHeaderTool } from './MailHeaderTool';
 import { UrlProbeTool } from './UrlProbeTool';
+import { SubnetTool } from './SubnetTool';
+import { AuthInspectorTool } from './AuthInspectorTool';
+import { SecurityHeadersTool } from './SecurityHeadersTool';
 
 export const TOOL_MODULES: ToolModule[] = [
   {
@@ -84,6 +87,45 @@ export const TOOL_MODULES: ToolModule[] = [
       'Test external corporate URLs, ICMP sonar ping, and custom TCP ports (default 443) from outside internal firewalls. Inspect HTTP responses, redirect chains, and live SSL/TLS certificate details.',
     capabilities: ['Sonar ICMP Ping', 'WAN URL & Port (443)', 'HTTP Status & Redirects', 'Live SSL Cert & Chain'],
     Component: UrlProbeTool,
+  },
+  {
+    id: 'subnet-calculator',
+    code: 'MOD-07',
+    shortcut: '7',
+    title: 'SUBNET & SUPERNETTING CALCULATOR',
+    shortTitle: 'SUBNET CALC',
+    category: 'NETWORK',
+    badge: 'IPv4 • IPv6 • CIDR',
+    description:
+      '100% client-side IPv4/IPv6 CIDR subnet & supernetting calculator. Computes netmask, wildcard, network/broadcast, usable host ranges, bitwise binary, reverse DNS PTR (in-addr.arpa / ip6.arpa), and interactive subnet carving.',
+    capabilities: ['IPv4 & IPv6 CIDR Math', 'Bitwise Binary View', 'in-addr.arpa & ip6.arpa PTR', 'Interactive Subnet Divider'],
+    Component: SubnetTool,
+  },
+  {
+    id: 'auth-inspector',
+    code: 'MOD-08',
+    shortcut: '8',
+    title: 'JWT, OIDC & SAML AUTH INSPECTOR',
+    shortTitle: 'JWT / SAML AUTH',
+    category: 'SECURITY',
+    badge: 'JWT • ENTRA • SAML',
+    description:
+      '100% client-side decoder for enterprise JWT, OIDC, and SAML 2.0 tokens. Converts iat/nbf/exp timestamps with live expiry badges, highlights Microsoft Entra ID claims (upn, oid, tid, roles, groups, wids), and formats Base64 SAML XML.',
+    capabilities: ['100% Client-Side Token Decode', 'Live iat / nbf / exp Status', 'Entra ID / OIDC Claims', 'SAML 2.0 XML Formatter'],
+    Component: AuthInspectorTool,
+  },
+  {
+    id: 'security-headers',
+    code: 'MOD-09',
+    shortcut: '9',
+    title: 'HTTP SECURITY HEADERS & CSP EVALUATOR',
+    shortTitle: 'SEC HEADERS',
+    category: 'SECURITY',
+    badge: 'HSTS • CSP • SCORE',
+    description:
+      'Audit and score target URL HTTP security headers against OWASP & naval compliance baselines. Evaluates HSTS, CSP directives (warning on unsafe-inline, unsafe-eval, and wildcards), X-Frame-Options, nosniff, Referrer-Policy, and Permissions-Policy.',
+    capabilities: ['HSTS & Max-Age Verification', 'CSP unsafe-inline/eval Audit', 'XFO / nosniff / Referrer / Permissions', 'Terminal PASS / WARN / FAIL Score'],
+    Component: SecurityHeadersTool,
   },
 ];
 

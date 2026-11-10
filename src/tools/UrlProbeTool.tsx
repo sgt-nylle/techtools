@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { CopyableIntelSection } from '../components/CopyableIntelSection';
 import { sound } from '../utils/audio';
+import { useIsPaneActive } from '../utils/paneContext';
 
 type ProbeViewTab = 'all' | 'http' | 'tls' | 'headers';
 type ProbeMethod = 'GET' | 'HEAD';
@@ -182,6 +183,7 @@ function extractInlinePortOrSchemeDefault(raw: string): { explicitPort: string |
 }
 
 export const UrlProbeTool: React.FC = () => {
+  const isPaneActive = useIsPaneActive();
   const [urlInput, setUrlInput] = useState<string>('');
   const [portInput, setPortInput] = useState<string>('443');
   const [portManuallyEdited, setPortManuallyEdited] = useState<boolean>(false);
@@ -303,6 +305,7 @@ export const UrlProbeTool: React.FC = () => {
 
   // Keyboard-first single-letter shortcuts
   useEffect(() => {
+    if (!isPaneActive) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
       const target = e.target as HTMLElement | null;
@@ -384,7 +387,7 @@ export const UrlProbeTool: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [data, loading, runProbe, copyValue]);
+  }, [isPaneActive, data, loading, runProbe, copyValue]);
 
   const sectionPayloads = useMemo(() => {
     if (!data) {

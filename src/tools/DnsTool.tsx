@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { CopyableIntelSection } from '../components/CopyableIntelSection';
 import { sound } from '../utils/audio';
+import { useIsPaneActive } from '../utils/paneContext';
 
 type DnsViewTab = 'all' | 'ip' | 'mail' | 'authority' | 'whois';
 type DnsServerPreset = 'google' | 'cloudflare' | 'custom';
@@ -116,6 +117,7 @@ interface DnsResultPayload {
 }
 
 export const DnsTool: React.FC = () => {
+  const isPaneActive = useIsPaneActive();
   const [domainInput, setDomainInput] = useState<string>('');
   const [dnsPreset, setDnsPreset] = useState<DnsServerPreset>('google');
   const [customDnsInput, setCustomDnsInput] = useState<string>('');
@@ -232,6 +234,7 @@ export const DnsTool: React.FC = () => {
 
   // Single-letter shortcuts for DNS & WHOIS tool
   useEffect(() => {
+    if (!isPaneActive) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
       const target = e.target as HTMLElement | null;
@@ -307,7 +310,7 @@ export const DnsTool: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [data, loading, runLookup, selectDnsPreset]);
+  }, [isPaneActive, data, loading, runLookup, selectDnsPreset]);
 
   // Formatted plain-text clipboard payloads for each Tab-selectable intel section
   const sectionPayloads = useMemo(() => {

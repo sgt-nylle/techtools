@@ -490,7 +490,7 @@ export const HmsVastervik: React.FC<{ className?: string }> = ({ className = '' 
         className="vastervik-svg"
         shapeRendering="crispEdges"
         role="img"
-        aria-label="8-bit Swedish Navy Norrköping-class Robotbåt HMS Västervik R136"
+        aria-label="Clean Swedish Navy Norrköping-class Robotbåt HMS Västervik R136"
       >
         <defs>
           <filter id="navyGlow" x="-12%" y="-12%" width="124%" height="124%">

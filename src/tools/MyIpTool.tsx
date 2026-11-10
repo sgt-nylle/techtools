@@ -232,17 +232,17 @@ export const MyIpTool: React.FC = () => {
     <div className="tool-panel">
       {/* HERO PUBLIC IP DISPLAY */}
       {loading ? (
-        <div className="loading-radar c64-box">
+        <div className="loading-radar clean-box">
           <span className="radar-spinner">◎</span> ACQUIRING PUBLIC IP &amp; RIR ALLOCATION TELEMETRY...
         </div>
       ) : error ? (
-        <div className="alert-banner status-err c64-box">⚠ {error}</div>
+        <div className="alert-banner status-err clean-box">⚠ {error}</div>
       ) : (
         data && (
           <>
             <div
               tabIndex={0}
-              className={`ip-hero-card copyable-section c64-box ${copied ? 'section-just-copied' : ''}`}
+              className={`ip-hero-card copyable-section clean-box ${copied ? 'section-just-copied' : ''}`}
               aria-label={`Public IP ${data.ip} — Press C to copy IP`}
               onKeyDown={(e) => {
                 if (!e.metaKey && !e.ctrlKey && !e.altKey && (e.key === 'c' || e.key === 'C')) {
@@ -435,7 +435,7 @@ export const MyIpTool: React.FC = () => {
 
       {/* BONUS EXTERNAL IP / HOST INSPECTOR */}
       <form
-        className="query-bar c64-box"
+        className="query-bar clean-box"
         onSubmit={(e) => {
           e.preventDefault();
           sound.playRadarPing();

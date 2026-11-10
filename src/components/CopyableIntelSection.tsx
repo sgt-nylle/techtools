@@ -10,7 +10,7 @@ interface CopyableIntelSectionProps {
 }
 
 /**
- * Tab-focusable C64 diagnostic card.
+ * Tab-focusable clean diagnostic card.
  * Users can Tab / Shift+Tab onto any section and press [C] (or click COPY [C])
  * to copy the formatted diagnostic output of that section to the clipboard.
  */
@@ -51,7 +51,7 @@ export const CopyableIntelSection: React.FC<CopyableIntelSectionProps> = ({
     <section
       tabIndex={0}
       onKeyDown={handleKeyDown}
-      className={`intel-section copyable-section c64-box ${copied ? 'section-just-copied' : ''} ${className}`}
+      className={`intel-section copyable-section clean-box ${copied ? 'section-just-copied' : ''} ${className}`}
       aria-label={`${title} — Press C to copy section output`}
     >
       <div className="section-title-row">

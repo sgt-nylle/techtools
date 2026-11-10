@@ -627,7 +627,7 @@ export const SubnetTool: React.FC = () => {
     <div className="tool-panel">
       {/* CIDR INPUT & SUPERNET / SUBNET PREFIX STEPPER */}
       <form
-        className="query-bar c64-box"
+        className="query-bar clean-box"
         onSubmit={(e) => {
           e.preventDefault();
           sound.playBlip();
@@ -684,12 +684,12 @@ export const SubnetTool: React.FC = () => {
         </div>
       </form>
 
-      {error && <div className="alert-banner status-err c64-box">⚠ {error}</div>}
+      {error && <div className="alert-banner status-err clean-box">⚠ {error}</div>}
 
       {data && (
         <>
           {/* TELEMETRY STRIP */}
-          <div className="telemetry-strip c64-box">
+          <div className="telemetry-strip clean-box">
             <div className="tele-cell">
               <span className="tele-lbl">CANONICAL CIDR</span>
               <span className="tele-val text-gold">{data.cidrNotation}</span>

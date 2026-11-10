@@ -6,7 +6,7 @@
 [![Launch TechTools](https://img.shields.io/badge/LAUNCH_APP-techtools.subwrite.se-2563eb?style=for-the-badge&logo=googlechrome&logoColor=white)](https://techtools.subwrite.se)
 [![Companion: subwrite.se](https://img.shields.io/badge/COMPANION-subwrite.se-facc15?style=for-the-badge)](https://subwrite.se)
 
-A modular retro C64 / Swedish Navy (*Kungliga Flottan*) IT troubleshooting web suite designed as a companion subsite to [subwrite.se](https://subwrite.se), featuring a custom pixel-art SVG sprite of the iconic *Norrköping*-class (*Spica II*) fast-attack missile boat **Robotbåt R136 HMS Västervik**. Launch and use the full suite directly in your browser at **[https://techtools.subwrite.se](https://techtools.subwrite.se)**.
+A modular clean, optimized Swedish Navy (*Kungliga Flottan*) IT troubleshooting web suite designed as a companion subsite to [subwrite.se](https://subwrite.se), featuring a custom pixel-art SVG sprite of the iconic *Norrköping*-class (*Spica II*) fast-attack missile boat **Robotbåt R136 HMS Västervik**. Launch and use the full suite directly in your browser at **[https://techtools.subwrite.se](https://techtools.subwrite.se)**.
 
 > [!IMPORTANT]
 > **100% Local Password, Token & Enterprise Auth Processing (Never on the Server):** All passwords, passphrases, UUIDs, cryptographic keys, and API tokens in `MOD-01`, as well as all IPv4/IPv6 CIDR calculations in `MOD-07` and all **JWT, OIDC, and SAML 2.0 authentication tokens** in `MOD-08`, are generated or decoded **strictly inside your own browser**. No generated secret or pasted enterprise bearer token / SAML assertion is ever transmitted to, logged by, or processed on the server.
@@ -116,7 +116,7 @@ On desktop viewports (`>= 1024px`), TechTools supports running **two diagnostic 
 | | `Ctrl+Shift+D` | Toggle **Desktop Dual-Pane Split-Screen Mode** (`50/50` resizable side-by-side modules) |
 | | `←` / `→` (in Split View) | Switch active window between **Pane A** (`←`) and **Pane B** (`→`) so `1`–`9` & tool shortcuts control that window |
 | | `ESC` | Blur focused text input (unlocking shortcuts), or return to the R136 Command Deck |
-| | `S` | Toggle synthesized 8-bit Naval CIC sound effects ON / OFF |
+| | `S` | Toggle synthesized clean Naval CIC sound effects ON / OFF |
 | | `Tab` / `Shift+Tab` | Step through buttons, secret rows, and diagnostic intel sections |
 | | `C` | Copy the currently focused intel section / secret row |
 | **MOD-01 (PassGen)** | `P` / `W` / `T` | Switch between Passwords, Passphrases, and API Tokens |
@@ -183,7 +183,7 @@ TechTools uses a plugin-style registry so new troubleshooting tools can be added
 - **`v0.2.6`** — Cloudflare Trusted Proxy & Real Client IP Resolution (`MOD-03` & Rate Limiter):
   - Hardened [`extractClientIp`](server/apiHandler.mjs) to trust reverse-proxy headers only from local/private proxy sockets (`127.0.0.1` / loopback) and prioritize Caddy-verified `X-Real-IP` / `Cf-Connecting-Ip` before `X-Forwarded-For`, alongside Cloudflare CIDR `trusted_proxies` in production Caddy.
 - **`v0.2.5`** — Official Domain Contact Footer (`sysop@subwrite.se`):
-  - Added official contact address (`contact: sysop@subwrite.se`) to the persistent C64 bottom footer bar, the starter Command Deck "About TechTools" footer, and repository documentation.
+  - Added official contact address (`contact: sysop@subwrite.se`) to the persistent clean bottom footer bar, the starter Command Deck "About TechTools" footer, and repository documentation.
 - **`v0.2.4`** — Password Generator Enhancements, Lighter Marine Blue Theme & Authentic Robotbåt Redesign:
   - **Password & Token Generator (`MOD-01`):**
     - Updated default preset to **`64BIT (16)`** (`16` chars, `A–Z`, `a–z`, `0–9`) and reworked ambiguous filtering into **`NO CONFUSE`** mode (default checked, excluding font-confusable look-alike characters `0, O, o, 1, l, I, |`), honoring user adjustments across visits via cookie (`tt_passgen_prefs`).
@@ -191,7 +191,7 @@ TechTools uses a plugin-style registry so new troubleshooting tools can be added
     - Updated strength status tiers: `>= 32` character passwords (`FORTRESS (32)`+) display **`ULTRA NAVY CRYPTO`**, and `> 5` word passphrases (`6–8` words) display **`NAVY CRYPTO GRADE`**.
     - Highlighted across tool UI and documentation that all passwords, passphrases, and tokens are generated **100% locally in the browser and never on the server**.
   - **Theme, Robotbåt & UX Polish:**
-    - Lifted console palette to a brighter **Swedish Marine / C64 Royal Blue** theme with softened CRT scanlines/vignette and responsive single-row 6-module desktop navigation.
+    - Lifted console palette to a brighter **Swedish Marine / Royal Blue** theme with softened CRT scanlines/vignette and responsive single-row 6-module desktop navigation.
     - Redesigned **Robotbåt R136 HMS Västervik** pixel-art SVG faithfully after the *Norrköping*-class (*Spica II*) profile (tandem forward-upward RBS-15 box launchers, open X-braced lattice mast + oval Sea Giraffe radome, tall aft pole mast + 3-tailed Swedish Naval Ensign, stepped bridge + 9LV200 director, Bofors 57 mm cupola gun, and M90 splinter camouflage), added gentle wave bobbing animation, and updated the `1200×630` `og-image.png` social preview.
     - Cleared pre-filled default domain in `MOD-02` (**DNS & WHOIS**) in favor of a standard input prompt placeholder.
 - **`v0.2.3`** — External Endpoint & TLS Probe (`MOD-06`) & Active Sonar ICMP Ping:
@@ -203,13 +203,13 @@ TechTools uses a plugin-style registry so new troubleshooting tools can be added
   - Added `MOD-04` Certificate & CSR Analyzer (X.509 / CSR / public key detection, trust verification, AIA chain discovery and export, private key intercept guard).
   - Added `MOD-05` Email Message Header Analyzer (hop trace with delays, SPF / DKIM / DMARC / ARC audit, tab-selectable copyable tiles).
   - Command Deck: `1`–`5` now only select a module and `Enter` launches it; tabbing to a module scrolls it into view.
-  - Added crawler-friendly "About TechTools" footer, Open Graph / Twitter / schema.org metadata and an 8-bit `og-image.png`.
+  - Added crawler-friendly "About TechTools" footer, Open Graph / Twitter / schema.org metadata and an optimized `og-image.png`.
 - **`v0.1.2`** — Keyboard-first workflow & selectable DNS resolvers:
   - Added single-letter keyboard shortcuts across `MOD-01`, `MOD-02`, and `MOD-03`, plus `ESC` input-blur before returning to Command Deck.
   - Added `Tab`-selectable diagnostic sections and secret rows with `[C]` one-key clipboard copy (`CopyableIntelSection`).
   - Added DNS server selector in `MOD-02` (`Google 8.8.8.8` default, `Cloudflare 1.1.1.1`, and `Custom` public DNS IP/hostname with SSRF protection and port-53 reachability/refusal diagnostics).
   - Unified `FORTRESS (32)` preset styling and removed the redundant `DECK` button from the module switcher bar.
-- **`v0.1.0`** — Initial release of TechTools (`techtools.subwrite.se`) featuring Swedish Navy C64 theme, 8-bit `R136 HMS Västervik` pixel SVG, Password & Token Generator, DNS & WHOIS Inspector, and What's My IP / RIR Range Owner Intel.
+- **`v0.1.0`** — Initial release of TechTools (`techtools.subwrite.se`) featuring clean Swedish Navy theme, optimized `R136 HMS Västervik` pixel SVG, Password & Token Generator, DNS & WHOIS Inspector, and What's My IP / RIR Range Owner Intel.
 
 ---
 

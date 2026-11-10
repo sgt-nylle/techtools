@@ -219,7 +219,7 @@ export const CertAnalyzerTool: React.FC = () => {
     <div className="tool-panel">
       {/* INPUT FORM */}
       <form
-        className="query-bar c64-box"
+        className="query-bar clean-box"
         onSubmit={(e) => {
           e.preventDefault();
           void analyzeCertText();
@@ -294,7 +294,7 @@ export const CertAnalyzerTool: React.FC = () => {
 
       {/* SECURITY ALERT BANNER (Rule 1.3: Private Key Detected) */}
       {securityAlert && (
-        <div className="alert-banner status-err c64-box security-alert-card">
+        <div className="alert-banner status-err clean-box security-alert-card">
           <div className="security-alert-title">🚨 NAVAL SECURITY INTERCEPT // PRIVATE KEY DETECTED 🚨</div>
           <div className="security-alert-msg text-gold">Security alert! We will not process private keys! Abandon Ship!</div>
           <div className="dim-note mt-8">
@@ -305,20 +305,20 @@ export const CertAnalyzerTool: React.FC = () => {
 
       {/* ERROR BANNER */}
       {error && !securityAlert && (
-        <div className="alert-banner status-err c64-box">
+        <div className="alert-banner status-err clean-box">
           ⚠ {error}
         </div>
       )}
 
       {!data && !loading && !error && !securityAlert && (
-        <div className="empty-prompt c64-box">
+        <div className="empty-prompt clean-box">
           Paste any X.509 Certificate (<kbd>.crt</kbd>, <kbd>.cer</kbd>, <kbd>.pem</kbd>, or raw Base64), Certificate
           Signing Request (<kbd>CSR</kbd>), or Public Key above and press <kbd>ENTER</kbd> or <strong>ANALYZE [R]</strong>.
         </div>
       )}
 
       {loading && (
-        <div className="loading-radar c64-box">
+        <div className="loading-radar clean-box">
           <span className="radar-spinner">◎</span> DECODING ASN.1 PARSING EXTENSIONS &amp; VALIDATING TRUST CHAIN...
         </div>
       )}
@@ -326,7 +326,7 @@ export const CertAnalyzerTool: React.FC = () => {
       {data && !loading && (
         <>
           {/* TELEMETRY STRIP */}
-          <div className="telemetry-strip c64-box">
+          <div className="telemetry-strip clean-box">
             <div className="tele-cell">
               <span className="tele-lbl">PAYLOAD TYPE</span>
               <span className="tele-val text-gold">{data.formatType}</span>

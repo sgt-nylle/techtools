@@ -631,7 +631,7 @@ export const AuthInspectorTool: React.FC = () => {
       {/* ==================== 1. JWT / OIDC MODE ==================== */}
       {mode === 'jwt' && (
         <>
-          <div className="query-bar c64-box">
+          <div className="query-bar clean-box">
             <div className="section-title-row">
               <span className="prompt-chevron" title="Press [Q] to focus token input">
                 PASTE JWT / OIDC BEARER TOKEN (100% LOCAL BROWSER DECODE) [Q]&gt;
@@ -671,12 +671,12 @@ export const AuthInspectorTool: React.FC = () => {
             />
           </div>
 
-          {jwtInspection.error && <div className="alert-banner status-err c64-box">⚠ {jwtInspection.error}</div>}
+          {jwtInspection.error && <div className="alert-banner status-err clean-box">⚠ {jwtInspection.error}</div>}
 
           {jwtData && (
             <>
               {/* TELEMETRY STRIP */}
-              <div className="telemetry-strip c64-box">
+              <div className="telemetry-strip clean-box">
                 <div className="tele-cell">
                   <span className="tele-lbl">TOKEN STATUS</span>
                   <span
@@ -893,7 +893,7 @@ export const AuthInspectorTool: React.FC = () => {
       {/* ==================== 2. SAML 2.0 XML MODE ==================== */}
       {mode === 'saml' && (
         <>
-          <div className="query-bar c64-box">
+          <div className="query-bar clean-box">
             <div className="section-title-row">
               <span className="prompt-chevron" title="Press [Q] to focus SAML input">
                 PASTE BASE64 SAMLResponse OR RAW SAML 2.0 XML [Q]&gt;
@@ -933,11 +933,11 @@ export const AuthInspectorTool: React.FC = () => {
             />
           </div>
 
-          {samlInspection.error && <div className="alert-banner status-err c64-box">⚠ {samlInspection.error}</div>}
+          {samlInspection.error && <div className="alert-banner status-err clean-box">⚠ {samlInspection.error}</div>}
 
           {samlData && (
             <>
-              <div className="telemetry-strip c64-box">
+              <div className="telemetry-strip clean-box">
                 <div className="tele-cell">
                   <span className="tele-lbl">SAML ROOT ELEMENT</span>
                   <span className="tele-val text-gold">&lt;{samlData.rootElement}&gt;</span>

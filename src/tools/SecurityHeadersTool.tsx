@@ -672,7 +672,7 @@ export const SecurityHeadersTool: React.FC = () => {
     <div className="tool-panel">
       {/* TARGET URL BAR */}
       <form
-        className="query-bar c64-box"
+        className="query-bar clean-box"
         onSubmit={(e) => {
           e.preventDefault();
           void runEvaluation();
@@ -729,10 +729,10 @@ export const SecurityHeadersTool: React.FC = () => {
         </div>
       </form>
 
-      {error && <div className="alert-banner status-err c64-box">⚠ {error}</div>}
+      {error && <div className="alert-banner status-err clean-box">⚠ {error}</div>}
 
       {!data && !loading && !error && (
-        <div className="empty-prompt c64-box">
+        <div className="empty-prompt clean-box">
           Enter any public URL above (<kbd>Q</kbd>) and press <kbd>ENTER</kbd> or <kbd>R</kbd> to inspect and score{' '}
           <strong className="text-gold">HSTS</strong>, <strong className="text-cyan">Content-Security-Policy (CSP)</strong>{' '}
           (flagging <code>&apos;unsafe-inline&apos;</code>, <code>&apos;unsafe-eval&apos;</code>, and wildcards),{' '}
@@ -742,7 +742,7 @@ export const SecurityHeadersTool: React.FC = () => {
       )}
 
       {loading && (
-        <div className="loading-radar c64-box">
+        <div className="loading-radar clean-box">
           <span className="radar-spinner">◎</span> INTERROGATING TARGET HTTP SECURITY HEADERS &amp; PARSING CSP
           DIRECTIVES...
         </div>
@@ -751,7 +751,7 @@ export const SecurityHeadersTool: React.FC = () => {
       {data && evaluation && !loading && (
         <>
           {/* SCORE & VERDICT TELEMETRY STRIP */}
-          <div className="telemetry-strip c64-box">
+          <div className="telemetry-strip clean-box">
             <div className="tele-cell">
               <span className="tele-lbl">COMPLIANCE GRADE</span>
               <span

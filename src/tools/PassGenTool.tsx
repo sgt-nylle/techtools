@@ -649,7 +649,7 @@ export const PassGenTool: React.FC = () => {
       </div>
 
       {/* ENTROPY & CSPRNG TELEMETRY BANNER */}
-      <div className="telemetry-strip c64-box">
+      <div className="telemetry-strip clean-box">
         <div className="tele-cell">
           <span className="tele-lbl">ENGINE</span>
           <span className="tele-val text-cyan">WEB CRYPTO CSPRNG</span>
@@ -671,7 +671,7 @@ export const PassGenTool: React.FC = () => {
       {/* ==================== 1. PASSWORD MODE ==================== */}
       {mode === 'password' && (
         <>
-          <div className="controls-card c64-box">
+          <div className="controls-card clean-box">
             <div className="preset-bar">
               <span className="control-heading">COMPLEXITY PRESETS:</span>
               <div className="preset-buttons">
@@ -849,7 +849,7 @@ export const PassGenTool: React.FC = () => {
             </div>
           </div>
 
-          <div className="output-list c64-box">
+          <div className="output-list clean-box">
             {passwords.length === 0 ? (
               <div className="empty-alert status-err">
                 ⚠ Enable at least one character set above to generate passwords.
@@ -896,7 +896,7 @@ export const PassGenTool: React.FC = () => {
       {/* ==================== 2. PASSPHRASE MODE ==================== */}
       {mode === 'passphrase' && (
         <>
-          <div className="controls-card c64-box">
+          <div className="controls-card clean-box">
             <div className="slider-grid">
               <div className="slider-block">
                 <label htmlFor="word-cnt">
@@ -1004,7 +1004,7 @@ export const PassGenTool: React.FC = () => {
             </div>
           </div>
 
-          <div className="output-list c64-box">
+          <div className="output-list clean-box">
             {passphrases.map((pp, idx) => {
               const id = `pp-${idx}`;
               return (
@@ -1045,7 +1045,7 @@ export const PassGenTool: React.FC = () => {
       {/* ==================== 3. API TOKENS & KEYS MODE ==================== */}
       {mode === 'tokens' && (
         <>
-          <div className="controls-card c64-box">
+          <div className="controls-card clean-box">
             <div className="inline-input-row">
               <label htmlFor="tok-prefix">API KEY PREFIX [Q]:</label>
               <input
@@ -1071,7 +1071,7 @@ export const PassGenTool: React.FC = () => {
             </div>
           </div>
 
-          <div className="output-list c64-box">
+          <div className="output-list clean-box">
             {[
               { id: 'tok-uuid', label: 'UUID v4 (RFC 4122)', val: tokens.uuid },
               { id: 'tok-api', label: 'PREFIXED API SECRET KEY (BASE62)', val: tokens.apiKey },
@@ -1115,7 +1115,7 @@ export const PassGenTool: React.FC = () => {
         </>
       )}
 
-      <div className="c64-box dim-note">
+      <div className="clean-box dim-note">
         🔒 <strong className="text-gold">100% LOCAL GENERATION:</strong> All passwords, passphrases, and API tokens are
         generated strictly inside your browser via Web Crypto CSPRNG — never on the server and never transmitted over
         the network.

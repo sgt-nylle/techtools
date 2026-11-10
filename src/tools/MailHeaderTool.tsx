@@ -191,7 +191,7 @@ export const MailHeaderTool: React.FC = () => {
     <div className="tool-panel">
       {/* INPUT QUERY BAR */}
       <form
-        className="query-bar c64-box"
+        className="query-bar clean-box"
         onSubmit={(e) => {
           e.preventDefault();
           analyzeHeaders();
@@ -245,13 +245,13 @@ export const MailHeaderTool: React.FC = () => {
 
       {/* ERROR BANNER (Rule 2.2: "Navy Mail Header Format Not DETECTED!") */}
       {error && (
-        <div className="alert-banner status-err c64-box">
+        <div className="alert-banner status-err clean-box">
           ⚠ {error}
         </div>
       )}
 
       {!data && !error && (
-        <div className="empty-prompt c64-box">
+        <div className="empty-prompt clean-box">
           Paste any raw email message header above and press <kbd>ENTER</kbd> or <strong>ANALYZE HEADERS [R]</strong> to
           trace mail server hops, verify SPF / DKIM / DMARC authentication, and diagnose transport latency.
         </div>
@@ -260,7 +260,7 @@ export const MailHeaderTool: React.FC = () => {
       {data && (
         <>
           {/* TELEMETRY STRIP */}
-          <div className="telemetry-strip c64-box">
+          <div className="telemetry-strip clean-box">
             <div className="tele-cell">
               <span className="tele-lbl">TOTAL HOPS</span>
               <span className="tele-val text-gold">{data.summary.totalHops} HOPS</span>
@@ -749,7 +749,7 @@ export const MailHeaderTool: React.FC = () => {
           )}
 
           {/* 3. RAW HEADERS EXPLORER */}
-          <div className="c64-box">
+          <div className="clean-box">
             <div className="section-title-row">
               <button
                 type="button"

@@ -482,7 +482,7 @@ export const DnsTool: React.FC = () => {
     <div className="tool-panel">
       {/* QUERY BAR + DNS RESOLVER SELECTOR */}
       <form
-        className="query-bar c64-box"
+        className="query-bar clean-box"
         onSubmit={(e) => {
           e.preventDefault();
           void runLookup();
@@ -566,10 +566,10 @@ export const DnsTool: React.FC = () => {
         </div>
       </form>
 
-      {error && <div className="alert-banner status-err c64-box">⚠ {error}</div>}
+      {error && <div className="alert-banner status-err clean-box">⚠ {error}</div>}
 
       {!data && !loading && !error && (
-        <div className="empty-prompt c64-box">
+        <div className="empty-prompt clean-box">
           Enter any domain name above (<kbd>Q</kbd> to focus), pick a DNS resolver (<kbd>G</kbd> Google{' '}
           <code>8.8.8.8</code>, <kbd>F</kbd> Cloudflare <code>1.1.1.1</code>, or <kbd>U</kbd> Custom), and press{' '}
           <kbd>ENTER</kbd> or <kbd>R</kbd> to scan.
@@ -577,7 +577,7 @@ export const DnsTool: React.FC = () => {
       )}
 
       {loading && (
-        <div className="loading-radar c64-box">
+        <div className="loading-radar clean-box">
           <span className="radar-spinner">◎</span> QUERYING DNS RESOLVER (
           {dnsPreset === 'google'
             ? '8.8.8.8'
@@ -591,7 +591,7 @@ export const DnsTool: React.FC = () => {
       {data && !loading && (
         <>
           {/* SUMMARY TELEMETRY STRIP */}
-          <div className="telemetry-strip c64-box">
+          <div className="telemetry-strip clean-box">
             <div className="tele-cell">
               <span className="tele-lbl">TARGET</span>
               <span className="tele-val text-gold">{data.query}</span>

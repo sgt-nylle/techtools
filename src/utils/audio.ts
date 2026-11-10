@@ -1,4 +1,4 @@
-// 8-Bit Naval CIC Web Audio Synthesizer (Zero external assets)
+// Clean Naval CIC Web Audio Synthesizer (Zero external assets)
 const SOUND_STORAGE_KEY = 'techtools_sound_enabled';
 
 class NavalAudio {

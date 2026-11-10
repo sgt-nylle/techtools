@@ -331,14 +331,14 @@ export function App() {
     isSplitActive && focusedPane === 'secondary' ? secondaryToolId : activeToolId;
 
   return (
-    <div className="c64-viewport">
+    <div className="clean-viewport">
       <div className="crt-overlay" aria-hidden="true" />
       <div className="crt-vignette" aria-hidden="true" />
 
-      <div className={`c64-screen-frame ${isSplitActive ? 'c64-screen-frame-split' : ''}`}>
+      <div className={`clean-screen-frame ${isSplitActive ? 'clean-screen-frame-split' : ''}`}>
         {/* TOP NAVAL COMMAND BAR */}
-        <header className="c64-top-bar">
-          <div className="c64-branding">
+        <header className="clean-top-bar">
+          <div className="clean-branding">
             <span className="naval-emblem">⚓</span>
             <button
               type="button"
@@ -407,7 +407,7 @@ export function App() {
 
         {/* PERSISTENT 9-MODULE SWITCHER BAR (3x3 / 9-column responsive layout) */}
         {activeModule && (
-          <nav className="module-switcher-bar c64-box" aria-label="Diagnostic Modules">
+          <nav className="module-switcher-bar clean-box" aria-label="Diagnostic Modules">
             {TOOL_MODULES.map((mod) => {
               const isPrimary = activeToolId === mod.id;
               const isSecondary = isSplitActive && secondaryToolId === mod.id;
@@ -437,7 +437,7 @@ export function App() {
         )}
 
         {/* MAIN VIEWPORT: COMMAND DECK, SINGLE TOOL, OR DESKTOP DUAL-PANE SPLIT */}
-        <main className="c64-main-stage">
+        <main className="clean-main-stage">
           {ActiveToolComponent && activeModule ? (
             isSplitActive && SecondaryToolComponent && secondaryModule ? (
               <div
@@ -457,7 +457,7 @@ export function App() {
                     onMouseDownCapture={() => setFocusedPane('primary')}
                     onFocusCapture={() => setFocusedPane('primary')}
                   >
-                    <div className="active-tool-banner split-pane-banner c64-box">
+                    <div className="active-tool-banner split-pane-banner clean-box">
                       <div className="pane-banner-left">
                         <span className="tool-banner-code">
                           PANE A [◄] {focusedPane === 'primary' ? '● ACTIVE WINDOW' : '○ PRESS [◄] TO FOCUS'} //{' '}
@@ -559,7 +559,7 @@ export function App() {
                     onMouseDownCapture={() => setFocusedPane('secondary')}
                     onFocusCapture={() => setFocusedPane('secondary')}
                   >
-                    <div className="active-tool-banner split-pane-banner c64-box">
+                    <div className="active-tool-banner split-pane-banner clean-box">
                       <div className="pane-banner-left">
                         <span className="tool-banner-code">
                           PANE B [►] {focusedPane === 'secondary' ? '● ACTIVE WINDOW' : '○ PRESS [►] TO FOCUS'} //{' '}
@@ -623,7 +623,7 @@ export function App() {
             ) : (
               <PaneActiveContext.Provider value={true}>
                 <div className="active-tool-shell">
-                  <div className="active-tool-banner c64-box">
+                  <div className="active-tool-banner clean-box">
                     <div>
                       <span className="tool-banner-code">{activeModule.code}</span>
                       <h2 className="tool-banner-title">{activeModule.title}</h2>
@@ -656,7 +656,7 @@ export function App() {
         </main>
 
         {/* FOOTER CREDITS */}
-        <footer className="c64-footer c64-box">
+        <footer className="clean-footer clean-box">
           <div className="footer-left">
             <span>[ESC] DECK</span> | <span>[1–{TOOL_MODULES.length}] MODULES</span> |{' '}
             <span>[CTRL+SHIFT+D] SPLIT</span> |{' '}
@@ -707,7 +707,7 @@ export function App() {
 
         {/* ABOUT / CONCEPT FOOTER (Command Deck starter page only) */}
         {!activeModule && (
-          <footer className="c64-box about-footer" aria-label="About TechTools">
+          <footer className="clean-box about-footer" aria-label="About TechTools">
             <h2 className="about-title">⚓ ABOUT TECHTOOLS</h2>
             <p>
               Built for sysadmins, developers, and support engineers who need fast answers without the bloat,{' '}

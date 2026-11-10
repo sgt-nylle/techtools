@@ -77,8 +77,8 @@ export const CommandDeck: React.FC<CommandDeckProps> = ({ modules, onSelectTool,
 
   return (
     <div className="command-deck">
-      {/* HERO TITLE & 8-BIT HMS VÄSTERVIK SPRITE */}
-      <div className="deck-hero c64-box">
+      {/* HERO TITLE & FAST HMS VÄSTERVIK SPRITE */}
+      <div className="deck-hero clean-box">
         <div className="deck-flair">⚓ ★ ⚓</div>
         <h1 className="deck-title">TECHTOOLS</h1>
         <div className="deck-subtitle">R136 HMS VÄSTERVIK // NAVAL IT TROUBLESHOOTING CONSOLE</div>
@@ -97,7 +97,7 @@ export const CommandDeck: React.FC<CommandDeckProps> = ({ modules, onSelectTool,
       </div>
 
       {/* EXTENSIBLE DIAGNOSTIC MODULE SELECTOR */}
-      <div className="deck-modules-box c64-box">
+      <div className="deck-modules-box clean-box">
         <div className="deck-modules-header">
           <span>-- SELECT MODULE [1–{modules.length} / ▲▼ / TAB] • [ENTER] LAUNCH --</span>
           <span className="slot-status">{modules.length} ACTIVE MODULES • EXPANSION READY</span>

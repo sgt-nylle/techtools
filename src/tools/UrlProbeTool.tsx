@@ -553,7 +553,7 @@ export const UrlProbeTool: React.FC = () => {
     <div className="tool-panel">
       {/* EXTERNAL PROBE INPUT BAR */}
       <form
-        className="query-bar c64-box"
+        className="query-bar clean-box"
         onSubmit={(e) => {
           e.preventDefault();
           void runProbe();
@@ -654,10 +654,10 @@ export const UrlProbeTool: React.FC = () => {
         </div>
       </form>
 
-      {error && <div className="alert-banner status-err c64-box">⚠ {error}</div>}
+      {error && <div className="alert-banner status-err clean-box">⚠ {error}</div>}
 
       {!data && !loading && !error && (
-        <div className="empty-prompt c64-box">
+        <div className="empty-prompt clean-box">
           Test how any public corporate URL, reverse proxy, or custom TCP port responds from the{' '}
           <strong className="text-gold">external internet</strong> — including active sonar{' '}
           <strong className="text-cyan">ICMP PING</strong>, TCP/HTTP response, and live SSL/TLS certificate inspection.
@@ -667,7 +667,7 @@ export const UrlProbeTool: React.FC = () => {
       )}
 
       {loading && (
-        <div className="loading-radar c64-box">
+        <div className="loading-radar clean-box">
           <span className="radar-spinner">◎</span> SENDING SONAR PING &amp; PROBING EXTERNAL ENDPOINT (
           {urlInput.trim() || '...'} : {portInput.trim() || '443'})...
         </div>
@@ -676,7 +676,7 @@ export const UrlProbeTool: React.FC = () => {
       {data && !loading && (
         <>
           {/* SUMMARY TELEMETRY STRIP */}
-          <div className="telemetry-strip c64-box">
+          <div className="telemetry-strip clean-box">
             <div className="tele-cell">
               <span className="tele-lbl">SONAR PING (ICMP)</span>
               <span className={`tele-val ${icmpVerdict.cls}`}>{icmpVerdict.label}</span>
@@ -1062,7 +1062,7 @@ export const UrlProbeTool: React.FC = () => {
                     ))}
                   </div>
                   {data.redirectWarning && (
-                    <div className="alert-banner status-err c64-box mt-8" style={{ padding: '10px' }}>
+                    <div className="alert-banner status-err clean-box mt-8" style={{ padding: '10px' }}>
                       ⚠ {data.redirectWarning}
                     </div>
                   )}
@@ -1083,7 +1083,7 @@ export const UrlProbeTool: React.FC = () => {
               copyPayload={sectionPayloads.tls}
             >
               {!data.tls.connected ? (
-                <div className="alert-banner status-err c64-box">
+                <div className="alert-banner status-err clean-box">
                   ⚠ SSL/TLS Handshake Failed: {data.tls.errorMessage || data.tls.errorCode}
                 </div>
               ) : data.tls.certificate ? (
@@ -1453,7 +1453,7 @@ export const UrlProbeTool: React.FC = () => {
           )}
 
           {activeTab === 'tls' && !data.tls && (
-            <div className="empty-prompt c64-box">
+            <div className="empty-prompt clean-box">
               This probe ran over plain TCP/HTTP (port <code>{data.port}</code>) without an SSL/TLS handshake.{' '}
               <button
                 type="button"
@@ -1544,7 +1544,7 @@ export const UrlProbeTool: React.FC = () => {
           )}
 
           {activeTab === 'headers' && !data.http && (
-            <div className="empty-prompt c64-box">
+            <div className="empty-prompt clean-box">
               No HTTP headers were returned on this probe ({data.reachability}).
             </div>
           )}

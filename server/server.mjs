@@ -19,7 +19,29 @@ const MIME_TYPES = {
   '.ico': 'image/x-icon',
 };
 
+const SECURITY_CSP = [
+  "default-src 'self'",
+  "script-src 'self' https://static.cloudflareinsights.com",
+  "style-src 'self' https://fonts.googleapis.com",
+  "font-src 'self' https://fonts.gstatic.com data:",
+  "img-src 'self' data: https://subwrite.se https://techtools.subwrite.se",
+  "connect-src 'self' https://cloudflareinsights.com",
+  "media-src 'self' data:",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  "upgrade-insecure-requests"
+].join('; ');
+
 const server = http.createServer(async (req, res) => {
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  res.setHeader('Content-Security-Policy', SECURITY_CSP);
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=()');
+
   const handled = await handleApiRequest(req, res);
   if (handled) return;
 

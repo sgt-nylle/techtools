@@ -9,7 +9,7 @@ A modular retro C64 / Swedish Navy (*Kungliga Flottan*) IT troubleshooting web s
 
 ---
 
-## Diagnostic Modules (`v0.2.6`)
+## Diagnostic Modules (`v0.2.7`)
 
 1. **`MOD-01` — Password & Token Generator (`#/password-generator`)**
    - **Generated 100% Locally in Your Browser (Not on the Server):** Uses client-side CSPRNG (`window.crypto.getRandomValues`) with unbiased rejection sampling — zero network traffic, zero server involvement, and zero logging.
@@ -19,6 +19,7 @@ A modular retro C64 / Swedish Navy (*Kungliga Flottan*) IT troubleshooting web s
 2. **`MOD-02` — DNS & Domain Registry Intel (`#/dns-inspector`)**
    - Selectable DNS resolvers: **Google `8.8.8.8` (default)**, **Cloudflare `1.1.1.1`**, or **Custom** public DNS server IP / authoritative nameserver hostname.
    - Parallel lookups for `A`, `AAAA`, `CNAME`, `PTR`, `MX` (including mail exchanger IPv4 resolution), `NS`, `SOA`, `TXT`, and `CAA`.
+   - **DNSSEC Zone Key (`DNSKEY`) & Delegation Signer (`DS`) Analysis:** Queries `DNSKEY` and `DS` records via DoH (`application/dns-json`), computes RFC 4034 Key Tags, identifies `KSK` (Flag 257) and `ZSK` (Flag 256) roles, maps cryptographic algorithms & digest types to plain text, and verifies Chain-of-Trust linkage between parent `DS` records and zone `KSK` keys.
    - Automated **SPF** (`v=spf1`) and **DMARC** (`_dmarc`) email security posture auditing.
    - Live port-43 **WHOIS Domain Registration** lookup (supporting `.se`/`.nu` via `whois.iis.se`, Verisign, PIR, EURid, and automatic IANA TLD referral discovery).
 3. **`MOD-03` — What's My IP? & Range Owner (`#/whats-my-ip`)**
@@ -96,6 +97,8 @@ TechTools uses a plugin-style registry so new troubleshooting tools can be added
 
 ## Changelog
 
+- **`v0.2.7`** — Expanded DNSSEC Zone Key (`DNSKEY`) & Delegation Signer (`DS`) Inspector (`MOD-02`):
+  - Added DoH (`application/dns-json`) `DNSKEY` and `DS` queries with RFC 4034 Key Tag computation, KSK (Flag 257) / ZSK (Flag 256) identification, plain-text cryptographic algorithm and digest type mapping, expandable/copyable Base64 public keys, and parent `DS` to zone `KSK` Chain-of-Trust verification.
 - **`v0.2.6`** — Cloudflare Trusted Proxy & Real Client IP Resolution (`MOD-03` & Rate Limiter):
   - Hardened [`extractClientIp`](server/apiHandler.mjs) to trust reverse-proxy headers only from local/private proxy sockets (`127.0.0.1` / loopback) and prioritize Caddy-verified `X-Real-IP` / `Cf-Connecting-Ip` before `X-Forwarded-For`, alongside Cloudflare CIDR `trusted_proxies` in production Caddy.
 - **`v0.2.5`** — Official Domain Contact Footer (`sysop@subwrite.se`):

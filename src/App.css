@@ -1032,6 +1032,191 @@
   gap: 4px;
 }
 
+/* DNSSEC Zone Key (DNSKEY) & Delegation Signer (DS) Inspector */
+.dnssec-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 2px dashed var(--navy-cell-border);
+  padding-top: 10px;
+}
+
+.dnssec-status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  background-color: var(--navy-inset);
+  border: 1px solid var(--navy-cell-border);
+  padding: 8px 12px;
+}
+
+.dnssec-status-left {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.dnssec-status-badge {
+  font-family: var(--font-arcade);
+  font-size: 9px;
+  padding: 5px 9px;
+  border: 1px solid var(--navy-border-bright);
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.dnssec-status-badge.badge-secure {
+  background-color: rgba(6, 95, 70, 0.72);
+  border-color: var(--navy-green);
+  color: var(--navy-green);
+}
+
+.dnssec-status-badge.badge-broken {
+  background-color: rgba(127, 29, 29, 0.78);
+  border-color: var(--navy-red);
+  color: var(--navy-red);
+}
+
+.dnssec-status-badge.badge-unsigned {
+  background-color: rgba(120, 53, 15, 0.55);
+  border-color: var(--navy-amber);
+  color: var(--navy-amber);
+}
+
+.dnssec-summary-note {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--navy-primary);
+}
+
+.dnssec-meta-pills {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.dnssec-sub-hdr {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.dnssec-records-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dnssec-record-block {
+  background-color: var(--navy-deep);
+  border: 1px solid var(--navy-cell-border);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dnssec-record-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dnssec-record-tags {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.dnssec-role-badge {
+  font-family: var(--font-arcade);
+  font-size: 8px;
+  padding: 3px 7px;
+  border: 1px solid var(--navy-border-bright);
+  white-space: nowrap;
+}
+
+.dnssec-role-badge.role-ksk {
+  background-color: #1f4f9e;
+  border-color: var(--navy-gold);
+  color: var(--navy-gold);
+}
+
+.dnssec-role-badge.role-zsk {
+  background-color: #153e7e;
+  border-color: var(--navy-cyan);
+  color: var(--navy-cyan);
+}
+
+.dnssec-tag-pill {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 7px;
+  background-color: #1c4fa6;
+  border: 1px solid var(--navy-gold);
+  color: var(--navy-white);
+}
+
+.dnssec-chain-indicator {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border: 1px solid transparent;
+}
+
+.dnssec-chain-indicator.chain-valid {
+  background-color: rgba(6, 95, 70, 0.55);
+  border-color: var(--navy-green);
+  color: var(--navy-green);
+}
+
+.dnssec-chain-indicator.chain-warn {
+  background-color: rgba(120, 53, 15, 0.55);
+  border-color: var(--navy-amber);
+  color: var(--navy-amber);
+}
+
+.dnssec-chain-indicator.chain-broken {
+  background-color: rgba(127, 29, 29, 0.65);
+  border-color: var(--navy-red);
+  color: var(--navy-red);
+}
+
+.dnssec-key-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  background-color: rgba(12, 40, 89, 0.55);
+  border: 1px solid rgba(84, 148, 247, 0.3);
+  padding: 5px 8px;
+}
+
+.dnssec-field-lbl {
+  font-family: var(--font-arcade);
+  font-size: 8px;
+  color: var(--navy-muted);
+  min-width: 56px;
+}
+
+.dnssec-key-code {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  word-break: break-all;
+}
+
 .soa-list {
   display: flex;
   flex-direction: column;

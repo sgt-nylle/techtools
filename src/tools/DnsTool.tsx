@@ -5,6 +5,48 @@ import { sound } from '../utils/audio';
 type DnsViewTab = 'all' | 'ip' | 'mail' | 'authority' | 'whois';
 type DnsServerPreset = 'google' | 'cloudflare' | 'custom';
 
+interface DnskeyRecord {
+  flags: number;
+  protocol: number;
+  algorithm: number;
+  algorithmName: string;
+  keyType: 'KSK' | 'ZSK' | 'REVOKED_KSK' | 'REVOKED_ZSK' | 'OTHER';
+  keyTypeLabel: string;
+  keyTag: number;
+  publicKey: string;
+  ttl: number | null;
+  matchedByDs: boolean;
+}
+
+interface DsRecord {
+  keyTag: number;
+  algorithm: number;
+  algorithmName: string;
+  digestType: number;
+  digestTypeName: string;
+  digest: string;
+  ttl: number | null;
+  matchesKsk: boolean;
+  matchesAnyKey: boolean;
+  digestVerified: boolean;
+}
+
+interface DnssecAnalysis {
+  zone: string;
+  inheritedFromApex: boolean;
+  dohProvider: string;
+  status: 'SECURE' | 'INCOMPLETE' | 'BROKEN' | 'UNSIGNED';
+  statusLabel: string;
+  chainValid: boolean;
+  adAuthenticated: boolean;
+  summaryNote: string;
+  totalKeys: number;
+  kskCount: number;
+  zskCount: number;
+  dnskeys: DnskeyRecord[];
+  dsRecords: DsRecord[];
+}
+
 interface DnsResultPayload {
   query: string;
   isIpQuery: boolean;
@@ -70,6 +112,7 @@ interface DnsResultPayload {
     } | null;
     raw: string;
   } | null;
+  dnssec?: DnssecAnalysis | null;
 }
 
 export const DnsTool: React.FC = () => {
@@ -81,6 +124,7 @@ export const DnsTool: React.FC = () => {
   const [data, setData] = useState<DnsResultPayload | null>(null);
   const [activeTab, setActiveTab] = useState<DnsViewTab>('all');
   const [showRawWhois, setShowRawWhois] = useState<boolean>(false);
+  const [expandedKeys, setExpandedKeys] = useState<Record<string, boolean>>({});
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -129,6 +173,7 @@ export const DnsTool: React.FC = () => {
         } else {
           setData(json as DnsResultPayload);
           setShowRawWhois(false);
+          setExpandedKeys({});
         }
       } catch {
         setError('Network error contacting diagnostic backend.');
@@ -173,6 +218,11 @@ export const DnsTool: React.FC = () => {
     } catch {
       sound.playError();
     }
+  }, []);
+
+  const toggleKeyExpand = useCallback((id: string) => {
+    sound.playClick();
+    setExpandedKeys((prev) => ({ ...prev, [id]: !prev[id] }));
   }, []);
 
   const quickQuery = (sample: string) => {
@@ -347,6 +397,35 @@ export const DnsTool: React.FC = () => {
         whoisLines.push(`Status: ${s.statuses.length > 0 ? s.statuses.join(', ') : 'ACTIVE'}`);
         if (s.nameservers.length > 0) {
           whoisLines.push(`Nameservers: ${s.nameservers.join(', ')}`);
+        }
+      }
+      if (data.dnssec) {
+        const d = data.dnssec;
+        whoisLines.push(
+          '',
+          `--- DNSSEC ZONE KEY & DELEGATION ANALYSIS (${d.zone.toUpperCase()}) ---`,
+          `DNSSEC Status: ${d.statusLabel} (Total Keys: ${d.totalKeys} — ${d.kskCount} KSK, ${d.zskCount} ZSK)`,
+          `Summary: ${d.summaryNote}`
+        );
+        if (d.dsRecords.length > 0) {
+          for (const ds of d.dsRecords) {
+            whoisLines.push(
+              `DS Record: KeyTag=#${ds.keyTag} | Alg=${ds.algorithm} (${ds.algorithmName}) | DigestType=${ds.digestType} (${ds.digestTypeName}) | Chain=${
+                ds.matchesKsk ? 'VALID (Matches KSK)' : 'MISMATCH'
+              } | Digest=${ds.digest}`
+            );
+          }
+        } else {
+          whoisLines.push('DS Records: None');
+        }
+        if (d.dnskeys.length > 0) {
+          for (const k of d.dnskeys) {
+            whoisLines.push(
+              `DNSKEY: ${k.keyType} (Flag ${k.flags}) | KeyTag=#${k.keyTag} | Alg=${k.algorithm} (${k.algorithmName}) | PubKey=${k.publicKey}`
+            );
+          }
+        } else {
+          whoisLines.push('DNSKEY Records: None');
         }
       }
       if (showRawWhois && data.whois.raw) {
@@ -534,6 +613,24 @@ export const DnsTool: React.FC = () => {
                 {data.records.MX.length} MX • {data.emailSecurity.spf?.status || 'N/A'}
               </span>
             </div>
+            {data.dnssec && (
+              <div className="tele-cell">
+                <span className="tele-lbl">DNSSEC</span>
+                <span
+                  className={`tele-val ${
+                    data.dnssec.status === 'SECURE'
+                      ? 'status-ok'
+                      : data.dnssec.status === 'BROKEN'
+                      ? 'status-err'
+                      : 'status-warn'
+                  }`}
+                >
+                  {data.dnssec.status === 'SECURE'
+                    ? `SIGNED (${data.dnssec.totalKeys} KEYS)`
+                    : data.dnssec.status}
+                </span>
+              </div>
+            )}
             <div className="tele-cell">
               <span className="tele-lbl">SCAN TIME</span>
               <span className="tele-val status-ok">{data.durationMs} ms</span>
@@ -548,7 +645,7 @@ export const DnsTool: React.FC = () => {
                 { id: 'ip', label: 'IP / PTR [I]' },
                 { id: 'mail', label: 'MX / SPF / DMARC [M]' },
                 { id: 'authority', label: 'NS / SOA / TXT [N]' },
-                { id: 'whois', label: 'WHOIS REGISTRY [W]' },
+                { id: 'whois', label: 'WHOIS & DNSSEC [W]' },
               ] as Array<{ id: DnsViewTab; label: string }>
             ).map((tab) => (
               <button
@@ -767,8 +864,22 @@ export const DnsTool: React.FC = () => {
                   </div>
                   <div className="whois-item">
                     <span className="tele-lbl">DNSSEC</span>
-                    <span className="tele-val">
-                      {data.whois.summary.dnssec || 'unsigned / unspecified'}
+                    <span
+                      className={`tele-val ${
+                        data.dnssec?.status === 'SECURE'
+                          ? 'status-ok'
+                          : data.dnssec?.status === 'BROKEN'
+                          ? 'status-err'
+                          : data.whois.summary.dnssec &&
+                            !/unsigned/i.test(data.whois.summary.dnssec)
+                          ? 'status-ok'
+                          : 'status-warn'
+                      }`}
+                    >
+                      {data.whois.summary.dnssec ||
+                        (data.dnssec?.status === 'SECURE'
+                          ? 'signedDelegation'
+                          : 'unsigned / unspecified')}
                     </span>
                   </div>
                   {data.whois.summary.holder && (
@@ -788,6 +899,219 @@ export const DnsTool: React.FC = () => {
                 </div>
               ) : (
                 <div className="dim-note">Structured WHOIS summary unavailable for this TLD.</div>
+              )}
+
+              {/* EXPANDED DNSSEC ZONE KEY (DNSKEY) & DELEGATION SIGNER (DS) ANALYSIS */}
+              {data.dnssec && (
+                <div className="dnssec-panel mt-8">
+                  <div className="dnssec-status-bar">
+                    <div className="dnssec-status-left">
+                      <span
+                        className={`dnssec-status-badge ${
+                          data.dnssec.status === 'SECURE'
+                            ? 'badge-secure'
+                            : data.dnssec.status === 'BROKEN'
+                            ? 'badge-broken'
+                            : 'badge-unsigned'
+                        }`}
+                      >
+                        {data.dnssec.status === 'SECURE'
+                          ? `✓ ${data.dnssec.statusLabel}`
+                          : data.dnssec.status === 'BROKEN'
+                          ? `✕ ${data.dnssec.statusLabel}`
+                          : `⚠ ${data.dnssec.statusLabel}`}
+                      </span>
+                      <span className="dnssec-summary-note">{data.dnssec.summaryNote}</span>
+                    </div>
+                    <div className="dnssec-meta-pills">
+                      <span className="ttl-pill">
+                        KEYS FOUND: <strong>{data.dnssec.totalKeys}</strong> ({data.dnssec.kskCount} KSK •{' '}
+                        {data.dnssec.zskCount} ZSK)
+                      </span>
+                      <span className="ttl-pill">
+                        DS RECORDS: <strong>{data.dnssec.dsRecords.length}</strong>
+                      </span>
+                      <span
+                        className={`ttl-pill ${
+                          data.dnssec.adAuthenticated ? 'status-ok' : 'dim-inline'
+                        }`}
+                        title="DNSSEC Authenticated Data (AD) bit from validating DoH resolver"
+                      >
+                        {data.dnssec.adAuthenticated ? 'AD=1 (VALIDATED)' : 'AD=0'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* DELEGATION SIGNER (DS) RECORDS */}
+                  <div className="sub-card mt-8">
+                    <div className="sub-card-hdr dnssec-sub-hdr">
+                      <span>
+                        DELEGATION SIGNER (DS) RECORDS — PARENT TLD CHAIN OF TRUST (
+                        {data.dnssec.dsRecords.length})
+                      </span>
+                      <span className="dim-inline">
+                        ZONE: {data.dnssec.zone}
+                        {data.dnssec.inheritedFromApex ? ' (apex)' : ''}
+                      </span>
+                    </div>
+                    {data.dnssec.dsRecords.length === 0 ? (
+                      <div className="dim-note">
+                        No DS delegation records published in parent zone for {data.dnssec.zone}.
+                      </div>
+                    ) : (
+                      <div className="dnssec-records-list">
+                        {data.dnssec.dsRecords.map((ds, idx) => {
+                          const dsCopyId = `ds-${ds.keyTag}-${idx}`;
+                          return (
+                            <div key={dsCopyId} className="dnssec-record-block">
+                              <div className="dnssec-record-top">
+                                <div className="dnssec-record-tags">
+                                  <span className="dnssec-tag-pill">KEY TAG #{ds.keyTag}</span>
+                                  <span className="ttl-pill">
+                                    ALG {ds.algorithm}: {ds.algorithmName}
+                                  </span>
+                                  <span className="ttl-pill">
+                                    DIGEST {ds.digestType}: {ds.digestTypeName}
+                                  </span>
+                                  {ds.ttl !== null && <span className="ttl-pill">TTL {ds.ttl}s</span>}
+                                </div>
+                                <span
+                                  className={`dnssec-chain-indicator ${
+                                    ds.matchesKsk
+                                      ? 'chain-valid'
+                                      : ds.matchesAnyKey
+                                      ? 'chain-warn'
+                                      : 'chain-broken'
+                                  }`}
+                                >
+                                  {ds.matchesKsk
+                                    ? `✓ CHAIN OF TRUST VALID • MATCHES KSK #${ds.keyTag}${
+                                        ds.digestVerified ? ' (DIGEST VERIFIED)' : ''
+                                      }`
+                                    : ds.matchesAnyKey
+                                    ? `✓ MATCHES ZONE KEY #${ds.keyTag}`
+                                    : `✕ NO MATCHING KSK #${ds.keyTag} IN ZONE`}
+                                </span>
+                              </div>
+                              <div className="dnssec-key-row">
+                                <span className="dnssec-field-lbl">DIGEST:</span>
+                                <code className="dnssec-key-code text-gold">{ds.digest}</code>
+                                <button
+                                  type="button"
+                                  tabIndex={-1}
+                                  className={`navy-btn btn-xs ${
+                                    copiedKey === dsCopyId ? 'btn-copied' : ''
+                                  }`}
+                                  onClick={() => void copyValue(ds.digest, dsCopyId)}
+                                >
+                                  {copiedKey === dsCopyId ? '✓ COPIED' : 'COPY'}
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ZONE PUBLIC KEYS (DNSKEY) */}
+                  <div className="sub-card mt-8">
+                    <div className="sub-card-hdr dnssec-sub-hdr">
+                      <span>
+                        ZONE PUBLIC KEYS (DNSKEY) — AUTHORITATIVE KEYSET ({data.dnssec.totalKeys} KEYS
+                        FOUND)
+                      </span>
+                      <span className="dim-inline">{data.dnssec.dohProvider}</span>
+                    </div>
+                    {data.dnssec.dnskeys.length === 0 ? (
+                      <div className="dim-note">
+                        No DNSKEY records published for {data.dnssec.zone}.
+                      </div>
+                    ) : (
+                      <div className="dnssec-records-list">
+                        {data.dnssec.dnskeys.map((k, idx) => {
+                          const keyId = `dnskey-${k.keyTag}-${k.flags}-${idx}`;
+                          const isExpanded = Boolean(expandedKeys[keyId]);
+                          const shouldTruncate = k.publicKey.length > 56;
+                          const displayKey =
+                            !shouldTruncate || isExpanded
+                              ? k.publicKey
+                              : `${k.publicKey.slice(0, 36)}…${k.publicKey.slice(-16)}`;
+
+                          return (
+                            <div key={keyId} className="dnssec-record-block">
+                              <div className="dnssec-record-top">
+                                <div className="dnssec-record-tags">
+                                  <span
+                                    className={`dnssec-role-badge ${
+                                      k.keyType === 'KSK' ? 'role-ksk' : 'role-zsk'
+                                    }`}
+                                  >
+                                    {k.keyType === 'KSK'
+                                      ? 'KSK • FLAG 257 (KEY SIGNING KEY)'
+                                      : k.keyType === 'ZSK'
+                                      ? 'ZSK • FLAG 256 (ZONE SIGNING KEY)'
+                                      : k.keyTypeLabel.toUpperCase()}
+                                  </span>
+                                  <span className="dnssec-tag-pill">KEY TAG #{k.keyTag}</span>
+                                  <span className="ttl-pill">
+                                    ALG {k.algorithm}: {k.algorithmName}
+                                  </span>
+                                  <span className="ttl-pill">PROTO {k.protocol}</span>
+                                  {k.ttl !== null && <span className="ttl-pill">TTL {k.ttl}s</span>}
+                                </div>
+                                {k.matchedByDs && (
+                                  <span className="dnssec-chain-indicator chain-valid">
+                                    ★ LINKED BY PARENT DS #{k.keyTag}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="dnssec-key-row">
+                                <span className="dnssec-field-lbl">PUBKEY:</span>
+                                <code
+                                  className="dnssec-key-code text-cyan"
+                                  onClick={() => {
+                                    if (shouldTruncate) toggleKeyExpand(keyId);
+                                  }}
+                                  title={
+                                    shouldTruncate
+                                      ? 'Click to expand / collapse full Base64 public key'
+                                      : undefined
+                                  }
+                                  style={shouldTruncate ? { cursor: 'pointer' } : undefined}
+                                >
+                                  {displayKey}
+                                </code>
+                                <div className="kv-right">
+                                  {shouldTruncate && (
+                                    <button
+                                      type="button"
+                                      tabIndex={-1}
+                                      className="navy-btn btn-xs"
+                                      onClick={() => toggleKeyExpand(keyId)}
+                                    >
+                                      {isExpanded ? 'COLLAPSE' : 'EXPAND'}
+                                    </button>
+                                  )}
+                                  <button
+                                    type="button"
+                                    tabIndex={-1}
+                                    className={`navy-btn btn-xs ${
+                                      copiedKey === keyId ? 'btn-copied' : ''
+                                    }`}
+                                    onClick={() => void copyValue(k.publicKey, keyId)}
+                                  >
+                                    {copiedKey === keyId ? '✓ COPIED' : 'COPY'}
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
 
               {data.whois.raw && (

@@ -144,7 +144,7 @@ function withTimeout(promise, ms, fallbackValue = null) {
   });
 }
 
-function fetchJsonHttps(urlStr, timeoutMs = 5000) {
+function fetchJsonHttps(urlStr, timeoutMs = 5000, acceptHeader = 'application/json') {
   return new Promise((resolve, reject) => {
     const req = https.get(
       urlStr,
@@ -152,14 +152,14 @@ function fetchJsonHttps(urlStr, timeoutMs = 5000) {
         family: 4,
         timeout: timeoutMs,
         headers: {
-          'User-Agent': 'SubWrite-TechTools/0.2.3 (+https://techtools.subwrite.se)',
-          Accept: 'application/json',
+          'User-Agent': 'SubWrite-TechTools/0.2.7 (+https://techtools.subwrite.se)',
+          Accept: acceptHeader,
         },
       },
       (res) => {
         if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
           res.resume();
-          fetchJsonHttps(res.headers.location, timeoutMs).then(resolve).catch(reject);
+          fetchJsonHttps(res.headers.location, timeoutMs, acceptHeader).then(resolve).catch(reject);
           return;
         }
         let body = '';
@@ -565,6 +565,278 @@ function analyzeDmarc(dmarcTxtRecords, queriedHost) {
   };
 }
 
+// ============================================================================
+// DNSSEC ZONE KEY (DNSKEY) & DELEGATION SIGNER (DS) INSPECTOR (DoH)
+// ============================================================================
+const DNSSEC_ALGORITHMS = new Map([
+  [1, 'RSA/MD5'],
+  [2, 'Diffie-Hellman'],
+  [3, 'DSA/SHA-1'],
+  [5, 'RSA/SHA-1'],
+  [6, 'DSA-NSEC3-SHA1'],
+  [7, 'RSASHA1-NSEC3-SHA1'],
+  [8, 'RSA/SHA-256'],
+  [10, 'RSA/SHA-512'],
+  [12, 'ECC-GOST (GOST R 34.10-2001)'],
+  [13, 'ECDSA Curve P-256 with SHA-256'],
+  [14, 'ECDSA Curve P-384 with SHA-384'],
+  [15, 'Ed25519'],
+  [16, 'Ed448'],
+  [17, 'SM2 signing with SM3'],
+  [23, 'ECC-GOST12 (GOST R 34.10-2012)'],
+]);
+
+const DS_DIGEST_TYPES = new Map([
+  [1, 'SHA-1'],
+  [2, 'SHA-256'],
+  [3, 'GOST R 34.11-94'],
+  [4, 'SHA-384'],
+  [5, 'GOST R 34.11-2012'],
+  [6, 'SM3'],
+]);
+
+function domainNameToWire(domain) {
+  const clean = String(domain || '').replace(/\.+$/, '').toLowerCase();
+  if (!clean) return Buffer.from([0]);
+  const labels = clean.split('.').filter(Boolean);
+  const parts = [];
+  for (const label of labels) {
+    const buf = Buffer.from(label, 'ascii');
+    parts.push(Buffer.from([buf.length]), buf);
+  }
+  parts.push(Buffer.from([0]));
+  return Buffer.concat(parts);
+}
+
+/**
+ * Computes the 16-bit DNSSEC Key Tag (Key ID) from DNSKEY RDATA per RFC 4034 Appendix B
+ * and returns the wire RDATA buffer for cryptographic DS digest verification.
+ */
+function computeDnskeyTagAndRdata(flags, protocol, algorithm, publicKeyBase64) {
+  const cleanB64 = String(publicKeyBase64 || '').replace(/\s+/g, '');
+  const pubKeyBuf = Buffer.from(cleanB64, 'base64');
+  const rdata = Buffer.alloc(4 + pubKeyBuf.length);
+  rdata.writeUInt16BE(flags & 0xffff, 0);
+  rdata.writeUInt8(protocol & 0xff, 2);
+  rdata.writeUInt8(algorithm & 0xff, 3);
+  pubKeyBuf.copy(rdata, 4);
+
+  if (algorithm === 1) {
+    const keyTag = rdata.length >= 4 ? rdata.readUInt16BE(rdata.length - 3) & 0xffff : 0;
+    return { keyTag, rdata };
+  }
+
+  let ac = 0;
+  for (let i = 0; i < rdata.length; i++) {
+    ac += i & 1 ? rdata[i] : rdata[i] << 8;
+  }
+  ac += (ac >>> 16) & 0xffff;
+  return { keyTag: ac & 0xffff, rdata };
+}
+
+async function queryDohRecord(domain, rrType) {
+  const encodedName = encodeURIComponent(domain);
+  const encodedType = encodeURIComponent(rrType);
+  const cfUrl = `https://cloudflare-dns.com/dns-query?name=${encodedName}&type=${encodedType}`;
+  const cfResp = await withTimeout(fetchJsonHttps(cfUrl, 3400, 'application/dns-json'), 3600, null);
+  if (cfResp && typeof cfResp.Status === 'number') {
+    return { ...cfResp, provider: 'Cloudflare DoH (cloudflare-dns.com)' };
+  }
+  const googleUrl = `https://dns.google/resolve?name=${encodedName}&type=${encodedType}`;
+  const googleResp = await withTimeout(fetchJsonHttps(googleUrl, 3400, 'application/dns-json'), 3600, null);
+  if (googleResp && typeof googleResp.Status === 'number') {
+    return { ...googleResp, provider: 'Google DoH (dns.google)' };
+  }
+  return null;
+}
+
+function parseZoneDnssec(zoneName, dnskeyResp, dsResp, inheritedFromApex = false) {
+  const wireOwner = domainNameToWire(zoneName);
+  const rawDnskeyAnswers = Array.isArray(dnskeyResp?.Answer)
+    ? dnskeyResp.Answer.filter((a) => a && a.type === 48 && typeof a.data === 'string')
+    : [];
+  const rawDsAnswers = Array.isArray(dsResp?.Answer)
+    ? dsResp.Answer.filter((a) => a && a.type === 43 && typeof a.data === 'string')
+    : [];
+
+  const computedDigestsByTag = new Map();
+
+  const dnskeys = rawDnskeyAnswers
+    .map((ans) => {
+      const parts = ans.data.trim().split(/\s+/);
+      const flags = Number(parts[0]) || 0;
+      const protocol = Number(parts[1]) || 3;
+      const algorithm = Number(parts[2]) || 0;
+      const publicKey = parts.slice(3).join('').replace(/\s+/g, '');
+      const { keyTag, rdata } = computeDnskeyTagAndRdata(flags, protocol, algorithm, publicKey);
+
+      const digestInput = Buffer.concat([wireOwner, rdata]);
+      const sha1 = crypto.createHash('sha1').update(digestInput).digest('hex').toUpperCase();
+      const sha256 = crypto.createHash('sha256').update(digestInput).digest('hex').toUpperCase();
+      const sha384 = crypto.createHash('sha384').update(digestInput).digest('hex').toUpperCase();
+      if (!computedDigestsByTag.has(keyTag)) {
+        computedDigestsByTag.set(keyTag, []);
+      }
+      computedDigestsByTag.get(keyTag).push({
+        flags,
+        algorithm,
+        digests: { 1: sha1, 2: sha256, 4: sha384 },
+      });
+
+      let keyType = 'OTHER';
+      let keyTypeLabel = `Flags ${flags}`;
+      if (flags === 257) {
+        keyType = 'KSK';
+        keyTypeLabel = 'KSK (Key Signing Key — Flag 257)';
+      } else if (flags === 256) {
+        keyType = 'ZSK';
+        keyTypeLabel = 'ZSK (Zone Signing Key — Flag 256)';
+      } else if (flags === 385) {
+        keyType = 'REVOKED_KSK';
+        keyTypeLabel = 'Revoked KSK (Flag 385)';
+      } else if (flags === 384) {
+        keyType = 'REVOKED_ZSK';
+        keyTypeLabel = 'Revoked ZSK (Flag 384)';
+      } else if (flags & 1) {
+        keyType = 'KSK';
+        keyTypeLabel = `KSK (Flag ${flags})`;
+      } else if (flags & 256) {
+        keyType = 'ZSK';
+        keyTypeLabel = `ZSK (Flag ${flags})`;
+      }
+
+      return {
+        flags,
+        protocol,
+        algorithm,
+        algorithmName: DNSSEC_ALGORITHMS.get(algorithm) || `Algorithm ${algorithm}`,
+        keyType,
+        keyTypeLabel,
+        keyTag,
+        publicKey,
+        ttl: typeof ans.TTL === 'number' ? ans.TTL : null,
+        matchedByDs: false,
+      };
+    })
+    .sort((a, b) => {
+      if (a.keyType === 'KSK' && b.keyType !== 'KSK') return -1;
+      if (a.keyType !== 'KSK' && b.keyType === 'KSK') return 1;
+      return a.keyTag - b.keyTag;
+    });
+
+  const kskTags = new Set(dnskeys.filter((k) => k.keyType === 'KSK').map((k) => k.keyTag));
+  const allKeyTags = new Set(dnskeys.map((k) => k.keyTag));
+
+  const dsRecords = rawDsAnswers
+    .map((ans) => {
+      const parts = ans.data.trim().split(/\s+/);
+      const keyTag = Number(parts[0]) || 0;
+      const algorithm = Number(parts[1]) || 0;
+      const digestType = Number(parts[2]) || 0;
+      const digest = parts.slice(3).join('').replace(/\s+/g, '').toUpperCase();
+
+      const matchesKsk = kskTags.has(keyTag);
+      const matchesAnyKey = allKeyTags.has(keyTag);
+      const candidateKeys = computedDigestsByTag.get(keyTag) || [];
+      const digestVerified = candidateKeys.some(
+        (c) => c.algorithm === algorithm && c.digests[digestType] && c.digests[digestType] === digest
+      );
+
+      return {
+        keyTag,
+        algorithm,
+        algorithmName: DNSSEC_ALGORITHMS.get(algorithm) || `Algorithm ${algorithm}`,
+        digestType,
+        digestTypeName: DS_DIGEST_TYPES.get(digestType) || `Digest Type ${digestType}`,
+        digest,
+        ttl: typeof ans.TTL === 'number' ? ans.TTL : null,
+        matchesKsk,
+        matchesAnyKey,
+        digestVerified,
+      };
+    })
+    .sort((a, b) => a.keyTag - b.keyTag);
+
+  const matchedTags = new Set(dsRecords.filter((d) => d.matchesAnyKey).map((d) => d.keyTag));
+  for (const key of dnskeys) {
+    if (matchedTags.has(key.keyTag)) {
+      key.matchedByDs = true;
+    }
+  }
+
+  const kskCount = dnskeys.filter((k) => k.keyType === 'KSK').length;
+  const zskCount = dnskeys.filter((k) => k.keyType === 'ZSK').length;
+  const chainValid = dsRecords.length > 0 && dnskeys.length > 0 && dsRecords.some((d) => d.matchesKsk);
+  const adAuthenticated = Boolean(dnskeyResp?.AD || dsResp?.AD);
+
+  let status = 'UNSIGNED';
+  let statusLabel = 'UNSIGNED';
+  let summaryNote = `No DNSKEY or DS records published for ${zoneName}.`;
+
+  if (chainValid) {
+    status = 'SECURE';
+    statusLabel = 'SIGNED • CHAIN OF TRUST VALID';
+    summaryNote = `Parent DS record matches active zone KSK (${dnskeys.length} DNSKEY${
+      dnskeys.length === 1 ? '' : 's'
+    }: ${kskCount} KSK, ${zskCount} ZSK).`;
+  } else if (dsRecords.length > 0 && dnskeys.length > 0 && dsRecords.some((d) => d.matchesAnyKey)) {
+    status = 'SECURE';
+    statusLabel = 'SIGNED • CSK CHAIN VALID';
+    summaryNote = `Parent DS record matches active zone DNSKEY (${dnskeys.length} key${
+      dnskeys.length === 1 ? '' : 's'
+    } found).`;
+  } else if (dnskeys.length > 0 && dsRecords.length === 0) {
+    status = 'INCOMPLETE';
+    statusLabel = 'SIGNED ZONE • NO PARENT DS';
+    summaryNote = `${dnskeys.length} DNSKEY record(s) found in zone, but no DS delegation record is published in the parent TLD.`;
+  } else if (dsRecords.length > 0 && dnskeys.length === 0) {
+    status = 'BROKEN';
+    statusLabel = 'BROKEN CHAIN • MISSING DNSKEY';
+    summaryNote = 'Parent TLD publishes DS record(s), but no matching DNSKEY records were returned by the zone.';
+  } else if (dsRecords.length > 0 && dnskeys.length > 0) {
+    status = 'BROKEN';
+    statusLabel = 'BROKEN CHAIN • DS / KSK MISMATCH';
+    summaryNote = 'Parent DS Key Tag does not match any active KSK in the zone DNSKEY RRset.';
+  }
+
+  return {
+    zone: zoneName,
+    inheritedFromApex,
+    dohProvider: dnskeyResp?.provider || dsResp?.provider || 'Cloudflare DoH (cloudflare-dns.com)',
+    status,
+    statusLabel,
+    chainValid,
+    adAuthenticated,
+    summaryNote,
+    totalKeys: dnskeys.length,
+    kskCount,
+    zskCount,
+    dnskeys,
+    dsRecords,
+  };
+}
+
+async function lookupDomainDnssec(cleanedDomain, apexDomain) {
+  const [dnskeyResp, dsResp] = await Promise.all([
+    queryDohRecord(cleanedDomain, 'DNSKEY'),
+    queryDohRecord(cleanedDomain, 'DS'),
+  ]);
+
+  const hasDirectKeys =
+    (Array.isArray(dnskeyResp?.Answer) && dnskeyResp.Answer.some((a) => a && a.type === 48)) ||
+    (Array.isArray(dsResp?.Answer) && dsResp.Answer.some((a) => a && a.type === 43));
+
+  if (!hasDirectKeys && apexDomain && apexDomain !== cleanedDomain) {
+    const [apexDnskeyResp, apexDsResp] = await Promise.all([
+      queryDohRecord(apexDomain, 'DNSKEY'),
+      queryDohRecord(apexDomain, 'DS'),
+    ]);
+    return parseZoneDnssec(apexDomain, apexDnskeyResp, apexDsResp, true);
+  }
+
+  return parseZoneDnssec(cleanedDomain, dnskeyResp, dsResp, false);
+}
+
 async function handleDnsLookup(rawTarget, rawServerParam) {
   const startedAt = Date.now();
   const cleaned = sanitizeDomainInput(rawTarget);
@@ -632,6 +904,7 @@ async function handleDnsLookup(rawTarget, rawServerParam) {
         },
         emailSecurity: { spf: null, dmarc: null },
         whois: null,
+        dnssec: null,
       },
     };
   }
@@ -644,7 +917,7 @@ async function handleDnsLookup(rawTarget, rawServerParam) {
   const dmarcHost = `_dmarc.${cleaned}`;
   const apexDmarcHost = `_dmarc.${apexDomain}`;
 
-  const [aRes, aaaaRes, cnameRes, mxRes, nsRes, txtRes, soaRes, caaRes, dmarcRes, whoisData] =
+  const [aRes, aaaaRes, cnameRes, mxRes, nsRes, txtRes, soaRes, caaRes, dmarcRes, whoisData, dnssecData] =
     await Promise.all([
       queryWithErrorCapture(activeResolver.resolve4(cleaned, { ttl: true }), 3200, [], dnsOutcomes),
       queryWithErrorCapture(activeResolver.resolve6(cleaned, { ttl: true }), 3200, [], dnsOutcomes),
@@ -656,6 +929,7 @@ async function handleDnsLookup(rawTarget, rawServerParam) {
       queryWithErrorCapture(activeResolver.resolveCaa(cleaned), 3200, [], dnsOutcomes),
       withTimeout(activeResolver.resolveTxt(dmarcHost), 3000, null),
       lookupDomainWhois(cleaned),
+      lookupDomainDnssec(cleaned, apexDomain),
     ]);
 
   // Surface clear error if the chosen DNS server itself is unreachable or refuses queries
@@ -775,6 +1049,7 @@ async function handleDnsLookup(rawTarget, rawServerParam) {
         dmarc,
       },
       whois: whoisData,
+      dnssec: dnssecData,
     },
   };
 }

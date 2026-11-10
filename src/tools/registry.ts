@@ -27,10 +27,10 @@ export const TOOL_MODULES: ToolModule[] = [
     title: 'DNS & DOMAIN REGISTRY INTEL',
     shortTitle: 'DNS & WHOIS',
     category: 'DNS & MAIL',
-    badge: 'DNS • SPF • WHOIS',
+    badge: 'DNS • DNSSEC • WHOIS',
     description:
-      'Interrogate authoritative DNS records (A, AAAA, CNAME, PTR, MX, NS, SOA, TXT, CAA), validate SPF & DMARC mail security, and pull WHOIS domain registration records.',
-    capabilities: ['Selectable DNS (Google/Cloudflare/Custom)', 'MX + Mail Server IPs', 'SPF & DMARC Audit', 'Domain WHOIS Registry'],
+      'Interrogate authoritative DNS records (A, AAAA, CNAME, PTR, MX, NS, SOA, TXT, CAA), inspect DNSSEC zone keys (DNSKEY & DS chain of trust), validate SPF & DMARC mail security, and pull WHOIS domain registration records.',
+    capabilities: ['Selectable DNS (Google/Cloudflare/Custom)', 'DNSSEC (DNSKEY & DS Chain)', 'SPF & DMARC Audit', 'Domain WHOIS Registry'],
     Component: DnsTool,
   },
   {

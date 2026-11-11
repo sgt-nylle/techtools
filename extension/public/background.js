@@ -120,7 +120,7 @@ api.contextMenus.onClicked.addListener(async (info, tab) => {
 });
 
 api.commands.onCommand.addListener(async (command, tab) => {
-  // `_execute_action` (Alt+Shift+T) is handled natively by the browser (opens the popup).
+  // `_execute_action` (Alt+Shift+K) is handled natively by the browser (opens the popup).
   if (command === 'open-side-panel' && api.sidePanel) {
     const win = tab ? { id: tab.windowId } : await api.windows.getCurrent();
     try {

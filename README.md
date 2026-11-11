@@ -3,7 +3,11 @@
 > **🚀 LIVE APPLICATION:** **[https://techtools.subwrite.se](https://techtools.subwrite.se)**  
 > **IT Network TechTools for Navy Sailors!**
 
+> [!TIP]
+> **🧩 NEW — Browser Extension for Chrome, Edge & Brave:** take TechTools with you as a toolbar popup or a **docked side panel** next to your Azure / vCenter / AWS / GitHub dashboards. Fuzzy-search launcher, a pinnable **default tool**, 5 themes, offline tools, and right-click **“Inspect with TechTools”** on selected text. One-line installers for Linux, macOS & Windows → **[jump to Browser Extension install & docs ↓](#browser-extension-chrome--edge--brave--firefox)**
+
 [![Launch TechTools](https://img.shields.io/badge/LAUNCH_APP-techtools.subwrite.se-2563eb?style=for-the-badge&logo=googlechrome&logoColor=white)](https://techtools.subwrite.se)
+[![Browser Extension](https://img.shields.io/badge/NEW-Browser_Extension-16a34a?style=for-the-badge&logo=googlechrome&logoColor=white)](#browser-extension-chrome--edge--brave--firefox)
 [![Companion: subwrite.se](https://img.shields.io/badge/COMPANION-subwrite.se-facc15?style=for-the-badge)](https://subwrite.se)
 
 A modular clean, optimized Swedish Navy (*Kungliga Flottan*) IT troubleshooting web suite designed as a companion subsite to [subwrite.se](https://subwrite.se), featuring a custom pixel-art SVG sprite of the iconic *Norrköping*-class (*Spica II*) fast-attack missile boat **Robotbåt R136 HMS Västervik**. Launch and use the full suite directly in your browser at **[https://techtools.subwrite.se](https://techtools.subwrite.se)**.
@@ -13,7 +17,7 @@ A modular clean, optimized Swedish Navy (*Kungliga Flottan*) IT troubleshooting 
 
 ---
 
-## Diagnostic Modules (`v0.5.0`)
+## Diagnostic Modules (`v0.5.1`)
 
 1. **`MOD-01` — Password & Token Generator (`#/password-generator`)**
    - **Generated 100% Locally in Your Browser (Not on the Server):** Uses client-side CSPRNG (`window.crypto.getRandomValues`) with unbiased rejection sampling — zero network traffic, zero server involvement, and zero logging.
@@ -157,9 +161,11 @@ Use TechTools straight from your browser toolbar or as a **docked side panel** n
 
 | Shortcut | Action |
 |---|---|
-| `Alt+Shift+T` | Open popup |
+| `Alt+Shift+K` | Open popup |
 | `Alt+Shift+S` | Open side panel |
 | `Alt+T` / `Alt+P` | Cycle theme / pin current tool as default (inside the extension) |
+
+> **Shortcut tip:** `Alt+Shift+T` is reserved by Chrome/Edge (it focuses the browser toolbar), which is why the popup uses `Alt+Shift+K`. If a key is unassigned or clashes, rebind it at `chrome://extensions/shortcuts` (Edge: `edge://extensions/shortcuts`).
 
 ### Easy install (scripts)
 
@@ -222,6 +228,7 @@ TechTools uses a plugin-style registry so new troubleshooting tools can be added
 
 ## Changelog
 
+- **`v0.5.1`** — Extension shortcut fix: popup command moved from `Alt+Shift+T` (reserved by Chrome/Edge for toolbar focus) to `Alt+Shift+K`; README highlights the browser extension.
 - **`v0.5.0`** — Browser Extension (Chromium MV3, Firefox experimental):
   - New `extension/` bundle (popup 720×580 + side panel) built from the same React tools via `vite.extension.config.ts`; `chrome.storage` default-tool pinning, fuzzy launcher, themes sync, `Alt+Shift+T` / `Alt+Shift+S` commands and an **Inspect with TechTools** context menu with content auto-detection.
   - Packaged download + easy installers: `/downloads/techtools-extension.zip`, `install-extension.sh` (Linux/macOS) and `install-extension.ps1` (Windows). `npm run release` builds everything.

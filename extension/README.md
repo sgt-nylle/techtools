@@ -47,7 +47,7 @@ npm run build:ext          # -> extension/dist   (use `npm run watch:ext` while 
 3. **Load unpacked** → select `techtools/extension/dist`.
 4. Pin the extension from the puzzle-piece menu.
 5. After code changes: rebuild, then click the ↻ reload icon on the extension card.
-6. Set/adjust shortcuts at `chrome://extensions/shortcuts`.
+6. Set/adjust shortcuts at `chrome://extensions/shortcuts`. Chrome only applies `suggested_key` on a fresh install; if a shortcut shows as *Not set* after an update, assign it there (or remove and re-add the extension).
 
 **Firefox (scaffolded, untested):** `about:debugging#/runtime/this-firefox` → *Load Temporary Add-on* →
 `extension/dist/manifest.json`. `chrome.sidePanel` doesn't exist in Firefox, so the PANEL button
@@ -57,7 +57,7 @@ hides itself (a `sidebar_action` entry would be the Firefox equivalent).
 
 | Feature | How |
 |---|---|
-| Popup | `Alt+Shift+T` (`_execute_action`) or toolbar icon |
+| Popup | `Alt+Shift+K` (`_execute_action`) or toolbar icon. (`Alt+Shift+T` is reserved by Chrome/Edge for toolbar focus and cannot be used.) |
 | Side panel | `Alt+Shift+S`, the **▥ PANEL** button, `Alt+S`, or right-click → *Open TechTools side panel* |
 | Launcher | Search box is focused on open: fuzzy filter, `↑/↓` + `Enter`, or `1–9` when the search is empty |
 | Default tool | In a tool: **☆ PIN** / `Alt+P`. Launcher footer: choose *ON OPEN → Launcher / Default tool* |

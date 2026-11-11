@@ -95,7 +95,7 @@ Finish in your browser (one-time, ~10 seconds):
   2. Turn on "Developer mode" (top-right)
   3. Click "Load unpacked" and choose:
        $DEST
-  4. Pin the TechTools icon, then press Alt+Shift+T (popup) or Alt+Shift+S (side panel).
+  4. Pin the TechTools icon, then press Alt+Shift+K (popup) or Alt+Shift+S (side panel).
 
 Update later by re-running this script, then click the ↻ reload icon on the extension card.
 EOF

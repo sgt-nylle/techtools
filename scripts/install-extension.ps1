@@ -51,7 +51,7 @@ Finish in your browser (one-time, ~10 seconds):
   2. Turn on "Developer mode"
   3. Click "Load unpacked" and paste/choose:
        $Dir
-  4. Pin the TechTools icon, then press Alt+Shift+T (popup) or Alt+Shift+S (side panel).
+  4. Pin the TechTools icon, then press Alt+Shift+K (popup) or Alt+Shift+S (side panel).
 
 Update later by re-running this script, then click the reload icon on the extension card.
 "@

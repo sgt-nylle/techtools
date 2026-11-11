@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Builds the browser extension and packages it for download.
 #   Output (served by the web app after `npm run build` + deploy):
-#     dist/downloads/techtools-extension.zip          (latest)
+#     dist/downloads/techtools-extension-latest.zip   (canonical latest; techtools-extension.zip kept as alias)
 #     dist/downloads/techtools-extension-<version>.zip
 #     dist/downloads/techtools-extension-firefox.zip  (background.scripts variant)
 #     dist/downloads/install-extension.sh | install-extension.ps1
@@ -11,6 +11,7 @@ cd "$(dirname "$0")/.."
 
 VERSION="$(node -p "require('./package.json').version")"
 npm run --silent build:ext
+node scripts/validate-manifest.mjs extension/dist/manifest.json
 
 OUT="dist/downloads"
 mkdir -p "$OUT"
@@ -19,6 +20,8 @@ node scripts/make-firefox-manifest.mjs extension/dist extension/dist-firefox >/d
 
 ( cd extension/dist && zip -qr -X "../../$OUT/techtools-extension-$VERSION.zip" . )
 cp "$OUT/techtools-extension-$VERSION.zip" "$OUT/techtools-extension.zip"
+# "-latest" is the canonical alias (the legacy plain name was cached by the CDN before no-cache headers existed)
+cp "$OUT/techtools-extension-$VERSION.zip" "$OUT/techtools-extension-latest.zip"
 ( cd extension/dist-firefox && zip -qr -X "../../$OUT/techtools-extension-firefox.zip" . )
 cp scripts/install-extension.sh scripts/install-extension.ps1 "$OUT/"
 

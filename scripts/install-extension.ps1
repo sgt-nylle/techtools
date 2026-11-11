@@ -16,7 +16,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $base = if ($env:TECHTOOLS_URL) { $env:TECHTOOLS_URL } else { 'https://techtools.subwrite.se' }
 # ?t=<epoch> busts CDN caches so updates are always fetched fresh
-$zipUrl = "$base/downloads/techtools-extension.zip?t=$([DateTimeOffset]::UtcNow.ToUnixTimeSeconds())"
+$zipUrl = "$base/downloads/techtools-extension-latest.zip?t=$([DateTimeOffset]::UtcNow.ToUnixTimeSeconds())"
 
 $local = if ($PSScriptRoot) { Join-Path $PSScriptRoot '..\extension\dist' } else { $null }
 if ((Test-Path $Dir) -and (Get-ChildItem $Dir -Force | Select-Object -First 1)) {

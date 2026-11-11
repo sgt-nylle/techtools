@@ -17,7 +17,7 @@ A modular clean, optimized Swedish Navy (*Kungliga Flottan*) IT troubleshooting 
 
 ---
 
-## Diagnostic Modules (`v0.5.2`)
+## Diagnostic Modules (`v0.5.3`)
 
 1. **`MOD-01` — Password & Token Generator (`#/password-generator`)**
    - **Generated 100% Locally in Your Browser (Not on the Server):** Uses client-side CSPRNG (`window.crypto.getRandomValues`) with unbiased rejection sampling — zero network traffic, zero server involvement, and zero logging.
@@ -187,7 +187,7 @@ Default install folders: `~/.local/share/techtools-extension` (Linux), `~/Librar
 
 ### Manual install
 
-1. Download **[techtools-extension.zip](https://techtools.subwrite.se/downloads/techtools-extension.zip)** and unzip it to a folder you will keep (the browser loads it from there).
+1. Download **[techtools-extension-latest.zip](https://techtools.subwrite.se/downloads/techtools-extension-latest.zip)** and unzip it to a folder you will keep (the browser loads it from there).
 2. Open the extensions page — **Chrome** `chrome://extensions` · **Edge** `edge://extensions` · **Brave** `brave://extensions`.
 3. Enable **Developer mode**, click **Load unpacked**, select the unzipped folder.
 4. Pin the TechTools icon from the puzzle-piece menu. Adjust shortcuts at `chrome://extensions/shortcuts`.
@@ -229,11 +229,12 @@ TechTools uses a plugin-style registry so new troubleshooting tools can be added
 
 ## Changelog
 
+- **`v0.5.3`** — Store-ready manifest: description shortened to the 132-char store limit (Edge Add-ons validation), new `scripts/validate-manifest.mjs` runs during packaging, canonical download `techtools-extension-latest.zip`.
 - **`v0.5.2`** — Manifest fix: Chromium manifest now uses only `background.service_worker` (removes the *'background.scripts requires manifest version 2 or lower'* warning). Firefox gets its own generated build (`techtools-extension-firefox.zip`, `npm run build:ext:firefox`).
 - **`v0.5.1`** — Extension shortcut fix: popup command moved from `Alt+Shift+T` (reserved by Chrome/Edge for toolbar focus) to `Alt+Shift+K`; README highlights the browser extension.
 - **`v0.5.0`** — Browser Extension (Chromium MV3, Firefox experimental):
   - New `extension/` bundle (popup 720×580 + side panel) built from the same React tools via `vite.extension.config.ts`; `chrome.storage` default-tool pinning, fuzzy launcher, themes sync, `Alt+Shift+T` / `Alt+Shift+S` commands and an **Inspect with TechTools** context menu with content auto-detection.
-  - Packaged download + easy installers: `/downloads/techtools-extension.zip`, `install-extension.sh` (Linux/macOS) and `install-extension.ps1` (Windows). `npm run release` builds everything.
+  - Packaged download + easy installers: `/downloads/techtools-extension-latest.zip`, `install-extension.sh` (Linux/macOS) and `install-extension.ps1` (Windows). `npm run release` builds everything.
 - **`v0.4.0`** — Theme Switcher & 5 Themes:
   - Added a header theme dropdown and `Alt+T` shortcut (disabled while typing in inputs). Choice is persisted via the `tt_theme` cookie with `localStorage` fallback and applied before first paint.
   - Themes: **`bridge`** (default, clean light), **`navy`** (classic dark sonar terminal), **`amber-phosphor`** (black + amber), **`oled-black`** (true black, single cyan accent), **`paper-navy`** (high-contrast cream + navy).

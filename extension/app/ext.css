@@ -1,0 +1,264 @@
+/* =========================================================================
+   TECHTOOLS BROWSER EXTENSION — viewport constraints & shell layout
+   Chromium popups are capped at 800x600; we target 720x580 for the action popup.
+   The side panel is user-resizable, so it simply fills the available viewport.
+   ========================================================================= */
+
+html.ext-popup,
+html.ext-popup body {
+  width: 720px;
+  height: 580px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+html.ext-panel,
+html.ext-panel body {
+  width: 100%;
+  height: 100vh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+html.ext-popup #root,
+html.ext-panel #root {
+  height: 100%;
+  min-height: 0;
+}
+
+.ext-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background-color: var(--navy-bg);
+  color: var(--navy-primary);
+  position: relative;
+}
+
+/* ---- top navigation bar ---- */
+.ext-topbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background-color: var(--surf-1);
+  border-bottom: var(--bw-3) solid var(--navy-border);
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+.ext-title {
+  font-family: var(--font-arcade);
+  font-size: 10px;
+  color: var(--navy-cyan);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ext-spacer {
+  flex: 1 1 auto;
+}
+
+.ext-topbar .retro-header-btn {
+  white-space: nowrap;
+  padding: 5px 8px;
+}
+
+.ext-home-active {
+  border-color: var(--navy-gold);
+  color: var(--navy-gold);
+}
+
+.ext-pinned {
+  color: var(--navy-gold);
+  border-color: var(--navy-gold);
+}
+
+.ext-tool-select {
+  max-width: 190px;
+}
+
+/* ---- scroll-contained body ---- */
+.ext-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px;
+}
+
+.ext-tool .tool-panel {
+  min-width: 0;
+}
+
+/* tools were designed for a wide page: tighten spacing & let wide tables scroll sideways */
+.ext-tool {
+  min-width: 0;
+}
+
+.ext-tool pre,
+.ext-tool table {
+  max-width: 100%;
+}
+
+.ext-toast {
+  position: absolute;
+  top: 44px;
+  right: 10px;
+  z-index: 50;
+  font-family: var(--font-arcade);
+  font-size: 9px;
+  padding: 6px 10px;
+  background-color: var(--navy-gold);
+  color: var(--navy-deep);
+  border-radius: var(--radius);
+}
+
+/* ---- launcher / palette ---- */
+.ext-launcher {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ext-search {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 15px;
+}
+
+.ext-results {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ext-result {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  padding: 8px 10px;
+  background-color: var(--navy-inset);
+  color: var(--navy-primary);
+  border: var(--bw-2) solid var(--navy-cell-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: var(--font-mono);
+}
+
+.ext-result.selected {
+  border-color: var(--navy-gold);
+  background-color: var(--navy-row-hover);
+}
+
+.ext-result-key {
+  color: var(--navy-gold);
+  font-weight: 700;
+  min-width: 26px;
+}
+
+.ext-result-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ext-result-main strong {
+  font-size: 13px;
+  color: var(--navy-white);
+}
+
+.ext-result-main small {
+  font-size: 11px;
+  color: var(--navy-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ext-tag {
+  font-family: var(--font-arcade);
+  font-size: 8px;
+  padding: 3px 6px;
+  border: var(--bw-2) solid currentColor;
+  border-radius: var(--radius);
+}
+
+.ext-tag.local {
+  color: var(--navy-green);
+}
+
+.ext-tag.online {
+  color: var(--navy-amber);
+}
+
+.ext-empty {
+  padding: 14px;
+  text-align: center;
+  color: var(--navy-muted);
+}
+
+.ext-settings {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-family: var(--font-arcade);
+  font-size: 9px;
+  padding: 8px 10px;
+}
+
+.ext-settings-label {
+  color: var(--navy-gold);
+}
+
+.ext-settings label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+/* ---- side-panel / narrow widths ---- */
+@media (max-width: 520px) {
+  /* Narrow side panel: let the top bar wrap onto a second row instead of clipping */
+  .ext-topbar {
+    flex-wrap: wrap;
+    overflow: visible;
+    row-gap: 6px;
+  }
+  .ext-spacer {
+    display: none;
+  }
+  .ext-title {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .ext-topbar .theme-switcher {
+    flex: none;
+    margin-left: auto;
+  }
+  .ext-tool-select {
+    flex: 1 1 110px;
+    max-width: none;
+    min-width: 0;
+  }
+  .ext-topbar .theme-switcher-key {
+    display: none;
+  }
+  .ext-result-main small {
+    display: none;
+  }
+}
+
+/* The web app's full-page frame is not used here, but a few tools reference these helpers */
+.ext-root .clean-box {
+  max-width: 100%;
+}

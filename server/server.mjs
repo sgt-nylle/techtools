@@ -17,6 +17,9 @@ const MIME_TYPES = {
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
   '.ico': 'image/x-icon',
+  '.zip': 'application/zip',
+  '.sh': 'text/plain; charset=utf-8',
+  '.ps1': 'text/plain; charset=utf-8',
 };
 
 const SECURITY_CSP = [

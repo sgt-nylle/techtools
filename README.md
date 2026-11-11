@@ -13,7 +13,7 @@ A modular clean, optimized Swedish Navy (*Kungliga Flottan*) IT troubleshooting 
 
 ---
 
-## Diagnostic Modules (`v0.4.0`)
+## Diagnostic Modules (`v0.5.0`)
 
 1. **`MOD-01` — Password & Token Generator (`#/password-generator`)**
    - **Generated 100% Locally in Your Browser (Not on the Server):** Uses client-side CSPRNG (`window.crypto.getRandomValues`) with unbiased rejection sampling — zero network traffic, zero server involvement, and zero logging.
@@ -149,6 +149,59 @@ On desktop viewports (`>= 1024px`), TechTools supports running **two diagnostic 
 
 ---
 
+## Browser Extension (Chrome · Edge · Brave · Firefox)
+
+Use TechTools straight from your browser toolbar or as a **docked side panel** next to Azure / vCenter / AWS / GitHub dashboards. It packages the same tools locally (no iframe): Pass & Tokens, Mail Headers, Subnet Calc and JWT/SAML work **offline**; DNS, IP, Cert, URL Tester and Sec Headers call the TechTools API.
+
+**Features:** fuzzy-search launcher (`1–9` / `↑↓` / `Enter`), pin a **default tool** to open on launch, 5 themes synced between popup and panel, and right-click **Inspect with TechTools** on selected text (auto-detects JWT, SAML, PEM certs, mail headers, CIDR, IP, URL, domain).
+
+| Shortcut | Action |
+|---|---|
+| `Alt+Shift+T` | Open popup |
+| `Alt+Shift+S` | Open side panel |
+| `Alt+T` / `Alt+P` | Cycle theme / pin current tool as default (inside the extension) |
+
+### Easy install (scripts)
+
+> Browsers don't allow fully silent installs of unpacked extensions, so the scripts download + unpack the extension to a stable folder and walk you through the one-time **Load unpacked** click (~10 s). Re-run to update.
+
+**Linux / macOS**
+```bash
+curl -fsSL https://techtools.subwrite.se/downloads/install-extension.sh | bash -s -- --open
+# options: --browser chrome|chromium|brave|edge|firefox   --dir <folder>   --open (opens the extensions page)
+```
+
+**Windows (PowerShell)**
+```powershell
+irm https://techtools.subwrite.se/downloads/install-extension.ps1 | iex
+# or download first:  .\install-extension.ps1 -Open -Browser edge
+```
+
+Default install folders: `~/.local/share/techtools-extension` (Linux), `~/Library/Application Support/TechTools/extension` (macOS), `%LOCALAPPDATA%\TechTools\extension` (Windows).
+
+### Manual install
+
+1. Download **[techtools-extension.zip](https://techtools.subwrite.se/downloads/techtools-extension.zip)** and unzip it to a folder you will keep (the browser loads it from there).
+2. Open the extensions page — **Chrome** `chrome://extensions` · **Edge** `edge://extensions` · **Brave** `brave://extensions`.
+3. Enable **Developer mode**, click **Load unpacked**, select the unzipped folder.
+4. Pin the TechTools icon from the puzzle-piece menu. Adjust shortcuts at `chrome://extensions/shortcuts`.
+5. To update: re-download/unzip over the same folder and press **↻** on the extension card.
+
+**Firefox (temporary add-on):** `about:debugging#/runtime/this-firefox` → **Load Temporary Add-on…** → pick `manifest.json` from the unzipped folder (removed on browser restart; the side panel is Chromium-only). Firefox support is experimental.
+
+### Build from source
+
+```bash
+npm install
+npm run build:ext     # -> extension/dist  (load this folder unpacked; `npm run watch:ext` while developing)
+npm run release       # web build + packaged zip & installer scripts in dist/downloads/ (served by the site)
+npm run typecheck:ext
+```
+
+See [`extension/README.md`](extension/README.md) for architecture, folder structure, permissions and known limitations.
+
+---
+
 ## Extending With New Tools
 
 TechTools uses a plugin-style registry so new troubleshooting tools can be added with minimal boilerplate:
@@ -169,6 +222,9 @@ TechTools uses a plugin-style registry so new troubleshooting tools can be added
 
 ## Changelog
 
+- **`v0.5.0`** — Browser Extension (Chromium MV3, Firefox experimental):
+  - New `extension/` bundle (popup 720×580 + side panel) built from the same React tools via `vite.extension.config.ts`; `chrome.storage` default-tool pinning, fuzzy launcher, themes sync, `Alt+Shift+T` / `Alt+Shift+S` commands and an **Inspect with TechTools** context menu with content auto-detection.
+  - Packaged download + easy installers: `/downloads/techtools-extension.zip`, `install-extension.sh` (Linux/macOS) and `install-extension.ps1` (Windows). `npm run release` builds everything.
 - **`v0.4.0`** — Theme Switcher & 5 Themes:
   - Added a header theme dropdown and `Alt+T` shortcut (disabled while typing in inputs). Choice is persisted via the `tt_theme` cookie with `localStorage` fallback and applied before first paint.
   - Themes: **`bridge`** (default, clean light), **`navy`** (classic dark sonar terminal), **`amber-phosphor`** (black + amber), **`oled-black`** (true black, single cyan accent), **`paper-navy`** (high-contrast cream + navy).

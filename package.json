@@ -1,7 +1,7 @@
 {
   "name": "techtools",
   "private": true,
-  "version": "0.4.0",
+  "version": "0.5.0",
   "author": "Sgt.Moon <sysop@subwrite.se>",
   "homepage": "https://techtools.subwrite.se",
   "type": "module",
@@ -10,13 +10,19 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "start": "node server/server.mjs"
+    "start": "node server/server.mjs",
+    "build:ext": "vite build --config vite.extension.config.ts",
+    "watch:ext": "vite build --config vite.extension.config.ts --watch",
+    "typecheck:ext": "tsc -p extension/tsconfig.json",
+    "pack:ext": "bash scripts/pack-extension.sh",
+    "release": "npm run build && npm run pack:ext"
   },
   "dependencies": {
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
   "devDependencies": {
+    "@types/chrome": "^0.3.7",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",

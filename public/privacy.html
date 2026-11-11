@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Privacy Policy – TechTools</title>
+    <meta name="description" content="Privacy policy for TechTools (techtools.subwrite.se) and the TechTools browser extension." />
+    <link rel="canonical" href="https://techtools.subwrite.se/privacy" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="stylesheet" href="/privacy.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Privacy Policy</h1>
+      <p class="meta">TechTools (techtools.subwrite.se) and the TechTools browser extension · Last updated: 11 November 2026</p>
+
+      <div class="summary">
+        <strong>In short:</strong> TechTools has no accounts, no advertising and no tracking scripts of its own in the app or
+        the extension. Four tools run entirely on your device. The five &ldquo;online&rdquo; tools send what you type to
+        our server to produce a result. Like any web service, our servers see your IP address and keep standard access logs.
+      </div>
+
+      <h2>Who we are</h2>
+      <p>
+        TechTools is operated by SubWrite (<a href="https://subwrite.se">subwrite.se</a>). Contact:
+        <a href="mailto:sysop@subwrite.se">sysop@subwrite.se</a>.
+      </p>
+
+      <h2>Tools that stay on your device (nothing is sent)</h2>
+      <ul>
+        <li><strong>Password &amp; Token Generator</strong> – generated locally with the browser&rsquo;s secure random generator.</li>
+        <li><strong>Subnet &amp; Supernetting Calculator</strong> – calculated locally.</li>
+        <li><strong>JWT, OIDC &amp; SAML Inspector</strong> – tokens and assertions you paste are decoded locally and are never transmitted.</li>
+        <li><strong>Email Header Analyzer</strong> – headers you paste are analyzed locally.</li>
+      </ul>
+
+      <h2>Online tools (input is sent to our server)</h2>
+      <p>
+        The tools below need network access that a browser cannot do alone. When you run them, the value you enter is sent
+        to <code>techtools.subwrite.se</code> only to return the result, and we do not use it for any other purpose.
+      </p>
+      <table>
+        <tr><th>Tool</th><th>What is sent</th><th>Also passed to</th></tr>
+        <tr><td>DNS &amp; WHOIS</td><td>Domain name, chosen resolver</td><td>Public DNS resolvers (Google, Cloudflare or the one you choose) and WHOIS registries</td></tr>
+        <tr><td>What&rsquo;s My IP / range owner</td><td>Your IP address, or the IP/host you look up</td><td>Public routing and registry data sources (e.g. RIPEstat, regional registries)</td></tr>
+        <tr><td>Certificate &amp; CSR Analyzer</td><td>The certificate/CSR text you paste (private keys are blocked in your browser before sending)</td><td>Issuer certificate servers, to build the chain</td></tr>
+        <tr><td>URL &amp; TLS Probe</td><td>The URL or host you enter</td><td>The target host you asked us to probe</td></tr>
+        <tr><td>HTTP Security Headers</td><td>The URL you enter</td><td>The target host you asked us to probe</td></tr>
+      </table>
+      <p>Please do not enter secrets or confidential data into the online tools.</p>
+
+      <h2>What we collect and log</h2>
+      <ul>
+        <li><strong>IP address and request data:</strong> every request to our servers (and to Cloudflare, which sits in front of the site) includes your IP address, the time, the requested address, and your browser&rsquo;s user-agent string.</li>
+        <li><strong>Access logs:</strong> our web server keeps standard access logs for operations, security and aggregate usage statistics. For online tools the requested address can include the value you looked up. Logs are kept only as long as needed for these purposes.</li>
+        <li><strong>Cloudflare:</strong> the site is served through Cloudflare (CDN and security), which processes requests under its own <a href="https://www.cloudflare.com/privacypolicy/">privacy policy</a> and may keep aggregate traffic statistics.</li>
+        <li>We do not collect names, email addresses or other account data, and we do not sell or share data for advertising.</li>
+      </ul>
+
+      <h2>Browser extension</h2>
+      <ul>
+        <li><strong>Storage:</strong> the extension saves your preferences (default tool, start mode, color theme) in your browser&rsquo;s local extension storage. They are not sent to us.</li>
+        <li><strong>Right-click action:</strong> text you select is used only when you choose &ldquo;Inspect with TechTools&rdquo;. It is held locally for a few seconds to open the matching tool and then deleted. It is sent to our server only if you then run one of the online tools above.</li>
+        <li><strong>No page access:</strong> the extension does not read the pages you visit, your browsing history or your keystrokes, and it does not run on other websites.</li>
+        <li><strong>Network access:</strong> the only site the extension contacts is <code>techtools.subwrite.se</code>.</li>
+        <li><strong>No remote code:</strong> all code ships inside the extension package.</li>
+      </ul>
+
+      <h2>Cookies and local storage</h2>
+      <p>
+        The website stores your preferences (color theme, sound on/off, password-generator options) in a cookie or in your
+        browser&rsquo;s local storage. These stay on your device and are not used for tracking.
+      </p>
+
+      <h2>Your rights</h2>
+      <p>
+        If you are in the EU/EEA you may ask us to access or delete personal data we hold about you (for example log
+        entries tied to your IP address) by emailing <a href="mailto:sysop@subwrite.se">sysop@subwrite.se</a>.
+      </p>
+
+      <h2>Changes</h2>
+      <p>We may update this policy; the date at the top shows the latest revision.</p>
+
+      <footer>
+        <a href="/">← Back to TechTools</a> · <a href="https://github.com/sgt-nylle/techtools">Source code</a>
+      </footer>
+    </main>
+  </body>
+</html>

@@ -205,7 +205,7 @@ npm run release       # web build + Chromium & Firefox zips + installer scripts 
 npm run typecheck:ext
 ```
 
-See [`extension/README.md`](extension/README.md) for architecture, folder structure, permissions and known limitations.
+Privacy policy: **[techtools.subwrite.se/privacy](https://techtools.subwrite.se/privacy)** (source: `public/privacy.html`). See [`extension/README.md`](extension/README.md) for architecture, folder structure, permissions and known limitations.
 
 ---
 

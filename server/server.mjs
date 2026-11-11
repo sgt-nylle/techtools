@@ -55,7 +55,8 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  const urlPath = (req.url || '/').split('?')[0];
+  let urlPath = (req.url || '/').split('?')[0];
+  if (urlPath === '/privacy' || urlPath === '/privacy/') urlPath = '/privacy.html';
   const safeRel = path.normalize(decodeURIComponent(urlPath)).replace(/^(\.\.(\/|\\|$))+/, '');
   let filePath = path.join(DIST_DIR, safeRel === '/' ? 'index.html' : safeRel);
 

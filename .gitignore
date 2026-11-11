@@ -28,3 +28,4 @@ dist-ssr
 extension/dist
 *.zip
 extension/dist-firefox
+extension/store-assets/raw

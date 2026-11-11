@@ -49,8 +49,7 @@ npm run build:ext          # -> extension/dist   (use `npm run watch:ext` while 
 5. After code changes: rebuild, then click the ↻ reload icon on the extension card.
 6. Set/adjust shortcuts at `chrome://extensions/shortcuts`. Chrome only applies `suggested_key` on a fresh install; if a shortcut shows as *Not set* after an update, assign it there (or remove and re-add the extension).
 
-**Firefox (scaffolded, untested):** `about:debugging#/runtime/this-firefox` → *Load Temporary Add-on* →
-`extension/dist/manifest.json`. `chrome.sidePanel` doesn't exist in Firefox, so the PANEL button
+**Firefox (scaffolded, untested):** `npm run build:ext:firefox` generates `extension/dist-firefox` (same bundle with a Firefox manifest: `background.scripts`, no side panel — the Chromium manifest must NOT contain `background.scripts`). Then `about:debugging#/runtime/this-firefox` → *Load Temporary Add-on* → `extension/dist-firefox/manifest.json`. `chrome.sidePanel` doesn't exist in Firefox, so the PANEL button
 hides itself (a `sidebar_action` entry would be the Firefox equivalent).
 
 ## Behaviour

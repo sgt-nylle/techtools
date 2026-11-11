@@ -11,8 +11,7 @@
 set -euo pipefail
 
 BASE_URL="${TECHTOOLS_URL:-https://techtools.subwrite.se}"
-# ?t=<epoch> busts CDN caches so updates are always fetched fresh
-ZIP_URL="$BASE_URL/downloads/techtools-extension.zip?t=$(date +%s)"
+ZIP_NAME="techtools-extension.zip"
 case "$(uname -s)" in
   Darwin) DEFAULT_DIR="$HOME/Library/Application Support/TechTools/extension" ;;
   *) DEFAULT_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/techtools-extension" ;;
@@ -32,9 +31,13 @@ done
 
 say() { printf '\033[1;36m==>\033[0m %s\n' "$*"; }
 
+[ "$BROWSER" = "firefox" ] && ZIP_NAME="techtools-extension-firefox.zip"
+# ?t=<epoch> busts CDN caches so updates are always fetched fresh
+ZIP_URL="$BASE_URL/downloads/$ZIP_NAME?t=$(date +%s)"
 SRC_LOCAL=""
-if [ -n "${BASH_SOURCE[0]:-}" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/../extension/dist/manifest.json" ]; then
-  SRC_LOCAL="$(cd "$(dirname "${BASH_SOURCE[0]}")/../extension/dist" && pwd)"
+LOCAL_SUB="dist"; [ "$BROWSER" = "firefox" ] && LOCAL_SUB="dist-firefox"
+if [ -n "${BASH_SOURCE[0]:-}" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/../extension/$LOCAL_SUB/manifest.json" ]; then
+  SRC_LOCAL="$(cd "$(dirname "${BASH_SOURCE[0]}")/../extension/$LOCAL_SUB" && pwd)"
 fi
 
 command -v unzip >/dev/null 2>&1 || [ -n "$SRC_LOCAL" ] || { echo "Please install 'unzip' first." >&2; exit 1; }

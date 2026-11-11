@@ -27,3 +27,4 @@ dist-ssr
 # Browser extension build output
 extension/dist
 *.zip
+extension/dist-firefox

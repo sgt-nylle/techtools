@@ -1,7 +1,7 @@
 {
   "name": "techtools",
   "private": true,
-  "version": "0.5.1",
+  "version": "0.5.2",
   "author": "Sgt.Moon <sysop@subwrite.se>",
   "homepage": "https://techtools.subwrite.se",
   "type": "module",
@@ -15,7 +15,8 @@
     "watch:ext": "vite build --config vite.extension.config.ts --watch",
     "typecheck:ext": "tsc -p extension/tsconfig.json",
     "pack:ext": "bash scripts/pack-extension.sh",
-    "release": "npm run build && npm run pack:ext"
+    "release": "npm run build && npm run pack:ext",
+    "build:ext:firefox": "npm run build:ext && node scripts/make-firefox-manifest.mjs"
   },
   "dependencies": {
     "react": "^19.2.8",

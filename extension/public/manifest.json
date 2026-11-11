@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "TechTools — Naval IT Diagnostics",
   "short_name": "TechTools",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Sysadmin toolbox in your browser: subnet calculator, JWT/SAML inspector, DNS, certs, mail headers, URL probe and more. Local-first, keyboard-driven.",
   "minimum_chrome_version": "116",
   "icons": {
@@ -23,11 +23,16 @@
     "default_path": "sidepanel.html"
   },
   "background": {
-    "service_worker": "background.js",
-    "scripts": ["background.js"]
+    "service_worker": "background.js"
   },
-  "permissions": ["storage", "contextMenus", "sidePanel"],
-  "host_permissions": ["https://techtools.subwrite.se/*"],
+  "permissions": [
+    "storage",
+    "contextMenus",
+    "sidePanel"
+  ],
+  "host_permissions": [
+    "https://techtools.subwrite.se/*"
+  ],
   "commands": {
     "_execute_action": {
       "suggested_key": {
@@ -46,11 +51,5 @@
   },
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
-  },
-  "browser_specific_settings": {
-    "gecko": {
-      "id": "techtools@subwrite.se",
-      "strict_min_version": "121.0"
-    }
   }
 }

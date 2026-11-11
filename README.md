@@ -17,7 +17,7 @@ A modular clean, optimized Swedish Navy (*Kungliga Flottan*) IT troubleshooting 
 
 ---
 
-## Diagnostic Modules (`v0.5.1`)
+## Diagnostic Modules (`v0.5.2`)
 
 1. **`MOD-01` — Password & Token Generator (`#/password-generator`)**
    - **Generated 100% Locally in Your Browser (Not on the Server):** Uses client-side CSPRNG (`window.crypto.getRandomValues`) with unbiased rejection sampling — zero network traffic, zero server involvement, and zero logging.
@@ -193,14 +193,15 @@ Default install folders: `~/.local/share/techtools-extension` (Linux), `~/Librar
 4. Pin the TechTools icon from the puzzle-piece menu. Adjust shortcuts at `chrome://extensions/shortcuts`.
 5. To update: re-download/unzip over the same folder and press **↻** on the extension card.
 
-**Firefox (temporary add-on):** `about:debugging#/runtime/this-firefox` → **Load Temporary Add-on…** → pick `manifest.json` from the unzipped folder (removed on browser restart; the side panel is Chromium-only). Firefox support is experimental.
+**Firefox (temporary add-on, experimental):** Firefox needs a slightly different manifest (`background.scripts`, no side panel), so use the dedicated build: `curl -fsSL https://techtools.subwrite.se/downloads/install-extension.sh | bash -s -- --browser firefox`, or unzip **[techtools-extension-firefox.zip](https://techtools.subwrite.se/downloads/techtools-extension-firefox.zip)** manually. Then open `about:debugging#/runtime/this-firefox` → **Load Temporary Add-on…** → pick `manifest.json` (removed on browser restart; the side panel is Chromium-only).
 
 ### Build from source
 
 ```bash
 npm install
 npm run build:ext     # -> extension/dist  (load this folder unpacked; `npm run watch:ext` while developing)
-npm run release       # web build + packaged zip & installer scripts in dist/downloads/ (served by the site)
+npm run build:ext:firefox   # Firefox variant -> extension/dist-firefox
+npm run release       # web build + Chromium & Firefox zips + installer scripts in dist/downloads/ (served by the site)
 npm run typecheck:ext
 ```
 
@@ -228,6 +229,7 @@ TechTools uses a plugin-style registry so new troubleshooting tools can be added
 
 ## Changelog
 
+- **`v0.5.2`** — Manifest fix: Chromium manifest now uses only `background.service_worker` (removes the *'background.scripts requires manifest version 2 or lower'* warning). Firefox gets its own generated build (`techtools-extension-firefox.zip`, `npm run build:ext:firefox`).
 - **`v0.5.1`** — Extension shortcut fix: popup command moved from `Alt+Shift+T` (reserved by Chrome/Edge for toolbar focus) to `Alt+Shift+K`; README highlights the browser extension.
 - **`v0.5.0`** — Browser Extension (Chromium MV3, Firefox experimental):
   - New `extension/` bundle (popup 720×580 + side panel) built from the same React tools via `vite.extension.config.ts`; `chrome.storage` default-tool pinning, fuzzy launcher, themes sync, `Alt+Shift+T` / `Alt+Shift+S` commands and an **Inspect with TechTools** context menu with content auto-detection.

@@ -67,6 +67,8 @@ const server = http.createServer(async (req, res) => {
     const ext = path.extname(filePath).toLowerCase();
     res.statusCode = 200;
     res.setHeader('Content-Type', MIME_TYPES[ext] || 'application/octet-stream');
+    // Extension downloads must never be served stale by the CDN / browser caches.
+    if (urlPath.startsWith('/downloads/')) res.setHeader('Cache-Control', 'no-cache, must-revalidate');
     fs.createReadStream(filePath).pipe(res);
   } catch {
     res.statusCode = 500;

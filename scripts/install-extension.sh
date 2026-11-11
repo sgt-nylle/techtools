@@ -11,7 +11,8 @@
 set -euo pipefail
 
 BASE_URL="${TECHTOOLS_URL:-https://techtools.subwrite.se}"
-ZIP_URL="$BASE_URL/downloads/techtools-extension.zip"
+# ?t=<epoch> busts CDN caches so updates are always fetched fresh
+ZIP_URL="$BASE_URL/downloads/techtools-extension.zip?t=$(date +%s)"
 case "$(uname -s)" in
   Darwin) DEFAULT_DIR="$HOME/Library/Application Support/TechTools/extension" ;;
   *) DEFAULT_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/techtools-extension" ;;

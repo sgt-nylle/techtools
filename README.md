@@ -13,7 +13,7 @@ A modular clean, optimized Swedish Navy (*Kungliga Flottan*) IT troubleshooting 
 
 ---
 
-## Diagnostic Modules (`v0.3.1`)
+## Diagnostic Modules (`v0.3.2`)
 
 1. **`MOD-01` — Password & Token Generator (`#/password-generator`)**
    - **Generated 100% Locally in Your Browser (Not on the Server):** Uses client-side CSPRNG (`window.crypto.getRandomValues`) with unbiased rejection sampling — zero network traffic, zero server involvement, and zero logging.
@@ -169,6 +169,8 @@ TechTools uses a plugin-style registry so new troubleshooting tools can be added
 
 ## Changelog
 
+- **`v0.3.2`** — MOD-08 Auth Inspector Cleared Defaults:
+  - JWT and SAML input fields now start empty (no pre-loaded sample) with a helpful empty-state prompt; sample tokens remain available via the sample buttons.
 - **`v0.3.1`** — Split-View Arrow-Key Window Switching (`←` / `→`) & Auth/Security Module Documentation:
   - Added keyboard arrow-key window switching (`←` / `→` and `↑` / `↓`) in Desktop Split-Screen Mode to rapidly move active focus between **Pane A** and **Pane B**, plus dedicated banner `FOCUS [◄]` / `FOCUS [►]` buttons and a center-divider quick-switch toggle so `[1–9]` and tool shortcuts immediately target the chosen window.
   - Added comprehensive repository documentation covering `MOD-07`, `MOD-08` (JWT/OIDC/Entra ID & SAML 2.0 input requirements and client-side privacy architecture), and `MOD-09` (HTTP security header scoring & CSP evaluation criteria).

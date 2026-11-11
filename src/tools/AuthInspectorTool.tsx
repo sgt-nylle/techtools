@@ -165,7 +165,7 @@ function formatDurationDelta(diffSeconds: number): string {
 function inspectJwtToken(rawInput: string): { result?: DecodedJwtResult; error?: string } {
   let cleaned = rawInput.trim();
   if (!cleaned) {
-    return { error: 'Paste a JWT or OIDC Bearer token to decode.' };
+    return {};
   }
   // Strip optional "Bearer " prefix
   cleaned = cleaned.replace(/^Bearer\s+/i, '').trim();
@@ -381,7 +381,7 @@ function prettyFormatXml(xmlInput: string): string {
 function inspectSamlPayload(rawInput: string): { result?: DecodedSamlResult; error?: string } {
   let trimmed = rawInput.trim();
   if (!trimmed) {
-    return { error: 'Paste a Base64-encoded SAMLResponse or raw SAML XML document.' };
+    return {};
   }
 
   // Handle URL-encoded SAMLResponse= parameter
@@ -508,8 +508,8 @@ function inspectSamlPayload(rawInput: string): { result?: DecodedSamlResult; err
 export const AuthInspectorTool: React.FC = () => {
   const isPaneActive = useIsPaneActive();
   const [mode, setMode] = useState<AuthInspectMode>('jwt');
-  const [jwtInput, setJwtInput] = useState<string>(() => createSampleEntraJwt());
-  const [samlInput, setSamlInput] = useState<string>(() => createSampleSamlBase64());
+  const [jwtInput, setJwtInput] = useState<string>('');
+  const [samlInput, setSamlInput] = useState<string>('');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -672,6 +672,13 @@ export const AuthInspectorTool: React.FC = () => {
           </div>
 
           {jwtInspection.error && <div className="alert-banner status-err clean-box">⚠ {jwtInspection.error}</div>}
+
+          {!jwtInput.trim() && (
+            <div className="empty-prompt clean-box">
+              Paste any JWT or OIDC Bearer token above (<kbd>Q</kbd> to focus) or click{' '}
+              <strong>SAMPLE ENTRA ID / OIDC JWT</strong> to inspect claims, token validity, and cryptographic signatures.
+            </div>
+          )}
 
           {jwtData && (
             <>
@@ -934,6 +941,13 @@ export const AuthInspectorTool: React.FC = () => {
           </div>
 
           {samlInspection.error && <div className="alert-banner status-err clean-box">⚠ {samlInspection.error}</div>}
+
+          {!samlInput.trim() && (
+            <div className="empty-prompt clean-box">
+              Paste a Base64-encoded SAMLResponse or raw SAML 2.0 XML above (<kbd>Q</kbd> to focus) or click{' '}
+              <strong>SAMPLE ENTRA SAML 2.0 RESPONSE</strong> to decode assertions, validity windows, and attributes.
+            </div>
+          )}
 
           {samlData && (
             <>

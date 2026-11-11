@@ -3,8 +3,32 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="theme-color" content="#123878" />
+    <meta name="theme-color" content="#f5f7fa" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <script>
+      /* Apply persisted theme before first paint (avoids flash). Default: bridge. */
+      (function () {
+        var themes = {
+          bridge: ['#f5f7fa', 1],
+          navy: ['#123878', 0],
+          'amber-phosphor': ['#000000', 1],
+          'oled-black': ['#000000', 1],
+          'paper-navy': ['#faf6ea', 1],
+        };
+        var t = 'bridge';
+        try {
+          var m = document.cookie.match(/(?:^|; )tt_theme=([^;]*)/);
+          var v = m ? decodeURIComponent(m[1]) : localStorage.getItem('tt_theme');
+          if (v === 'clean') v = 'bridge'; /* legacy id */
+          if (v && Object.prototype.hasOwnProperty.call(themes, v)) t = v;
+        } catch (e) {}
+        var root = document.documentElement;
+        root.setAttribute('data-theme', t);
+        if (themes[t][1]) root.setAttribute('data-flat', '');
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', themes[t][0]);
+      })();
+    </script>
     <title>TechTools // HMS Västervik (R136) – SubWrite Naval IT Diagnostics</title>
     <meta
       name="description"

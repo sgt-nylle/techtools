@@ -3,6 +3,7 @@ import { TOOL_MODULES, getToolById } from './tools/registry';
 import { CommandDeck } from './components/CommandDeck';
 import { APP_VERSION } from './version';
 import { sound } from './utils/audio';
+import { THEMES, applyTheme, loadTheme, nextTheme, saveTheme, type ThemeId } from './utils/theme';
 import { PaneActiveContext } from './utils/paneContext';
 import './App.css';
 
@@ -62,6 +63,7 @@ export function App() {
   );
 
   const [soundEnabled, setSoundEnabled] = useState<boolean>(() => sound.isEnabled());
+  const [theme, setTheme] = useState<ThemeId>(() => loadTheme());
   const [quickIp, setQuickIp] = useState<string | null>(null);
 
   const splitContainerRef = useRef<HTMLDivElement>(null);
@@ -228,12 +230,33 @@ export function App() {
     };
   }, []);
 
+  // Theme: apply + persist on change (cookie with localStorage fallback)
+  useEffect(() => {
+    applyTheme(theme);
+    saveTheme(theme);
+  }, [theme]);
+
+  const changeTheme = useCallback(
+    (id: ThemeId) => {
+      if (id === theme) return;
+      sound.playClick();
+      setTheme(id);
+    },
+    [theme]
+  );
+
+  const cycleTheme = useCallback(() => {
+    sound.playClick();
+    setTheme((prev) => nextTheme(prev));
+  }, []);
+
   // Global keyboard shortcuts:
   // - Ctrl+Shift+D -> Toggle Desktop Split-Screen / Dual-Pane Mode
   // - ESC in text input -> blur input (unlocks single-letter shortcuts)
   // - ESC outside text input -> return to Command Deck
   // - [1..9] -> Jump to Module (routes to currently focused pane in Split View)
   // - [S] -> Toggle SFX
+  // - [Alt+T] -> Cycle themes
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Desktop Split-Screen shortcut: Ctrl+Shift+D
@@ -266,6 +289,15 @@ export function App() {
           selectPrimaryTool(null);
           return;
         }
+      }
+
+      // Theme cycle: Alt+T (Option+T on macOS). Guarded: never fires while typing in
+      // inputs / textareas / contenteditable. Alt is used because [T] is already a
+      // per-module shortcut (PassGen, URL Probe).
+      if (!isTextEntry && e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && e.code === 'KeyT') {
+        e.preventDefault();
+        cycleTheme();
+        return;
       }
 
       if (isTextEntry || e.metaKey || e.ctrlKey || e.altKey) return;
@@ -319,6 +351,7 @@ export function App() {
     selectToolForActivePane,
     toggleSplitView,
     switchFocusedPane,
+    cycleTheme,
   ]);
 
   const activeModule = getToolById(activeToolId);
@@ -394,6 +427,30 @@ export function App() {
             >
               ⌨ SUBWRITE.SE ↗
             </a>
+            <div className="theme-switcher">
+              <span className="theme-switcher-label" aria-hidden="true">
+                THEME
+              </span>
+              <select
+                className="theme-switcher-select"
+                aria-label="Color theme"
+                value={theme}
+                title={`Active theme: ${THEMES.find((t) => t.id === theme)?.title ?? theme}`}
+                onChange={(e) => {
+                  changeTheme(e.target.value as ThemeId);
+                  e.target.blur();
+                }}
+              >
+                {THEMES.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+              <span className="theme-switcher-key" title="Cycle theme: Alt+T" aria-hidden="true">
+                [Alt+T]
+              </span>
+            </div>
             <button
               type="button"
               className="retro-header-btn"

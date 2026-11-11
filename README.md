@@ -13,7 +13,7 @@ A modular clean, optimized Swedish Navy (*Kungliga Flottan*) IT troubleshooting 
 
 ---
 
-## Diagnostic Modules (`v0.3.2`)
+## Diagnostic Modules (`v0.4.0`)
 
 1. **`MOD-01` — Password & Token Generator (`#/password-generator`)**
    - **Generated 100% Locally in Your Browser (Not on the Server):** Uses client-side CSPRNG (`window.crypto.getRandomValues`) with unbiased rejection sampling — zero network traffic, zero server involvement, and zero logging.
@@ -169,6 +169,10 @@ TechTools uses a plugin-style registry so new troubleshooting tools can be added
 
 ## Changelog
 
+- **`v0.4.0`** — Theme Switcher & 5 Themes:
+  - Added a header theme dropdown and `Alt+T` shortcut (disabled while typing in inputs). Choice is persisted via the `tt_theme` cookie with `localStorage` fallback and applied before first paint.
+  - Themes: **`bridge`** (default, clean light), **`navy`** (classic dark sonar terminal), **`amber-phosphor`** (black + amber), **`oled-black`** (true black, single cyan accent), **`paper-navy`** (high-contrast cream + navy).
+  - HMS Västervik sprite now re-colors per theme and bobs in every theme; larger/bolder module switcher (1–9) text in the flat themes.
 - **`v0.3.2`** — MOD-08 Auth Inspector Cleared Defaults:
   - JWT and SAML input fields now start empty (no pre-loaded sample) with a helpful empty-state prompt; sample tokens remain available via the sample buttons.
 - **`v0.3.1`** — Split-View Arrow-Key Window Switching (`←` / `→`) & Auth/Security Module Documentation:

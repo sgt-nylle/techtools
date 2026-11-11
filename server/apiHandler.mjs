@@ -152,7 +152,7 @@ function fetchJsonHttps(urlStr, timeoutMs = 5000, acceptHeader = 'application/js
         family: 4,
         timeout: timeoutMs,
         headers: {
-          'User-Agent': 'SubWrite-TechTools/0.3.2 (+https://techtools.subwrite.se)',
+          'User-Agent': 'SubWrite-TechTools/0.4.0 (+https://techtools.subwrite.se)',
           Accept: acceptHeader,
         },
       },
@@ -2129,7 +2129,7 @@ function executeSocketProbe({ ip, hostname, port, pathWithQuery, method, useTls 
             agent: oneShotAgent,
             headers: {
               Host: hostHeader,
-              'User-Agent': 'SubWrite-TechTools-Probe/0.3.2 (+https://techtools.subwrite.se)',
+              'User-Agent': 'SubWrite-TechTools-Probe/0.4.0 (+https://techtools.subwrite.se)',
               Accept: 'text/html,application/xhtml+xml,application/json,*/*;q=0.8',
               'Accept-Encoding': 'identity',
               Connection: 'close',
@@ -2704,7 +2704,7 @@ export async function handleApiRequest(req, res) {
       sendJson(res, 200, {
         ok: true,
         service: 'techtools.subwrite.se',
-        version: '0.3.2',
+        version: '0.4.0',
         timestamp: new Date().toISOString(),
       });
       return true;

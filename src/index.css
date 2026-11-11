@@ -1,4 +1,93 @@
-:root {
+/* =========================================================================
+   THEME TOKENS
+   - bridge (DEFAULT): light, crisp, thin-bordered utility theme
+   - navy  (Classic Sub): original dark submarine / sonar terminal theme
+   Theme is applied via <html data-theme="bridge|navy|amber-phosphor|oled-black|paper-navy"> (see src/utils/theme.ts).
+   Token names keep the legacy --navy-* prefix so every component picks them up.
+   ========================================================================= */
+
+/* ---------- BRIDGE — Clean Navy / Light (default) ---------- */
+:root,
+:root[data-theme='bridge'] {
+  color-scheme: light;
+
+  --page-bg: #eceff4;
+  --bg-glow-a: #f6f8fb;
+  --bg-glow-b: #e9edf3;
+
+  --navy-bg: #f5f7fa;
+  --navy-panel: #ffffff;
+  --navy-subcard: #f1f4f8;
+  --navy-inset: #f6f8fb;
+  --navy-deep: #e8ecf2;
+  --navy-row-hover: #eaf0fa;
+  --navy-frame: #dde5f1;
+  --navy-border: #d0d7e2;
+  --navy-border-bright: #b3bfd0;
+  --navy-cell-border: #dbe1ea;
+  --navy-primary: #0f2547;
+  --navy-dim: #3d5273;
+  --navy-muted: #5d6e88;
+  --navy-cyan: #0b6a8f;
+  --navy-gold: #1d4ed8;
+  --navy-green: #15803d;
+  --navy-amber: #b45309;
+  --navy-red: #b91c1c;
+  --navy-white: #0a1d3b;
+  --navy-glow: rgba(0, 0, 0, 0);
+
+  --surf-1: #f7f9fc;
+  --surf-2: #ffffff;
+  --surf-3: #f3f5f9;
+  --surf-4: #eef2f7;
+  --surf-5: #f3f6fb;
+  --surf-6: #edf1f7;
+  --surf-7: #f1f4f9;
+  --surf-8: #eef2f8;
+  --grad-hi: #ffffff;
+  --grad-lo: #eef2f7;
+  --grad-hi-2: #ffffff;
+  --card-border: #cbd5e1;
+  --card-hover-bg: #eef4ff;
+  --text-soft: #334a6b;
+  --accent-hover: #dbe7fb;
+  --ok-solid: #dcfce7;
+  --err-solid: #fee2e2;
+  --err-solid-hi: #fecaca;
+  --alert-bg: #fef2f2;
+
+  --gold-rgb: 29, 78, 216;
+  --cyan-rgb: 11, 106, 143;
+  --blue-rgb: 100, 116, 139;
+  --amber-rgb: 180, 83, 9;
+  --red-rgb: 220, 38, 38;
+  --green-rgb: 21, 128, 61;
+  --ok-bg-rgb: 187, 247, 208;
+  --err-bg-rgb: 254, 202, 202;
+  --warn-bg-rgb: 253, 230, 138;
+  --dim-rgb: 61, 82, 115;
+  --bright-rgb: 148, 163, 184;
+  --frame-rgb: 148, 163, 184;
+  --shade-rgb: 233, 237, 243;
+
+  --bw-2: 1px;
+  --bw-3: 1px;
+  --bw-12: 1px;
+  --radius: 6px;
+
+  --font-arcade: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, system-ui, sans-serif;
+  --font-retro: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, system-ui, sans-serif;
+  --font-mono: ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+}
+
+/* ---------- NAVY (CLASSIC SUB) — original dark theme ---------- */
+:root[data-theme='navy'] {
+  color-scheme: dark;
+
+  --page-bg: #0d2b5e;
+  --bg-glow-a: #1e52a8;
+  --bg-glow-b: #0c2859;
+
   --navy-bg: #123878;
   --navy-panel: #174591;
   --navy-subcard: #1e52ab;
@@ -20,6 +109,45 @@
   --navy-white: #f8fafc;
   --navy-glow: rgba(103, 232, 249, 0.55);
 
+  --surf-1: #154087;
+  --surf-2: #1c4fa6;
+  --surf-3: #16438c;
+  --surf-4: #143d82;
+  --surf-5: #1b4da3;
+  --surf-6: #1f4f9e;
+  --surf-7: #194899;
+  --surf-8: #153e7e;
+  --grad-hi: #1d51ab;
+  --grad-lo: #10336e;
+  --grad-hi-2: #1b4ea3;
+  --card-border: #4080e8;
+  --card-hover-bg: #245ec2;
+  --text-soft: #dbeafe;
+  --accent-hover: #3b82f6;
+  --ok-solid: #065f46;
+  --err-solid: #7f1d1d;
+  --err-solid-hi: #b91c1c;
+  --alert-bg: #451424;
+
+  --gold-rgb: 254, 204, 2;
+  --cyan-rgb: 103, 232, 249;
+  --blue-rgb: 84, 148, 247;
+  --amber-rgb: 253, 224, 71;
+  --red-rgb: 239, 68, 68;
+  --green-rgb: 74, 222, 128;
+  --ok-bg-rgb: 6, 95, 70;
+  --err-bg-rgb: 127, 29, 29;
+  --warn-bg-rgb: 120, 53, 15;
+  --dim-rgb: 191, 217, 255;
+  --bright-rgb: 130, 181, 255;
+  --frame-rgb: 37, 99, 235;
+  --shade-rgb: 11, 38, 84;
+
+  --bw-2: 2px;
+  --bw-3: 3px;
+  --bw-12: 12px;
+  --radius: 0px;
+
   --font-arcade: 'Press Start 2P', monospace;
   --font-retro: 'VT323', 'Share Tech Mono', monospace;
   --font-mono: 'Share Tech Mono', 'Courier New', monospace;
@@ -35,8 +163,9 @@ html,
 body {
   width: 100%;
   min-height: 100vh;
-  background-color: #0d2b5e;
+  background-color: var(--page-bg);
   color: var(--navy-primary);
+  transition: background-color 0.15s ease, color 0.15s ease;
   font-family: var(--font-retro);
   overflow-x: hidden;
 }
@@ -65,4 +194,353 @@ pre {
 ::-webkit-scrollbar-thumb {
   background: var(--navy-border);
   border: 1px solid var(--navy-frame);
+}
+
+/* ---------- AMBER PHOSPHOR — Bridge Terminal (P3 amber on pure black) ---------- */
+:root[data-theme='amber-phosphor'] {
+  color-scheme: dark;
+
+  --page-bg: #000000;
+  --bg-glow-a: #000000;
+  --bg-glow-b: #000000;
+  --navy-bg: #000000;
+  --navy-panel: #050300;
+  --navy-subcard: #0d0800;
+  --navy-inset: #080500;
+  --navy-deep: #000000;
+  --navy-row-hover: #1a1100;
+  --navy-frame: #3d2a00;
+  --navy-border: #6b4a00;
+  --navy-border-bright: #a87600;
+  --navy-cell-border: #3d2a00;
+  --navy-primary: #ffb000;
+  --navy-dim: #cc8c00;
+  --navy-muted: #8f6300;
+  --navy-cyan: #ffb000;
+  --navy-gold: #ffcc4d;
+  --navy-green: #33ff33;
+  --navy-amber: #ffb000;
+  --navy-red: #ff5a3c;
+  --navy-white: #ffd27a;
+  --navy-glow: rgba(0, 0, 0, 0);
+  --surf-1: #0a0600;
+  --surf-2: #000000;
+  --surf-3: #090600;
+  --surf-4: #070400;
+  --surf-5: #0b0700;
+  --surf-6: #0d0800;
+  --surf-7: #0a0600;
+  --surf-8: #080500;
+  --grad-hi: #120c00;
+  --grad-lo: #000000;
+  --grad-hi-2: #0d0800;
+  --card-border: #6b4a00;
+  --card-hover-bg: #1f1400;
+  --text-soft: #e6a000;
+  --accent-hover: #2b1c00;
+  --ok-solid: #0a2a0a;
+  --err-solid: #2e0a05;
+  --err-solid-hi: #4a1208;
+  --alert-bg: #1a0503;
+  --gold-rgb: 255, 176, 0;
+  --cyan-rgb: 255, 176, 0;
+  --blue-rgb: 168, 118, 0;
+  --amber-rgb: 255, 176, 0;
+  --red-rgb: 255, 90, 60;
+  --green-rgb: 51, 255, 51;
+  --ok-bg-rgb: 10, 60, 10;
+  --err-bg-rgb: 80, 20, 10;
+  --warn-bg-rgb: 80, 50, 0;
+  --dim-rgb: 204, 140, 0;
+  --bright-rgb: 168, 118, 0;
+  --frame-rgb: 107, 74, 0;
+  --shade-rgb: 0, 0, 0;
+  --bw-2: 1px;
+  --bw-3: 1px;
+  --bw-12: 1px;
+  --radius: 0px;
+  --font-arcade: ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  --font-retro: ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  --font-mono: ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+}
+
+/* ---------- OLED BLACK — Pure Dark ---------- */
+:root[data-theme='oled-black'] {
+  color-scheme: dark;
+
+  --page-bg: #000000;
+  --bg-glow-a: #000000;
+  --bg-glow-b: #000000;
+  --navy-bg: #000000;
+  --navy-panel: #0b0d10;
+  --navy-subcard: #101318;
+  --navy-inset: #07090b;
+  --navy-deep: #000000;
+  --navy-row-hover: #151a21;
+  --navy-frame: #1c222b;
+  --navy-border: #232a34;
+  --navy-border-bright: #3a4452;
+  --navy-cell-border: #1a2028;
+  --navy-primary: #e6eaf0;
+  --navy-dim: #a3adbb;
+  --navy-muted: #7a8594;
+  --navy-cyan: #38bdf8;
+  --navy-gold: #38bdf8;
+  --navy-green: #4ade80;
+  --navy-amber: #fbbf24;
+  --navy-red: #f87171;
+  --navy-white: #f8fafc;
+  --navy-glow: rgba(0, 0, 0, 0);
+  --surf-1: #0b0d10;
+  --surf-2: #0d1014;
+  --surf-3: #0a0c0f;
+  --surf-4: #0c0f13;
+  --surf-5: #0b0e12;
+  --surf-6: #0e1115;
+  --surf-7: #0b0d10;
+  --surf-8: #0c0f13;
+  --grad-hi: #11151a;
+  --grad-lo: #07090b;
+  --grad-hi-2: #0d1014;
+  --card-border: #2a323e;
+  --card-hover-bg: #131a22;
+  --text-soft: #b6c0cd;
+  --accent-hover: #1a222c;
+  --ok-solid: #0f2a1a;
+  --err-solid: #2a1215;
+  --err-solid-hi: #3d1a1e;
+  --alert-bg: #1a0b0d;
+  --gold-rgb: 56, 189, 248;
+  --cyan-rgb: 56, 189, 248;
+  --blue-rgb: 58, 68, 82;
+  --amber-rgb: 251, 191, 36;
+  --red-rgb: 248, 113, 113;
+  --green-rgb: 74, 222, 128;
+  --ok-bg-rgb: 15, 60, 35;
+  --err-bg-rgb: 70, 20, 25;
+  --warn-bg-rgb: 70, 50, 10;
+  --dim-rgb: 163, 173, 187;
+  --bright-rgb: 90, 104, 122;
+  --frame-rgb: 58, 68, 82;
+  --shade-rgb: 0, 0, 0;
+  --bw-2: 1px;
+  --bw-3: 1px;
+  --bw-12: 1px;
+  --radius: 6px;
+  --font-arcade: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, system-ui, sans-serif;
+  --font-retro: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, system-ui, sans-serif;
+  --font-mono: ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+}
+
+/* ---------- PAPER NAVY — High-Contrast Light ---------- */
+:root[data-theme='paper-navy'] {
+  color-scheme: light;
+
+  --page-bg: #f1ecdc;
+  --bg-glow-a: #faf6ea;
+  --bg-glow-b: #f1ecdc;
+  --navy-bg: #faf6ea;
+  --navy-panel: #fffdf6;
+  --navy-subcard: #f4efe0;
+  --navy-inset: #f8f3e4;
+  --navy-deep: #e7e0cb;
+  --navy-row-hover: #efe8d2;
+  --navy-frame: #cfc6aa;
+  --navy-border: #1b2f57;
+  --navy-border-bright: #0a1f44;
+  --navy-cell-border: #8f97a8;
+  --navy-primary: #08142b;
+  --navy-dim: #1f3358;
+  --navy-muted: #3c4d6b;
+  --navy-cyan: #00497a;
+  --navy-gold: #0b3b9e;
+  --navy-green: #0b6b2f;
+  --navy-amber: #8a4b00;
+  --navy-red: #a30f0f;
+  --navy-white: #040b1a;
+  --navy-glow: rgba(0, 0, 0, 0);
+  --surf-1: #f6f1e1;
+  --surf-2: #fffdf6;
+  --surf-3: #f4efe0;
+  --surf-4: #efe9d7;
+  --surf-5: #f5f0e0;
+  --surf-6: #eee7d2;
+  --surf-7: #f3eedd;
+  --surf-8: #efe9d6;
+  --grad-hi: #fffdf6;
+  --grad-lo: #efe8d2;
+  --grad-hi-2: #fffdf6;
+  --card-border: #1b2f57;
+  --card-hover-bg: #efe8d2;
+  --text-soft: #1f3358;
+  --accent-hover: #e2d9bd;
+  --ok-solid: #c9ecd1;
+  --err-solid: #f9d0d0;
+  --err-solid-hi: #f3b4b4;
+  --alert-bg: #fbe4e4;
+  --gold-rgb: 11, 59, 158;
+  --cyan-rgb: 0, 73, 122;
+  --blue-rgb: 27, 47, 87;
+  --amber-rgb: 138, 75, 0;
+  --red-rgb: 163, 15, 15;
+  --green-rgb: 11, 107, 47;
+  --ok-bg-rgb: 190, 235, 200;
+  --err-bg-rgb: 247, 196, 196;
+  --warn-bg-rgb: 250, 222, 140;
+  --dim-rgb: 31, 51, 88;
+  --bright-rgb: 27, 47, 87;
+  --frame-rgb: 27, 47, 87;
+  --shade-rgb: 231, 224, 203;
+  --bw-2: 1px;
+  --bw-3: 2px;
+  --bw-12: 2px;
+  --radius: 3px;
+  --font-arcade: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, system-ui, sans-serif;
+  --font-retro: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, system-ui, sans-serif;
+  --font-mono: ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+}
+
+/* =========================================================================
+   HMS VÄSTERVIK SPRITE PALETTE (per theme)
+   ========================================================================= */
+
+:root[data-theme='navy'] {
+  --boat-hullDark: #19325e;
+  --boat-hullMid: #4c75b0;
+  --boat-hullLight: #8fb5eb;
+  --boat-keel: #0b1b3b;
+  --boat-canister: #436aa3;
+  --boat-canisterHi: #7da4de;
+  --boat-canisterDark: #132850;
+  --boat-mast: #091733;
+  --boat-mastEdge: #5b85c4;
+  --boat-railing: #739cd6;
+  --boat-cupola: #82aae0;
+  --boat-cupolaHi: #dbeafe;
+  --boat-cupolaShadow: #33578f;
+  --boat-white: #f8fafc;
+  --boat-pennant: #e2eeff;
+  --boat-windowDark: #061229;
+  --boat-windowGlint: #67e8f9;
+  --boat-wakeMid: #38bdf8;
+  --boat-wakeDeep: #1d4ed8;
+  --boat-flagBlue: #006aa7;
+  --boat-flagGold: #fecc02;
+  --boat-buoyOrange: #fb923c;
+  --boat-grid: #3b76d4;
+  --boat-glow: #67e8f9;
+  --boat-glow-opacity: 0.4;
+}
+
+:root,
+:root[data-theme='bridge'] {
+  --boat-hullDark: #14284d;
+  --boat-hullMid: #2f5a96;
+  --boat-hullLight: #6f98cf;
+  --boat-keel: #0b1b3b;
+  --boat-canister: #2c4f86;
+  --boat-canisterHi: #6f98cf;
+  --boat-canisterDark: #0f2147;
+  --boat-mast: #0a1a38;
+  --boat-mastEdge: #3d68a8;
+  --boat-railing: #4a74b0;
+  --boat-cupola: #5d86c0;
+  --boat-cupolaHi: #c9dcf5;
+  --boat-cupolaShadow: #274a80;
+  --boat-white: #ffffff;
+  --boat-pennant: #e8f0fc;
+  --boat-windowDark: #061229;
+  --boat-windowGlint: #38bdf8;
+  --boat-wakeMid: #0ea5e9;
+  --boat-wakeDeep: #1d4ed8;
+  --boat-flagBlue: #006aa7;
+  --boat-flagGold: #fecc02;
+  --boat-buoyOrange: #fb923c;
+  --boat-grid: #94a3b8;
+  --boat-glow: #67e8f9;
+  --boat-glow-opacity: 0;
+}
+
+:root[data-theme='amber-phosphor'] {
+  --boat-hullDark: #5c3d00;
+  --boat-hullMid: #b37a00;
+  --boat-hullLight: #ffb000;
+  --boat-keel: #2e1f00;
+  --boat-canister: #996800;
+  --boat-canisterHi: #ffc84d;
+  --boat-canisterDark: #3d2a00;
+  --boat-mast: #7a5200;
+  --boat-mastEdge: #cc8c00;
+  --boat-railing: #cc8c00;
+  --boat-cupola: #e69d00;
+  --boat-cupolaHi: #ffe0a0;
+  --boat-cupolaShadow: #6b4a00;
+  --boat-white: #ffe9b8;
+  --boat-pennant: #ffd27a;
+  --boat-windowDark: #0a0600;
+  --boat-windowGlint: #ffcc4d;
+  --boat-wakeMid: #ffb000;
+  --boat-wakeDeep: #805800;
+  --boat-flagBlue: #8f6300;
+  --boat-flagGold: #ffcc4d;
+  --boat-buoyOrange: #ff8c1a;
+  --boat-grid: #6b4a00;
+  --boat-glow: #67e8f9;
+  --boat-glow-opacity: 0;
+}
+
+:root[data-theme='oled-black'] {
+  --boat-hullDark: #1a2330;
+  --boat-hullMid: #3a4a5e;
+  --boat-hullLight: #7c8da3;
+  --boat-keel: #161e29;
+  --boat-canister: #33445a;
+  --boat-canisterHi: #6b7f98;
+  --boat-canisterDark: #121a24;
+  --boat-mast: #2a3646;
+  --boat-mastEdge: #8ea3bd;
+  --boat-railing: #7c8da3;
+  --boat-cupola: #a3b4ca;
+  --boat-cupolaHi: #e6eaf0;
+  --boat-cupolaShadow: #3a4a5e;
+  --boat-white: #f8fafc;
+  --boat-pennant: #e6eaf0;
+  --boat-windowDark: #05080c;
+  --boat-windowGlint: #38bdf8;
+  --boat-wakeMid: #38bdf8;
+  --boat-wakeDeep: #0c6e9a;
+  --boat-flagBlue: #006aa7;
+  --boat-flagGold: #fecc02;
+  --boat-buoyOrange: #fb923c;
+  --boat-grid: #3a4452;
+  --boat-glow: #67e8f9;
+  --boat-glow-opacity: 0;
+}
+
+:root[data-theme='paper-navy'] {
+  --boat-hullDark: #0f2147;
+  --boat-hullMid: #2a4a82;
+  --boat-hullLight: #5f86c0;
+  --boat-keel: #060f24;
+  --boat-canister: #20406f;
+  --boat-canisterHi: #5f86c0;
+  --boat-canisterDark: #081633;
+  --boat-mast: #040b1a;
+  --boat-mastEdge: #2a4a82;
+  --boat-railing: #2a4a82;
+  --boat-cupola: #4a72ae;
+  --boat-cupolaHi: #c4d6ef;
+  --boat-cupolaShadow: #1f3d70;
+  --boat-white: #fffdf6;
+  --boat-pennant: #fffdf6;
+  --boat-windowDark: #040b1a;
+  --boat-windowGlint: #3aa7d9;
+  --boat-wakeMid: #1b78c2;
+  --boat-wakeDeep: #0a3a9c;
+  --boat-flagBlue: #006aa7;
+  --boat-flagGold: #e0b000;
+  --boat-buoyOrange: #d9631a;
+  --boat-grid: #1b2f57;
+  --boat-glow: #67e8f9;
+  --boat-glow-opacity: 0;
 }

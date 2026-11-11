@@ -17,29 +17,33 @@ const ROBOTBAT_COLS = 190;
 const ROBOTBAT_ROWS = 54;
 const ROBOTBAT_PIXEL_SIZE = 2;
 
+/**
+ * Boat colors are CSS variables (--boat-*) defined per theme in index.css, so the sprite
+ * re-colors with the selected theme. Navy keeps the original palette.
+ */
 const PALETTE = {
-  hullDark: '#19325e', // M90 dark splinter navy-slate
-  hullMid: '#4c75b0', // M90 mid splinter steel-blue
-  hullLight: '#8fb5eb', // M90 light splinter ice-steel
-  keel: '#0b1b3b', // Dark lower planing hull / boot-top
-  canister: '#436aa3', // RBS-15 box launcher & torpedo tube body
-  canisterHi: '#7da4de', // RBS-15 top edge highlight
-  canisterDark: '#132850', // RBS-15 seam, end-caps & struts
-  mast: '#091733', // Lattice mast, pole mast, pedestal & 9LV200 director
-  mastEdge: '#5b85c4', // Subtle metallic edge highlight on dark mast & struts
-  railing: '#739cd6', // Fine deck railing wire
-  cupola: '#82aae0', // Bofors 57mm cupola & Sea Giraffe radome body
-  cupolaHi: '#dbeafe', // Radome & gun barrel highlight
-  cupolaShadow: '#33578f', // Cupola base & lower shadow
-  white: '#f8fafc', // Crisp white (visor, lifebuoy quarters, foam crest)
-  pennant: '#e2eeff', // R136 tactical hull number
-  windowDark: '#061229', // Tinted armored bridge windows
-  windowGlint: '#67e8f9', // Cyan instrument/glass glint & wave spray
-  wakeMid: '#38bdf8', // Baltic sea wake mid-cyan
-  wakeDeep: '#1d4ed8', // Sub-surface wake shadow
-  flagBlue: '#006aa7', // Swedish Naval Ensign blue
-  flagGold: '#fecc02', // Swedish Naval Ensign gold cross & nameplate
-  buoyOrange: '#fb923c', // Lifebuoy safety orange
+  hullDark: 'var(--boat-hullDark)', // M90 dark splinter navy-slate
+  hullMid: 'var(--boat-hullMid)', // M90 mid splinter steel-blue
+  hullLight: 'var(--boat-hullLight)', // M90 light splinter ice-steel
+  keel: 'var(--boat-keel)', // Dark lower planing hull / boot-top
+  canister: 'var(--boat-canister)', // RBS-15 box launcher & torpedo tube body
+  canisterHi: 'var(--boat-canisterHi)', // RBS-15 top edge highlight
+  canisterDark: 'var(--boat-canisterDark)', // RBS-15 seam, end-caps & struts
+  mast: 'var(--boat-mast)', // Lattice mast, pole mast, pedestal & 9LV200 director
+  mastEdge: 'var(--boat-mastEdge)', // Subtle metallic edge highlight on dark mast & struts
+  railing: 'var(--boat-railing)', // Fine deck railing wire
+  cupola: 'var(--boat-cupola)', // Bofors 57mm cupola & Sea Giraffe radome body
+  cupolaHi: 'var(--boat-cupolaHi)', // Radome & gun barrel highlight
+  cupolaShadow: 'var(--boat-cupolaShadow)', // Cupola base & lower shadow
+  white: 'var(--boat-white)', // Crisp white (visor, lifebuoy quarters, foam crest)
+  pennant: 'var(--boat-pennant)', // R136 tactical hull number
+  windowDark: 'var(--boat-windowDark)', // Tinted armored bridge windows
+  windowGlint: 'var(--boat-windowGlint)', // Cyan instrument/glass glint & wave spray
+  wakeMid: 'var(--boat-wakeMid)', // Baltic sea wake mid-cyan
+  wakeDeep: 'var(--boat-wakeDeep)', // Sub-surface wake shadow
+  flagBlue: 'var(--boat-flagBlue)', // Swedish Naval Ensign blue
+  flagGold: 'var(--boat-flagGold)', // Swedish Naval Ensign gold cross & nameplate
+  buoyOrange: 'var(--boat-buoyOrange)', // Lifebuoy safety orange
 };
 
 interface PixelSpan {
@@ -494,12 +498,12 @@ export const HmsVastervik: React.FC<{ className?: string }> = ({ className = '' 
       >
         <defs>
           <filter id="navyGlow" x="-12%" y="-12%" width="124%" height="124%">
-            <feDropShadow dx="0" dy="0" stdDeviation="2.5" floodColor="#67e8f9" floodOpacity="0.4" />
+            <feDropShadow dx="0" dy="0" stdDeviation="2.5" style={{ floodColor: 'var(--boat-glow)', floodOpacity: 'var(--boat-glow-opacity)' } as React.CSSProperties} />
           </filter>
         </defs>
 
         {/* Naval Radar Bearing & Horizon Grid behind HMS Västervik */}
-        <g stroke="#3b76d4" strokeWidth="1" strokeDasharray="3 4" opacity="0.5">
+        <g stroke="var(--boat-grid)" strokeWidth="1" strokeDasharray="3 4" opacity="0.5">
           <line x1="0" y1="36" x2={width} y2="36" />
           <line x1="0" y1="70" x2={width} y2="70" />
           <line x1="190" y1="4" x2="190" y2={height} />
@@ -513,7 +517,7 @@ export const HmsVastervik: React.FC<{ className?: string }> = ({ className = '' 
               y={s.y * ROBOTBAT_PIXEL_SIZE}
               width={s.w * ROBOTBAT_PIXEL_SIZE}
               height={ROBOTBAT_PIXEL_SIZE}
-              fill={s.color}
+              style={{ fill: s.color }}
             />
           ))}
         </g>

@@ -4,9 +4,10 @@
 > **IT Network TechTools for Navy Sailors!**
 
 > [!TIP]
-> **🧩 NEW — Browser Extension for Chrome, Edge & Brave:** take TechTools with you as a toolbar popup or a **docked side panel** next to your Azure / vCenter / AWS / GitHub dashboards. Fuzzy-search launcher, a pinnable **default tool**, 5 themes, offline tools, and right-click **“Inspect with TechTools”** on selected text. One-line installers for Linux, macOS & Windows → **[jump to Browser Extension install & docs ↓](#browser-extension-chrome--edge--brave--firefox)**
+> **🧩 NEW — Browser Extension, now live on the Microsoft Edge Add-ons store (also for Chrome & Brave):** take TechTools with you as a toolbar popup or a **docked side panel** next to your Azure / vCenter / AWS / GitHub dashboards. Fuzzy-search launcher, a pinnable **default tool**, 5 themes, offline tools, and right-click **“Inspect with TechTools”** on selected text. One-line installers for Linux, macOS & Windows → **[Get it on the Microsoft Edge Add-ons store](https://microsoftedge.microsoft.com/addons/detail/techtools-%E2%80%94-naval-it-diag/phoogogpdkknpjedkmogpfkdoljgngmd)** · **[install & docs ↓](#browser-extension-chrome--edge--brave--firefox)**
 
 [![Launch TechTools](https://img.shields.io/badge/LAUNCH_APP-techtools.subwrite.se-2563eb?style=for-the-badge&logo=googlechrome&logoColor=white)](https://techtools.subwrite.se)
+[![Get it on Microsoft Edge Add-ons](https://img.shields.io/badge/EDGE_ADD--ONS-Install_TechTools-0078d4?style=for-the-badge&logo=microsoftedge&logoColor=white)](https://microsoftedge.microsoft.com/addons/detail/techtools-%E2%80%94-naval-it-diag/phoogogpdkknpjedkmogpfkdoljgngmd)
 [![Browser Extension](https://img.shields.io/badge/NEW-Browser_Extension-16a34a?style=for-the-badge&logo=googlechrome&logoColor=white)](#browser-extension-chrome--edge--brave--firefox)
 [![Companion: subwrite.se](https://img.shields.io/badge/COMPANION-subwrite.se-facc15?style=for-the-badge)](https://subwrite.se)
 
@@ -167,6 +168,22 @@ Use TechTools straight from your browser toolbar or as a **docked side panel** n
 
 > **Shortcut tip:** `Alt+Shift+T` is reserved by Chrome/Edge (it focuses the browser toolbar), which is why the popup uses `Alt+Shift+K`. If a key is unassigned or clashes, rebind it at `chrome://extensions/shortcuts` (Edge: `edge://extensions/shortcuts`).
 
+### Install from the Microsoft Edge Add-ons store (recommended)
+
+TechTools is **published and approved on the Microsoft Edge Add-ons store** — one click, automatic updates, no developer mode:
+
+**➡️ [TechTools — Naval IT Diagnostics on Microsoft Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/techtools-%E2%80%94-naval-it-diag/phoogogpdkknpjedkmogpfkdoljgngmd)**
+
+Open the link in **Microsoft Edge** (Windows, macOS or Linux) and click **Get**. Then pin the TechTools icon from the puzzle-piece (Extensions) menu.
+
+| Browser | Install from the Edge Add-ons store? |
+|---|---|
+| **Microsoft Edge** (desktop) | ✅ Yes — native support, auto-updates |
+| Chrome, Brave, Vivaldi, Opera and other Chromium browsers | ❌ The Edge store only installs into Edge. Use the **[install scripts](#easy-install-scripts)** or **[manual install](#manual-install)** below (the same extension build works on all Chromium browsers) |
+| Firefox | ❌ Not on this store — use the experimental Firefox build below |
+
+> Store builds can lag a few days behind the latest release on GitHub while Microsoft reviews each update. The scripts below always fetch the newest version.
+
 ### Easy install (scripts)
 
 > Browsers don't allow fully silent installs of unpacked extensions, so the scripts download + unpack the extension to a stable folder and walk you through the one-time **Load unpacked** click (~10 s). Re-run to update.
@@ -229,6 +246,7 @@ TechTools uses a plugin-style registry so new troubleshooting tools can be added
 
 ## Changelog
 
+- **`v0.5.3` (published)** — **Microsoft Edge Add-ons:** the extension is approved and live on the [Edge Add-ons store](https://microsoftedge.microsoft.com/addons/detail/techtools-%E2%80%94-naval-it-diag/phoogogpdkknpjedkmogpfkdoljgngmd).
 - **`v0.5.3`** — Store-ready manifest: description shortened to the 132-char store limit (Edge Add-ons validation), new `scripts/validate-manifest.mjs` runs during packaging, canonical download `techtools-extension-latest.zip`.
 - **`v0.5.2`** — Manifest fix: Chromium manifest now uses only `background.service_worker` (removes the *'background.scripts requires manifest version 2 or lower'* warning). Firefox gets its own generated build (`techtools-extension-firefox.zip`, `npm run build:ext:firefox`).
 - **`v0.5.1`** — Extension shortcut fix: popup command moved from `Alt+Shift+T` (reserved by Chrome/Edge for toolbar focus) to `Alt+Shift+K`; README highlights the browser extension.

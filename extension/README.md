@@ -32,7 +32,9 @@ techtools/
 
 ## Install
 
-End users: see **Browser Extension** in the [main README](../README.md#browser-extension-chrome--edge--brave--firefox) (one-line installers for Linux/macOS/Windows + manual steps).
+**Microsoft Edge:** install from the [Edge Add-ons store](https://microsoftedge.microsoft.com/addons/detail/techtools-%E2%80%94-naval-it-diag/phoogogpdkknpjedkmogpfkdoljgngmd) (one click, auto-updates).
+
+Other browsers / end users: see **Browser Extension** in the [main README](../README.md#browser-extension-chrome--edge--brave--firefox) (one-line installers for Linux/macOS/Windows + manual steps).
 
 ## Load unpacked from source (Chrome / Edge / Brave)
 

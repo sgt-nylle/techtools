@@ -78,6 +78,15 @@
   --font-arcade: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, system-ui, sans-serif;
   --font-retro: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, system-ui, sans-serif;
   --font-mono: ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+
+  --logo-font: 'Chakra Petch', var(--font-arcade);
+  --logo-weight: 700;
+  --logo-spacing: 0.15em;
+  --logo-scale: 1.22;
+  --logo-shadow:
+    0 0 12px rgba(56, 189, 248, 0.55),
+    0 0 24px rgba(14, 165, 233, 0.28),
+    0 2px 0 rgba(11, 106, 143, 0.22);
 }
 
 /* ---------- NAVY (CLASSIC SUB) — original dark theme ---------- */
@@ -151,6 +160,12 @@
   --font-arcade: 'Press Start 2P', monospace;
   --font-retro: 'VT323', 'Share Tech Mono', monospace;
   --font-mono: 'Share Tech Mono', 'Courier New', monospace;
+
+  --logo-font: var(--font-arcade);
+  --logo-weight: 400;
+  --logo-spacing: 4px;
+  --logo-scale: 1;
+  --logo-shadow: 0 0 18px rgba(var(--cyan-rgb), 0.65), 4px 4px 0 var(--navy-deep);
 }
 
 * {
@@ -196,7 +211,8 @@ pre {
   border: 1px solid var(--navy-frame);
 }
 
-/* ---------- AMBER PHOSPHOR — Bridge Terminal (P3 amber on pure black) ---------- */
+/* ---------- RADAR (AMBER PHOSPHOR) — Bridge Terminal (P3 amber on pure black) ---------- */
+:root[data-theme='radar'],
 :root[data-theme='amber-phosphor'] {
   color-scheme: dark;
 
@@ -262,6 +278,16 @@ pre {
   --font-arcade: ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
   --font-retro: ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
   --font-mono: ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+
+  --logo-font: 'Share Tech Mono', 'VT323', var(--font-mono);
+  --logo-weight: 400;
+  --logo-spacing: 0.18em;
+  --logo-scale: 1.28;
+  --logo-shadow:
+    0 0 6px rgba(255, 196, 61, 0.85),
+    0 0 14px rgba(255, 176, 0, 0.65),
+    0 0 28px rgba(255, 106, 0, 0.45),
+    0 0 46px rgba(204, 68, 0, 0.3);
 }
 
 /* ---------- OLED BLACK — Pure Dark ---------- */
@@ -330,6 +356,15 @@ pre {
   --font-arcade: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, system-ui, sans-serif;
   --font-retro: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, system-ui, sans-serif;
   --font-mono: ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+
+  --logo-font: 'Orbitron', var(--font-arcade);
+  --logo-weight: 800;
+  --logo-spacing: 0.13em;
+  --logo-scale: 1.08;
+  --logo-shadow:
+    0 0 10px rgba(56, 189, 248, 0.52),
+    0 0 22px rgba(56, 189, 248, 0.22),
+    0 2px 0 #000000;
 }
 
 /* ---------- PAPER NAVY — High-Contrast Light ---------- */
@@ -398,6 +433,12 @@ pre {
   --font-arcade: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, system-ui, sans-serif;
   --font-retro: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, system-ui, sans-serif;
   --font-mono: ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+
+  --logo-font: 'Space Mono', var(--font-mono);
+  --logo-weight: 700;
+  --logo-spacing: 0.15em;
+  --logo-scale: 1.24;
+  --logo-shadow: 3px 3px 0px rgba(var(--frame-rgb), 0.32);
 }
 
 /* =========================================================================
@@ -461,6 +502,7 @@ pre {
   --boat-glow-opacity: 0;
 }
 
+:root[data-theme='radar'],
 :root[data-theme='amber-phosphor'] {
   --boat-hullDark: #5c3d00;
   --boat-hullMid: #b37a00;

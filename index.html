@@ -11,6 +11,7 @@
         var themes = {
           bridge: ['#f5f7fa', 1],
           navy: ['#123878', 0],
+          radar: ['#000000', 1],
           'amber-phosphor': ['#000000', 1],
           'oled-black': ['#000000', 1],
           'paper-navy': ['#faf6ea', 1],
@@ -20,6 +21,7 @@
           var m = document.cookie.match(/(?:^|; )tt_theme=([^;]*)/);
           var v = m ? decodeURIComponent(m[1]) : localStorage.getItem('tt_theme');
           if (v === 'clean') v = 'bridge'; /* legacy id */
+          if (v === 'amber-phosphor' || v === 'amber') v = 'radar'; /* legacy id */
           if (v && Object.prototype.hasOwnProperty.call(themes, v)) t = v;
         } catch (e) {}
         var root = document.documentElement;
@@ -65,7 +67,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Share+Tech+Mono&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@700&family=Orbitron:wght@800&family=Press+Start+2P&family=Share+Tech+Mono&family=Space+Mono:wght@700&family=VT323&display=swap"
       rel="stylesheet"
     />
   </head>

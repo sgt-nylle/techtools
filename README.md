@@ -18,7 +18,7 @@ A modular clean, optimized Swedish Navy (*Kungliga Flottan*) IT troubleshooting 
 
 ---
 
-## Diagnostic Modules (`v0.5.3`)
+## Diagnostic Modules (`v0.5.4`)
 
 1. **`MOD-01` — Password & Token Generator (`#/password-generator`)**
    - **Generated 100% Locally in Your Browser (Not on the Server):** Uses client-side CSPRNG (`window.crypto.getRandomValues`) with unbiased rejection sampling — zero network traffic, zero server involvement, and zero logging.
@@ -246,6 +246,9 @@ TechTools uses a plugin-style registry so new troubleshooting tools can be added
 
 ## Changelog
 
+- **`v0.5.4`** — **Theme-Specific Header Typography & `RADAR` Theme:**
+  - Each theme now has a distinct typographic identity on the `TECHTOOLS` Command Deck header via CSS custom properties (`--logo-font`, `--logo-weight`, `--logo-spacing`, `--logo-scale`, `--logo-shadow`): **`bridge`** (`Chakra Petch` Bold + cyan HUD glow), **`navy`** (`Press Start 2P` pixel-art benchmark), **`radar`** (`Share Tech Mono` + 4-stage amber CRT phosphor bloom), **`oled`** (`Orbitron` ExtraBold + ice-cyan night-ops glow), and **`paper`** (`Space Mono` Bold + `3px 3px 0px` navy ink stamp shadow), with locked line-box heights for zero layout shift across desktop and mobile viewports.
+  - Renamed the **`AMBER`** theme to **`RADAR`** (`data-theme="radar"`, with automatic migration from legacy `amber-phosphor` cookies/`localStorage`).
 - **`v0.5.3` (published)** — **Microsoft Edge Add-ons:** the extension is approved and live on the [Edge Add-ons store](https://microsoftedge.microsoft.com/addons/detail/techtools-%E2%80%94-naval-it-diag/phoogogpdkknpjedkmogpfkdoljgngmd).
 - **`v0.5.3`** — Store-ready manifest: description shortened to the 132-char store limit (Edge Add-ons validation), new `scripts/validate-manifest.mjs` runs during packaging, canonical download `techtools-extension-latest.zip`.
 - **`v0.5.2`** — Manifest fix: Chromium manifest now uses only `background.service_worker` (removes the *'background.scripts requires manifest version 2 or lower'* warning). Firefox gets its own generated build (`techtools-extension-firefox.zip`, `npm run build:ext:firefox`).

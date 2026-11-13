@@ -1,4 +1,4 @@
-export type ThemeId = 'bridge' | 'navy' | 'amber-phosphor' | 'oled-black' | 'paper-navy';
+export type ThemeId = 'bridge' | 'navy' | 'radar' | 'oled-black' | 'paper-navy';
 
 export interface ThemeDef {
   id: ThemeId;
@@ -12,7 +12,7 @@ export interface ThemeDef {
 export const THEMES: ThemeDef[] = [
   { id: 'bridge', label: 'BRIDGE', title: 'Bridge — Clean Navy / Light (default)', metaColor: '#f5f7fa', flat: true },
   { id: 'navy', label: 'NAVY', title: 'Navy — Classic Sub (dark sonar terminal)', metaColor: '#123878', flat: false },
-  { id: 'amber-phosphor', label: 'AMBER', title: 'Amber Phosphor — Terminal (black + amber)', metaColor: '#000000', flat: true },
+  { id: 'radar', label: 'RADAR', title: 'Radar — Amber Phosphor Terminal (black + amber)', metaColor: '#000000', flat: true },
   { id: 'oled-black', label: 'OLED', title: 'OLED Black — Pure Dark (true black, single accent)', metaColor: '#000000', flat: true },
   { id: 'paper-navy', label: 'PAPER', title: 'Paper Navy — High-Contrast Light (cream + deep navy)', metaColor: '#faf6ea', flat: true },
 ];
@@ -40,10 +40,12 @@ function readCookie(): string | null {
 export function loadTheme(): ThemeId {
   const fromCookie = readCookie();
   if (fromCookie === 'clean') return 'bridge'; // legacy id (renamed)
+  if (fromCookie === 'amber-phosphor' || fromCookie === 'amber') return 'radar'; // legacy id (renamed)
   if (isThemeId(fromCookie)) return fromCookie;
   try {
     const fromStorage = localStorage.getItem(THEME_STORAGE_KEY);
     if (fromStorage === 'clean') return 'bridge'; // legacy id (renamed)
+    if (fromStorage === 'amber-phosphor' || fromStorage === 'amber') return 'radar'; // legacy id (renamed)
     if (isThemeId(fromStorage)) return fromStorage;
   } catch {
     // storage unavailable

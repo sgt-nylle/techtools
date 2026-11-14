@@ -32,7 +32,8 @@ techtools/
 
 ## Install
 
-**Microsoft Edge:** install from the [Edge Add-ons store](https://microsoftedge.microsoft.com/addons/detail/techtools-%E2%80%94-naval-it-diag/phoogogpdkknpjedkmogpfkdoljgngmd) (one click, auto-updates).
+- **Google Chrome / Chromium / Brave / Vivaldi / Opera / Arc:** install from the [Chrome Web Store](https://chromewebstore.google.com/detail/techtools-%E2%80%94-naval-it-diag/jkpojohaddlefcjgmkcnjnaclbjfobmi) (one click, auto-updates).
+- **Microsoft Edge:** install from the [Edge Add-ons store](https://microsoftedge.microsoft.com/addons/detail/techtools-%E2%80%94-naval-it-diag/phoogogpdkknpjedkmogpfkdoljgngmd) (one click, auto-updates).
 
 Other browsers / end users: see **Browser Extension** in the [main README](../README.md#browser-extension-chrome--edge--brave--firefox) (one-line installers for Linux/macOS/Windows + manual steps).
 

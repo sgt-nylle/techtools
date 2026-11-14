@@ -4,11 +4,13 @@
 > **IT Network TechTools for Navy Sailors!**
 
 > [!TIP]
-> **🧩 NEW — Browser Extension, now live on the Microsoft Edge Add-ons store (also for Chrome & Brave):** take TechTools with you as a toolbar popup or a **docked side panel** next to your Azure / vCenter / AWS / GitHub dashboards. Fuzzy-search launcher, a pinnable **default tool**, 5 themes, offline tools, and right-click **“Inspect with TechTools”** on selected text. One-line installers for Linux, macOS & Windows → **[Get it on the Microsoft Edge Add-ons store](https://microsoftedge.microsoft.com/addons/detail/techtools-%E2%80%94-naval-it-diag/phoogogpdkknpjedkmogpfkdoljgngmd)** · **[install & docs ↓](#browser-extension-chrome--edge--brave--firefox)**
+> **🧩 NEW — Browser Extension, now live on the Chrome Web Store & Microsoft Edge Add-ons:** take TechTools with you as a toolbar popup or a **docked side panel** next to your Azure / vCenter / AWS / GitHub dashboards. Fuzzy-search launcher, a pinnable **default tool**, 5 themes, offline tools, and right-click **“Inspect with TechTools”** on selected text.  
+> ➡️ **[Get it on the Chrome Web Store](https://chromewebstore.google.com/detail/techtools-%E2%80%94-naval-it-diag/jkpojohaddlefcjgmkcnjnaclbjfobmi)** *(Chrome, Chromium, Brave, Vivaldi, Opera, Arc)* · **[Get it on Microsoft Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/techtools-%E2%80%94-naval-it-diag/phoogogpdkknpjedkmogpfkdoljgngmd)** *(Edge)* · **[install & docs ↓](#browser-extension-chrome--edge--brave--firefox)**
 
 [![Launch TechTools](https://img.shields.io/badge/LAUNCH_APP-techtools.subwrite.se-2563eb?style=for-the-badge&logo=googlechrome&logoColor=white)](https://techtools.subwrite.se)
+[![Get it on Chrome Web Store](https://img.shields.io/badge/CHROME_WEB_STORE-Install_TechTools-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/techtools-%E2%80%94-naval-it-diag/jkpojohaddlefcjgmkcnjnaclbjfobmi)
 [![Get it on Microsoft Edge Add-ons](https://img.shields.io/badge/EDGE_ADD--ONS-Install_TechTools-0078d4?style=for-the-badge&logo=microsoftedge&logoColor=white)](https://microsoftedge.microsoft.com/addons/detail/techtools-%E2%80%94-naval-it-diag/phoogogpdkknpjedkmogpfkdoljgngmd)
-[![Browser Extension](https://img.shields.io/badge/NEW-Browser_Extension-16a34a?style=for-the-badge&logo=googlechrome&logoColor=white)](#browser-extension-chrome--edge--brave--firefox)
+[![Browser Extension](https://img.shields.io/badge/DOCS-Browser_Extension-16a34a?style=for-the-badge&logo=googlechrome&logoColor=white)](#browser-extension-chrome--edge--brave--firefox)
 [![Companion: subwrite.se](https://img.shields.io/badge/COMPANION-subwrite.se-facc15?style=for-the-badge)](https://subwrite.se)
 
 A modular clean, optimized Swedish Navy (*Kungliga Flottan*) IT troubleshooting web suite designed as a companion subsite to [subwrite.se](https://subwrite.se), featuring a custom pixel-art SVG sprite of the iconic *Norrköping*-class (*Spica II*) fast-attack missile boat **Robotbåt R136 HMS Västervik**. Launch and use the full suite directly in your browser at **[https://techtools.subwrite.se](https://techtools.subwrite.se)**.
@@ -168,21 +170,22 @@ Use TechTools straight from your browser toolbar or as a **docked side panel** n
 
 > **Shortcut tip:** `Alt+Shift+T` is reserved by Chrome/Edge (it focuses the browser toolbar), which is why the popup uses `Alt+Shift+K`. If a key is unassigned or clashes, rebind it at `chrome://extensions/shortcuts` (Edge: `edge://extensions/shortcuts`).
 
-### Install from the Microsoft Edge Add-ons store (recommended)
+### Install from the Official Browser Stores (recommended)
 
-TechTools is **published and approved on the Microsoft Edge Add-ons store** — one click, automatic updates, no developer mode:
+TechTools is **published and approved on both the Chrome Web Store and the Microsoft Edge Add-ons store** — one click, automatic updates, no developer mode required:
 
-**➡️ [TechTools — Naval IT Diagnostics on Microsoft Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/techtools-%E2%80%94-naval-it-diag/phoogogpdkknpjedkmogpfkdoljgngmd)**
+- **🟢 [TechTools — Naval IT Diagnostics on the Chrome Web Store](https://chromewebstore.google.com/detail/techtools-%E2%80%94-naval-it-diag/jkpojohaddlefcjgmkcnjnaclbjfobmi)** *(Google Chrome, Chromium, Brave, Vivaldi, Opera, Arc)*
+- **🔵 [TechTools — Naval IT Diagnostics on Microsoft Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/techtools-%E2%80%94-naval-it-diag/phoogogpdkknpjedkmogpfkdoljgngmd)** *(Microsoft Edge)*
 
-Open the link in **Microsoft Edge** (Windows, macOS or Linux) and click **Get**. Then pin the TechTools icon from the puzzle-piece (Extensions) menu.
+Open the matching store link in your browser and click **Add to Chrome** / **Get**. Then pin the TechTools icon from the puzzle-piece (Extensions) menu.
 
-| Browser | Install from the Edge Add-ons store? |
+| Browser | Official Store Install |
 |---|---|
-| **Microsoft Edge** (desktop) | ✅ Yes — native support, auto-updates |
-| Chrome, Brave, Vivaldi, Opera and other Chromium browsers | ❌ The Edge store only installs into Edge. Use the **[install scripts](#easy-install-scripts)** or **[manual install](#manual-install)** below (the same extension build works on all Chromium browsers) |
-| Firefox | ❌ Not on this store — use the experimental Firefox build below |
+| **Google Chrome, Chromium, Brave, Vivaldi, Opera, Arc** | ✅ **[Chrome Web Store](https://chromewebstore.google.com/detail/techtools-%E2%80%94-naval-it-diag/jkpojohaddlefcjgmkcnjnaclbjfobmi)** — native support, auto-updates |
+| **Microsoft Edge** (desktop) | ✅ **[Microsoft Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/techtools-%E2%80%94-naval-it-diag/phoogogpdkknpjedkmogpfkdoljgngmd)** (or Chrome Web Store) — native support, auto-updates |
+| **Firefox** | ❌ Not on a store yet — use the **[experimental Firefox build](#manual-install)** or **[install scripts](#easy-install-scripts)** below |
 
-> Store builds can lag a few days behind the latest release on GitHub while Microsoft reviews each update. The scripts below always fetch the newest version.
+> Store builds can lag a few days behind the latest release on GitHub while Google/Microsoft review each update. The scripts below always fetch the newest version.
 
 ### Easy install (scripts)
 
@@ -246,7 +249,8 @@ TechTools uses a plugin-style registry so new troubleshooting tools can be added
 
 ## Changelog
 
-- **`v0.5.4`** — **Theme-Specific Header Typography & `RADAR` Theme:**
+- **`v0.5.4`** — **Theme-Specific Header Typography, `RADAR` Theme & Chrome Web Store Launch:**
+  - **Chrome Web Store:** the extension is now approved and live on the [Chrome Web Store](https://chromewebstore.google.com/detail/techtools-%E2%80%94-naval-it-diag/jkpojohaddlefcjgmkcnjnaclbjfobmi) for Google Chrome, Chromium, Brave, Vivaldi, Opera, and Arc (alongside the [Microsoft Edge Add-ons store](https://microsoftedge.microsoft.com/addons/detail/techtools-%E2%80%94-naval-it-diag/phoogogpdkknpjedkmogpfkdoljgngmd)).
   - Each theme now has a distinct typographic identity on the `TECHTOOLS` Command Deck header via CSS custom properties (`--logo-font`, `--logo-weight`, `--logo-spacing`, `--logo-scale`, `--logo-shadow`): **`bridge`** (`Chakra Petch` Bold + cyan HUD glow), **`navy`** (`Press Start 2P` pixel-art benchmark), **`radar`** (`Share Tech Mono` + 4-stage amber CRT phosphor bloom), **`oled`** (`Orbitron` ExtraBold + ice-cyan night-ops glow), and **`paper`** (`Space Mono` Bold + `3px 3px 0px` navy ink stamp shadow), with locked line-box heights for zero layout shift across desktop and mobile viewports.
   - Renamed the **`AMBER`** theme to **`RADAR`** (`data-theme="radar"`, with automatic migration from legacy `amber-phosphor` cookies/`localStorage`).
 - **`v0.5.3` (published)** — **Microsoft Edge Add-ons:** the extension is approved and live on the [Edge Add-ons store](https://microsoftedge.microsoft.com/addons/detail/techtools-%E2%80%94-naval-it-diag/phoogogpdkknpjedkmogpfkdoljgngmd).

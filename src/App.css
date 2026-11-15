@@ -1215,6 +1215,34 @@
   word-break: break-all;
 }
 
+.dnssec-rrsig-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  background-color: rgba(var(--shade-rgb), 0.35);
+  border: 1px solid var(--navy-cell-border);
+  padding: 5px 8px;
+}
+
+.dnssec-rrsig-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  flex: 1;
+}
+
+.dnssec-rrsig-date {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--navy-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
 .soa-list {
   display: flex;
   flex-direction: column;

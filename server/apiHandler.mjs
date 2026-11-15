@@ -152,7 +152,7 @@ function fetchJsonHttps(urlStr, timeoutMs = 5000, acceptHeader = 'application/js
         family: 4,
         timeout: timeoutMs,
         headers: {
-          'User-Agent': 'SubWrite-TechTools/0.5.3 (+https://techtools.subwrite.se)',
+          'User-Agent': 'SubWrite-TechTools/0.5.5 (+https://techtools.subwrite.se)',
           Accept: acceptHeader,
         },
       },
@@ -637,12 +637,12 @@ function computeDnskeyTagAndRdata(flags, protocol, algorithm, publicKeyBase64) {
 async function queryDohRecord(domain, rrType) {
   const encodedName = encodeURIComponent(domain);
   const encodedType = encodeURIComponent(rrType);
-  const cfUrl = `https://cloudflare-dns.com/dns-query?name=${encodedName}&type=${encodedType}`;
+  const cfUrl = `https://cloudflare-dns.com/dns-query?name=${encodedName}&type=${encodedType}&do=true`;
   const cfResp = await withTimeout(fetchJsonHttps(cfUrl, 3400, 'application/dns-json'), 3600, null);
   if (cfResp && typeof cfResp.Status === 'number') {
     return { ...cfResp, provider: 'Cloudflare DoH (cloudflare-dns.com)' };
   }
-  const googleUrl = `https://dns.google/resolve?name=${encodedName}&type=${encodedType}`;
+  const googleUrl = `https://dns.google/resolve?name=${encodedName}&type=${encodedType}&do=true`;
   const googleResp = await withTimeout(fetchJsonHttps(googleUrl, 3400, 'application/dns-json'), 3600, null);
   if (googleResp && typeof googleResp.Status === 'number') {
     return { ...googleResp, provider: 'Google DoH (dns.google)' };
@@ -650,7 +650,83 @@ async function queryDohRecord(domain, rrType) {
   return null;
 }
 
-function parseZoneDnssec(zoneName, dnskeyResp, dsResp, inheritedFromApex = false) {
+function parseRrsigTimestamp(raw) {
+  const str = String(raw || '').trim();
+  if (!str) return null;
+  if (/^\d{14}$/.test(str)) {
+    const iso = `${str.slice(0, 4)}-${str.slice(4, 6)}-${str.slice(6, 8)}T${str.slice(8, 10)}:${str.slice(10, 12)}:${str.slice(12, 14)}Z`;
+    const ms = Date.parse(iso);
+    return Number.isFinite(ms) ? new Date(ms).toISOString() : null;
+  }
+  if (/^\d{9,11}$/.test(str)) {
+    const sec = Number(str);
+    if (Number.isFinite(sec) && sec > 0) {
+      return new Date(sec * 1000).toISOString();
+    }
+  }
+  return null;
+}
+
+function parseRrsigRecords(answers) {
+  if (!Array.isArray(answers)) return [];
+  const nowMs = Date.now();
+  const out = [];
+  for (const ans of answers) {
+    if (!ans || ans.type !== 46 || typeof ans.data !== 'string') continue;
+    const parts = ans.data.trim().split(/\s+/);
+    if (parts.length < 9) continue;
+    const typeCovered = parts[0].toUpperCase();
+    const algorithm = Number(parts[1]) || 0;
+    const labels = Number(parts[2]) || 0;
+    const originalTtl = Number(parts[3]) || 0;
+    const expirationIso = parseRrsigTimestamp(parts[4]);
+    const inceptionIso = parseRrsigTimestamp(parts[5]);
+    const keyTag = Number(parts[6]) || 0;
+    const signerName = parts[7].replace(/\.+$/, '');
+    const signature = parts.slice(8).join('').replace(/\s+/g, '');
+
+    const expMs = expirationIso ? Date.parse(expirationIso) : null;
+    const incMs = inceptionIso ? Date.parse(inceptionIso) : null;
+    const remainingSec = expMs !== null ? Math.floor((expMs - nowMs) / 1000) : null;
+    const remainingDays = remainingSec !== null ? Number((remainingSec / 86400).toFixed(1)) : null;
+    const windowSec = expMs !== null && incMs !== null && expMs > incMs ? Math.floor((expMs - incMs) / 1000) : null;
+    const validityWindowDays = windowSec !== null ? Math.max(1, Math.round(windowSec / 86400)) : null;
+
+    let validityStatus = 'UNKNOWN';
+    if (remainingSec !== null) {
+      if (remainingSec <= 0) {
+        validityStatus = 'EXPIRED';
+      } else if (
+        remainingSec < 6 * 3600 ||
+        (remainingSec < 3 * 86400 && (windowSec === null || remainingSec < windowSec * 0.25))
+      ) {
+        validityStatus = 'EXPIRING_SOON';
+      } else {
+        validityStatus = 'VALID';
+      }
+    }
+
+    out.push({
+      typeCovered,
+      algorithm,
+      labels,
+      originalTtl,
+      inception: inceptionIso,
+      expiration: expirationIso,
+      keyTag,
+      signerName,
+      signature,
+      ttl: typeof ans.TTL === 'number' ? ans.TTL : null,
+      remainingSec,
+      remainingDays,
+      validityWindowDays,
+      validityStatus,
+    });
+  }
+  return out;
+}
+
+function parseZoneDnssec(zoneName, dnskeyResp, dsResp, inheritedFromApex = false, soaResp = null) {
   const wireOwner = domainNameToWire(zoneName);
   const rawDnskeyAnswers = Array.isArray(dnskeyResp?.Answer)
     ? dnskeyResp.Answer.filter((a) => a && a.type === 48 && typeof a.data === 'string')
@@ -658,6 +734,11 @@ function parseZoneDnssec(zoneName, dnskeyResp, dsResp, inheritedFromApex = false
   const rawDsAnswers = Array.isArray(dsResp?.Answer)
     ? dsResp.Answer.filter((a) => a && a.type === 43 && typeof a.data === 'string')
     : [];
+
+  const dnskeyRrsigs = parseRrsigRecords(dnskeyResp?.Answer).filter((r) => r.typeCovered === 'DNSKEY');
+  const soaRrsigs = parseRrsigRecords(soaResp?.Answer).filter((r) => r.typeCovered === 'SOA');
+  const allZoneRrsigs = [...dnskeyRrsigs, ...soaRrsigs];
+  const primaryDnskeyRrsig = dnskeyRrsigs[0] || null;
 
   const computedDigestsByTag = new Map();
 
@@ -705,6 +786,17 @@ function parseZoneDnssec(zoneName, dnskeyResp, dsResp, inheritedFromApex = false
         keyTypeLabel = `ZSK (Flag ${flags})`;
       }
 
+      const matchingKeyRrsigs = allZoneRrsigs.filter(
+        (r) => r.keyTag === keyTag && (!r.algorithm || r.algorithm === algorithm)
+      );
+      const matchingDnskeyRrsig = matchingKeyRrsigs.find((r) => r.typeCovered === 'DNSKEY') || null;
+      const matchingSoaRrsig = matchingKeyRrsigs.find((r) => r.typeCovered === 'SOA') || null;
+      const primaryKeyRrsig =
+        keyType === 'KSK'
+          ? matchingDnskeyRrsig || matchingSoaRrsig
+          : matchingSoaRrsig || matchingDnskeyRrsig;
+      const typesCovered = Array.from(new Set(matchingKeyRrsigs.map((r) => r.typeCovered)));
+
       return {
         flags,
         protocol,
@@ -716,6 +808,31 @@ function parseZoneDnssec(zoneName, dnskeyResp, dsResp, inheritedFromApex = false
         publicKey,
         ttl: typeof ans.TTL === 'number' ? ans.TTL : null,
         matchedByDs: false,
+        rrsig: primaryKeyRrsig
+          ? {
+              typeCovered: primaryKeyRrsig.typeCovered,
+              typesCovered,
+              keyTag: primaryKeyRrsig.keyTag,
+              signerName: primaryKeyRrsig.signerName,
+              inception: primaryKeyRrsig.inception,
+              expiration: primaryKeyRrsig.expiration,
+              remainingSec: primaryKeyRrsig.remainingSec,
+              remainingDays: primaryKeyRrsig.remainingDays,
+              validityWindowDays: primaryKeyRrsig.validityWindowDays,
+              validityStatus: primaryKeyRrsig.validityStatus,
+            }
+          : null,
+        dnskeyRrsig: primaryDnskeyRrsig
+          ? {
+              keyTag: primaryDnskeyRrsig.keyTag,
+              inception: primaryDnskeyRrsig.inception,
+              expiration: primaryDnskeyRrsig.expiration,
+              remainingSec: primaryDnskeyRrsig.remainingSec,
+              remainingDays: primaryDnskeyRrsig.remainingDays,
+              validityWindowDays: primaryDnskeyRrsig.validityWindowDays,
+              validityStatus: primaryDnskeyRrsig.validityStatus,
+            }
+          : null,
       };
     })
     .sort((a, b) => {
@@ -817,9 +934,10 @@ function parseZoneDnssec(zoneName, dnskeyResp, dsResp, inheritedFromApex = false
 }
 
 async function lookupDomainDnssec(cleanedDomain, apexDomain) {
-  const [dnskeyResp, dsResp] = await Promise.all([
+  const [dnskeyResp, dsResp, soaResp] = await Promise.all([
     queryDohRecord(cleanedDomain, 'DNSKEY'),
     queryDohRecord(cleanedDomain, 'DS'),
+    queryDohRecord(cleanedDomain, 'SOA'),
   ]);
 
   const hasDirectKeys =
@@ -827,14 +945,15 @@ async function lookupDomainDnssec(cleanedDomain, apexDomain) {
     (Array.isArray(dsResp?.Answer) && dsResp.Answer.some((a) => a && a.type === 43));
 
   if (!hasDirectKeys && apexDomain && apexDomain !== cleanedDomain) {
-    const [apexDnskeyResp, apexDsResp] = await Promise.all([
+    const [apexDnskeyResp, apexDsResp, apexSoaResp] = await Promise.all([
       queryDohRecord(apexDomain, 'DNSKEY'),
       queryDohRecord(apexDomain, 'DS'),
+      queryDohRecord(apexDomain, 'SOA'),
     ]);
-    return parseZoneDnssec(apexDomain, apexDnskeyResp, apexDsResp, true);
+    return parseZoneDnssec(apexDomain, apexDnskeyResp, apexDsResp, true, apexSoaResp);
   }
 
-  return parseZoneDnssec(cleanedDomain, dnskeyResp, dsResp, false);
+  return parseZoneDnssec(cleanedDomain, dnskeyResp, dsResp, false, soaResp);
 }
 
 async function handleDnsLookup(rawTarget, rawServerParam) {
@@ -2129,7 +2248,7 @@ function executeSocketProbe({ ip, hostname, port, pathWithQuery, method, useTls 
             agent: oneShotAgent,
             headers: {
               Host: hostHeader,
-              'User-Agent': 'SubWrite-TechTools-Probe/0.5.3 (+https://techtools.subwrite.se)',
+              'User-Agent': 'SubWrite-TechTools-Probe/0.5.5 (+https://techtools.subwrite.se)',
               Accept: 'text/html,application/xhtml+xml,application/json,*/*;q=0.8',
               'Accept-Encoding': 'identity',
               Connection: 'close',
@@ -2704,7 +2823,7 @@ export async function handleApiRequest(req, res) {
       sendJson(res, 200, {
         ok: true,
         service: 'techtools.subwrite.se',
-        version: '0.5.3',
+        version: '0.5.5',
         timestamp: new Date().toISOString(),
       });
       return true;

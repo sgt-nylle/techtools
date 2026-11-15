@@ -20,7 +20,7 @@ A modular clean, optimized Swedish Navy (*Kungliga Flottan*) IT troubleshooting 
 
 ---
 
-## Diagnostic Modules (`v0.5.4`)
+## Diagnostic Modules (`v0.5.5`)
 
 1. **`MOD-01` — Password & Token Generator (`#/password-generator`)**
    - **Generated 100% Locally in Your Browser (Not on the Server):** Uses client-side CSPRNG (`window.crypto.getRandomValues`) with unbiased rejection sampling — zero network traffic, zero server involvement, and zero logging.
@@ -30,7 +30,7 @@ A modular clean, optimized Swedish Navy (*Kungliga Flottan*) IT troubleshooting 
 2. **`MOD-02` — DNS & Domain Registry Intel (`#/dns-inspector`)**
    - Selectable DNS resolvers: **Google `8.8.8.8` (default)**, **Cloudflare `1.1.1.1`**, or **Custom** public DNS server IP / authoritative nameserver hostname.
    - Parallel lookups for `A`, `AAAA`, `CNAME`, `PTR`, `MX` (including mail exchanger IPv4 resolution), `NS`, `SOA`, `TXT`, and `CAA`.
-   - **DNSSEC Zone Key (`DNSKEY`) & Delegation Signer (`DS`) Analysis:** Queries `DNSKEY` and `DS` records via DoH (`application/dns-json`), computes RFC 4034 Key Tags, identifies `KSK` (Flag 257) and `ZSK` (Flag 256) roles, maps cryptographic algorithms & digest types to plain text, and verifies Chain-of-Trust linkage between parent `DS` records and zone `KSK` keys.
+   - **DNSSEC Zone Key (`DNSKEY`), `RRSIG` Expiration & Delegation Signer (`DS`) Analysis:** Queries `DNSKEY`, `DS`, and `SOA` records with `do=true` via DoH (`application/dns-json`), computes RFC 4034 Key Tags, identifies `KSK` (Flag 257) and `ZSK` (Flag 256) roles, maps cryptographic algorithms & digest types to plain text, verifies Chain-of-Trust linkage between parent `DS` records and zone `KSK` keys, and inspects **`RRSIG` signature inception (`SIGNED`) and expiration (`EXPIRES`) timestamps** per `DNSKEY` post to validate active key rotation vs. standby/rollover keys.
    - Automated **SPF** (`v=spf1`) and **DMARC** (`_dmarc`) email security posture auditing.
    - Live port-43 **WHOIS Domain Registration** lookup (supporting `.se`/`.nu` via `whois.iis.se`, Verisign, PIR, EURid, and automatic IANA TLD referral discovery).
 3. **`MOD-03` — What's My IP? & Range Owner (`#/whats-my-ip`)**
@@ -249,6 +249,10 @@ TechTools uses a plugin-style registry so new troubleshooting tools can be added
 
 ## Changelog
 
+- **`v0.5.5`** — **DNSSEC `RRSIG` Signature & Expiration Telemetry (`MOD-02`):**
+  - Enabled DNSSEC OK (`&do=true`) on DoH queries (`DNSKEY`, `DS`, and `SOA`) to inspect `RRSIG` (`type 46`) records alongside zone public keys.
+  - Added per-key `RRSIG` rows on every `DNSKEY` post in **ZONE PUBLIC KEYS (`DNSKEY`)** showing which RRset(s) the key signs (`SIGNS: DNSKEY` / `SIGNS: SOA`) or whether it is a `STANDBY / ROLLOVER KEY`, exact UTC `SIGNED` (inception) and `EXPIRES` timestamps, `DNSKEY` RRset signature expiration, and a validity countdown badge (`✓ RRSIG VALID`, `⚠ EXPIRING SOON`, or `✕ RRSIG EXPIRED` with remaining days/hours and signature window length) to verify key rotation.
+  - Updated the **WHOIS & DNSSEC** clipboard export and packaged browser extension (`v0.5.5`) with the new `RRSIG` telemetry.
 - **`v0.5.4`** — **Theme-Specific Header Typography, `RADAR` Theme & Chrome Web Store Launch:**
   - **Chrome Web Store:** the extension is now approved and live on the [Chrome Web Store](https://chromewebstore.google.com/detail/techtools-%E2%80%94-naval-it-diag/jkpojohaddlefcjgmkcnjnaclbjfobmi) for Google Chrome, Chromium, Brave, Vivaldi, Opera, and Arc (alongside the [Microsoft Edge Add-ons store](https://microsoftedge.microsoft.com/addons/detail/techtools-%E2%80%94-naval-it-diag/phoogogpdkknpjedkmogpfkdoljgngmd)).
   - Each theme now has a distinct typographic identity on the `TECHTOOLS` Command Deck header via CSS custom properties (`--logo-font`, `--logo-weight`, `--logo-spacing`, `--logo-scale`, `--logo-shadow`): **`bridge`** (`Chakra Petch` Bold + cyan HUD glow), **`navy`** (`Press Start 2P` pixel-art benchmark), **`radar`** (`Share Tech Mono` + 4-stage amber CRT phosphor bloom), **`oled`** (`Orbitron` ExtraBold + ice-cyan night-ops glow), and **`paper`** (`Space Mono` Bold + `3px 3px 0px` navy ink stamp shadow), with locked line-box heights for zero layout shift across desktop and mobile viewports.

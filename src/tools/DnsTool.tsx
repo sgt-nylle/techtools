@@ -6,6 +6,19 @@ import { useIsPaneActive } from '../utils/paneContext';
 type DnsViewTab = 'all' | 'ip' | 'mail' | 'authority' | 'whois';
 type DnsServerPreset = 'google' | 'cloudflare' | 'custom';
 
+interface DnskeyRrsigInfo {
+  typeCovered?: string;
+  typesCovered?: string[];
+  keyTag: number;
+  signerName?: string;
+  inception: string | null;
+  expiration: string | null;
+  remainingSec: number | null;
+  remainingDays: number | null;
+  validityWindowDays: number | null;
+  validityStatus: 'VALID' | 'EXPIRING_SOON' | 'EXPIRED' | 'UNKNOWN';
+}
+
 interface DnskeyRecord {
   flags: number;
   protocol: number;
@@ -17,6 +30,34 @@ interface DnskeyRecord {
   publicKey: string;
   ttl: number | null;
   matchedByDs: boolean;
+  rrsig?: DnskeyRrsigInfo | null;
+  dnskeyRrsig?: DnskeyRrsigInfo | null;
+}
+
+function formatRrsigUtc(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return `${d.toISOString().slice(0, 16).replace('T', ' ')} UTC`;
+}
+
+function formatRrsigRemaining(remainingSec: number | null | undefined): string {
+  if (remainingSec === null || remainingSec === undefined || !Number.isFinite(remainingSec)) {
+    return 'UNKNOWN';
+  }
+  if (remainingSec <= 0) {
+    const agoSec = Math.abs(remainingSec);
+    const agoDays = Math.floor(agoSec / 86400);
+    const agoHours = Math.floor((agoSec % 86400) / 3600);
+    return agoDays > 0 ? `EXPIRED ${agoDays}d ${agoHours}h AGO` : `EXPIRED ${agoHours}h AGO`;
+  }
+  const days = Math.floor(remainingSec / 86400);
+  const hours = Math.floor((remainingSec % 86400) / 3600);
+  const mins = Math.floor((remainingSec % 3600) / 60);
+  if (days > 0) {
+    return `${days}d ${hours}h LEFT`;
+  }
+  return `${hours}h ${mins}m LEFT`;
 }
 
 interface DsRecord {
@@ -423,8 +464,20 @@ export const DnsTool: React.FC = () => {
         }
         if (d.dnskeys.length > 0) {
           for (const k of d.dnskeys) {
+            const rrsigSummary = k.rrsig
+              ? `RRSIG(${(k.rrsig.typesCovered && k.rrsig.typesCovered.length > 0
+                  ? k.rrsig.typesCovered
+                  : [k.rrsig.typeCovered || 'DNSKEY']
+                ).join('+')}): Signed=${formatRrsigUtc(k.rrsig.inception)} -> Expires=${formatRrsigUtc(
+                  k.rrsig.expiration
+                )} (${formatRrsigRemaining(k.rrsig.remainingSec)})`
+              : k.dnskeyRrsig
+              ? `RRSIG(DNSKEY RRset #${k.dnskeyRrsig.keyTag}): Expires=${formatRrsigUtc(
+                  k.dnskeyRrsig.expiration
+                )} (${formatRrsigRemaining(k.dnskeyRrsig.remainingSec)})`
+              : 'RRSIG: None';
             whoisLines.push(
-              `DNSKEY: ${k.keyType} (Flag ${k.flags}) | KeyTag=#${k.keyTag} | Alg=${k.algorithm} (${k.algorithmName}) | PubKey=${k.publicKey}`
+              `DNSKEY: ${k.keyType} (Flag ${k.flags}) | KeyTag=#${k.keyTag} | Alg=${k.algorithm} (${k.algorithmName}) | ${rrsigSummary} | PubKey=${k.publicKey}`
             );
           }
         } else {
@@ -1107,6 +1160,89 @@ export const DnsTool: React.FC = () => {
                                     {copiedKey === keyId ? '✓ COPIED' : 'COPY'}
                                   </button>
                                 </div>
+                              </div>
+                              <div className="dnssec-rrsig-row">
+                                <span className="dnssec-field-lbl">RRSIG:</span>
+                                {k.rrsig ? (
+                                  <>
+                                    <div className="dnssec-rrsig-meta">
+                                      <span className="ttl-pill">
+                                        SIGNS:{' '}
+                                        <strong>
+                                          {(k.rrsig.typesCovered && k.rrsig.typesCovered.length > 0
+                                            ? k.rrsig.typesCovered
+                                            : [k.rrsig.typeCovered || 'DNSKEY']
+                                          ).join(' + ')}
+                                        </strong>
+                                      </span>
+                                      <span className="dnssec-rrsig-date">
+                                        <span className="dim-inline">SIGNED:</span>{' '}
+                                        <code>{formatRrsigUtc(k.rrsig.inception)}</code>
+                                      </span>
+                                      <span className="dnssec-rrsig-date">
+                                        <span className="dim-inline">EXPIRES:</span>{' '}
+                                        <code className="text-gold">{formatRrsigUtc(k.rrsig.expiration)}</code>
+                                      </span>
+                                      {!(k.rrsig.typesCovered || []).includes('DNSKEY') &&
+                                        k.dnskeyRrsig?.expiration && (
+                                          <span
+                                            className="ttl-pill"
+                                            title="RRSIG expiration of the DNSKEY RRset itself (signed by KSK)"
+                                          >
+                                            DNSKEY RRSET EXP: <strong>{formatRrsigUtc(k.dnskeyRrsig.expiration)}</strong>
+                                          </span>
+                                        )}
+                                    </div>
+                                    <span
+                                      className={`dnssec-chain-indicator ${
+                                        k.rrsig.validityStatus === 'VALID'
+                                          ? 'chain-valid'
+                                          : k.rrsig.validityStatus === 'EXPIRED'
+                                          ? 'chain-broken'
+                                          : 'chain-warn'
+                                      }`}
+                                    >
+                                      {k.rrsig.validityStatus === 'VALID'
+                                        ? '✓ RRSIG VALID'
+                                        : k.rrsig.validityStatus === 'EXPIRED'
+                                        ? '✕ RRSIG EXPIRED'
+                                        : '⚠ EXPIRING SOON'}{' '}
+                                      • {formatRrsigRemaining(k.rrsig.remainingSec)}
+                                      {k.rrsig.validityWindowDays
+                                        ? ` (${k.rrsig.validityWindowDays}d WINDOW)`
+                                        : ''}
+                                    </span>
+                                  </>
+                                ) : k.dnskeyRrsig ? (
+                                  <>
+                                    <div className="dnssec-rrsig-meta">
+                                      <span className="ttl-pill">STANDBY / ROLLOVER KEY</span>
+                                      <span className="dnssec-rrsig-date">
+                                        <span className="dim-inline">
+                                          DNSKEY RRSET RRSIG (#{k.dnskeyRrsig.keyTag}) EXPIRES:
+                                        </span>{' '}
+                                        <code className="text-gold">
+                                          {formatRrsigUtc(k.dnskeyRrsig.expiration)}
+                                        </code>
+                                      </span>
+                                    </div>
+                                    <span
+                                      className={`dnssec-chain-indicator ${
+                                        k.dnskeyRrsig.validityStatus === 'VALID'
+                                          ? 'chain-valid'
+                                          : k.dnskeyRrsig.validityStatus === 'EXPIRED'
+                                          ? 'chain-broken'
+                                          : 'chain-warn'
+                                      }`}
+                                    >
+                                      ◎ PRE-PUBLISHED • RRSET {formatRrsigRemaining(k.dnskeyRrsig.remainingSec)}
+                                    </span>
+                                  </>
+                                ) : (
+                                  <span className="dim-inline">
+                                    No RRSIG signature record returned for this DNSKEY.
+                                  </span>
+                                )}
                               </div>
                             </div>
                           );

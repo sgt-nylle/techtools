@@ -20,49 +20,53 @@ A modular clean, optimized Swedish Navy (*Kungliga Flottan*) IT troubleshooting 
 
 ---
 
-## Diagnostic Modules (`v0.5.5`)
+## Diagnostic Modules (`v0.6.0`)
 
 1. **`MOD-01` — Password & Token Generator (`#/password-generator`)**
    - **Generated 100% Locally in Your Browser (Not on the Server):** Uses client-side CSPRNG (`window.crypto.getRandomValues`) with unbiased rejection sampling — zero network traffic, zero server involvement, and zero logging.
    - **`64BIT (16)` & `NO CONFUSE` Enabled by Default (Cookie-Persisted):** Opens with **`64BIT (16)`** (`16` chars, `A–Z`, `a–z`, `0–9`) and **`NO CONFUSE`** enabled by default — excluding look-alike characters (`0`, `O`, `o`, `1`, `l`, `I`, `|`) that can be misread across proportional/sans-serif fonts — while saving any user preset or toggle changes in a local preference cookie (`tt_passgen_prefs`).
    - **Complexity Presets & Strength Tiers:** Presets (`PIN (8)`, `64BIT (16)`, `STANDARD IT (20)`, `FORTRESS (32)`), custom length (`6–64`), character class toggles, batch generation (`1×`, `5×`, `10×`), and live entropy telemetry (`ULTRA NAVY CRYPTO` for `>= 32` char passwords, `NAVY CRYPTO GRADE` for `> 5` word passphrases).
    - **Multi-Branch Passphrases & Developer Tokens:** Memorable cross-domain word passphrases (`3–8` words blending Navy, Nature, Food, Drinks, Cars, Fitness, and Tech vocabulary) plus developer/auth tokens (`UUID v4`, `Hex 128/256-bit`, `Base64URL 256/512-bit`, and custom-prefixed `Base62` API keys).
-2. **`MOD-02` — DNS & Domain Registry Intel (`#/dns-inspector`)**
+2. **`MOD-02` — Internet Speed Navy Test (`#/speed-test`)**
+   - **Direct Browser-to-CDN Anycast Measurement (No Server Bottleneck):** Tests your real-world internet speed between your ISP and the wider internet directly from the browser against the nearest Anycast CDN edge node (`speed.cloudflare.com`), never routing speed test traffic through the TechTools server.
+   - **80s Cassette Deck Digital VU Meter:** Dual-channel (`CH-L // RX DOWN` & `CH-R // TX UP`) 36-segment VFD/LED peak-hold level meter with green/amber/red zones, logarithmic `0` to `1G+ Mbps` scale, and live digital readouts.
+   - **Multi-Stream Throughput & Latency Telemetry:** Measures median Ping & Jitter (`10` cache-busted probes), 4-stream `ReadableStream` Download Mbps, and 4-stream `XMLHttpRequest` Upload Mbps (discarding the first 1.5s TCP slow-start window), paired with a live animated SVG throughput chart and public IP / ISP / ASN / edge node metadata.
+3. **`MOD-03` — DNS & Domain Registry Intel (`#/dns-inspector`)**
    - Selectable DNS resolvers: **Google `8.8.8.8` (default)**, **Cloudflare `1.1.1.1`**, or **Custom** public DNS server IP / authoritative nameserver hostname.
    - Parallel lookups for `A`, `AAAA`, `CNAME`, `PTR`, `MX` (including mail exchanger IPv4 resolution), `NS`, `SOA`, `TXT`, and `CAA`.
    - **DNSSEC Zone Key (`DNSKEY`), `RRSIG` Expiration & Delegation Signer (`DS`) Analysis:** Queries `DNSKEY`, `DS`, and `SOA` records with `do=true` via DoH (`application/dns-json`), computes RFC 4034 Key Tags, identifies `KSK` (Flag 257) and `ZSK` (Flag 256) roles, maps cryptographic algorithms & digest types to plain text, verifies Chain-of-Trust linkage between parent `DS` records and zone `KSK` keys, and inspects **`RRSIG` signature inception (`SIGNED`) and expiration (`EXPIRES`) timestamps** per `DNSKEY` post to validate active key rotation vs. standby/rollover keys.
    - Automated **SPF** (`v=spf1`) and **DMARC** (`_dmarc`) email security posture auditing.
    - Live port-43 **WHOIS Domain Registration** lookup (supporting `.se`/`.nu` via `whois.iis.se`, Verisign, PIR, EURid, and automatic IANA TLD referral discovery).
-3. **`MOD-03` — What's My IP? & Range Owner (`#/whats-my-ip`)**
+4. **`MOD-04` — What's My IP? & Range Owner (`#/whats-my-ip`)**
    - Displays caller's public IPv4/IPv6 address, reverse `PTR` hostname, routed BGP CIDR prefix, Autonomous System (`ASN` + ISP holder), and RIR allocation block owner/netname/country/abuse contact.
    - Includes an external IP/hostname lookup bar to inspect any third-party IP block.
-4. **`MOD-04` — Certificate & CSR Analyzer (`#/cert-analyzer`)**
+5. **`MOD-05` — Certificate & CSR Analyzer (`#/cert-analyzer`)**
    - Base64 / PEM certificate analyzer detecting X.509 certs, Certificate Signing Requests (CSR), and public keys.
    - Extracts Subject, Issuer, Serial, SHA-256 fingerprint, validity dates, days remaining, SAN names, Key Usage, and Extended Key Usage (Server/Client auth).
    - Verifies against system Trust Store and discovers full certificate chains via Authority Information Access (AIA) with full-chain export in Base64 PEM.
    - **Private Key Security Intercept Guard:** Rejects private keys with `"Security alert! We will not process private keys! Abandon Ship!"`.
    - Rejects non-cert payloads with `"Navy Cert Format Not DETECTED!"` and clears the input.
-5. **`MOD-05` — Email Message Header Analyzer (`#/mail-header-analyzer`)**
+6. **`MOD-06` — Email Message Header Analyzer (`#/mail-header-analyzer`)**
    - Analyzes raw RFC 5322 email headers and reconstructs full chronological transport traces with per-hop latency calculations, IP addresses, protocols, and TLS ciphers.
    - Audits SPF, DKIM (including selector, domain, and signature parameters), DMARC policy alignment, and ARC headers.
    - Rejects non-header payloads with `"Navy Mail Header Format Not DETECTED!"` and clears the input.
-6. **`MOD-06` — External Endpoint & TLS Probe — URL Tester (`#/url-tester`)**
+7. **`MOD-07` — External Endpoint & TLS Probe — URL Tester (`#/url-tester`)**
    - Tests how public corporate URLs, reverse proxies, and custom TCP ports (default `443`, `1–65535`) respond from the **external public internet** (bypassing internal corporate split-horizon DNS and outbound port blocks).
    - **Active Sonar ICMP Ping (`PING OK`):** Fires a concurrent 3-pulse ICMP Echo probe (`min / avg / max ms`, packet loss %, and `TTL`) alongside TCP/TLS/HTTP probing.
    - **Multi-Layer Telemetry:** Measures public DNS resolution (`8.8.8.8` / `1.1.1.1`), TCP 3-way handshake (`OPEN` vs `ECONNREFUSED` vs `ETIMEDOUT` firewall drop), TLS handshake, HTTP TTFB, status codes, HTML `<title>` / JSON preview, security headers (`HSTS`, `CSP`, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`), non-HTTP service banners (e.g. SSH/SMTP), and up to 5 HTTP `3xx` redirect hops.
    - **Live SSL / TLS Certificate Inspection:** Inspects negotiated TLS protocol & cipher suite, CA trust store verification, SAN/CN hostname match, validity countdown, SHA-256 fingerprint, wire chain depth, and Base64 PEM / Full-Chain export.
-7. **`MOD-07` — Subnet & Supernetting Calculator — IPv4 / IPv6 (`#/subnet-calculator`)**
+8. **`MOD-08` — Subnet & Supernetting Calculator — IPv4 / IPv6 (`#/subnet-calculator`)**
    - **100% Client-Side TypeScript BigInt Engine:** Instantaneous zero-network calculation for any IPv4 (`/0–/32`) or IPv6 (`/0–/128`) CIDR block (e.g. `10.120.4.0/22` or `2001:db8::/48`).
    - Computes Netmask, Wildcard mask, canonical Network address, Broadcast / last address, Usable host range, Total usable hosts, RFC scope classification, parent Supernet (`-1` bit), and full bitwise binary representation.
    - **Reverse DNS PTR Generator:** Automatically builds `in-addr.arpa` (including RFC 2317 classless delegation) for IPv4 and full 32-nibble `ip6.arpa` zones/records for IPv6.
    - **Interactive Subnet Divider & Carving Visualizer:** Quick slider & preset buttons to subdivide any network block into smaller subnets (e.g. splitting a `/22` into four `/24` blocks) with one-click drill-down.
-8. **`MOD-08` — JWT, OIDC & SAML Auth Inspector (`#/auth-inspector`)**
+9. **`MOD-09` — JWT, OIDC & SAML Auth Inspector (`#/auth-inspector`)**
    - **100% Client-Side Decoder:** Zero external API calls or server transmission to safeguard sensitive enterprise bearer tokens and SAML assertions.
    - Decodes JOSE Header, Claims Payload, and cryptographic Signature length/hex preview for JWT & OIDC tokens.
    - **Human-Readable Timestamps:** Converts `iat`, `nbf`, `exp`, and `auth_time` to local & UTC time with live status badges (`ACTIVE (expires in 48m)` or `EXPIRED`).
    - **Microsoft Entra ID / OIDC Claim Highlighter:** Formats and highlights `upn`, `oid`, `tid`, `roles`, `groups`, `scp`, `amr`, and translates well-known Entra Directory Role Template GUIDs (`wids`).
    - **SAML 2.0 Response XML Viewer:** Decodes Base64 / URL-encoded `SAMLResponse` payloads, extracts Issuer, Subject `NameID`, Conditions window, AttributeStatement claims, and pretty-prints the XML document.
-9. **`MOD-09` — HTTP Security Headers & CSP Evaluator (`#/security-headers`)**
+10. **`MOD-10` — HTTP Security Headers & CSP Evaluator (`#/security-headers`)**
    - Evaluates target URL HTTP response headers via the backend fetch/probe pipeline and computes a `0–100` compliance score (`GRADE A+` to `F`).
    - Audits and scores **HSTS** (`Strict-Transport-Security`), **CSP** (`Content-Security-Policy` with explicit warnings for `'unsafe-inline'`, `'unsafe-eval'`, and wildcard `*` origins), **`X-Frame-Options`** / `frame-ancestors`, **`X-Content-Type-Options: nosniff`**, **`Referrer-Policy`**, and **`Permissions-Policy`**.
    - Displays results as a retro terminal compliance checklist with `PASS` / `WARN` / `FAIL` badges, remediation guidance, and a parsed CSP Directive Matrix.
@@ -117,11 +121,11 @@ On desktop viewports (`>= 1024px`), TechTools supports running **two diagnostic 
 
 | Context | Key | Action |
 | :--- | :--- | :--- |
-| **Command Deck** | `1` – `9` / `↑` `↓` `←` `→` / `Tab` | SELECT a module only (card is focused and scrolled into view) |
+| **Command Deck** | `1` – `9`, `0` / `↑` `↓` `←` `→` / `Tab` | SELECT a module only (card is focused and scrolled into view) |
 | | `Enter` | Launch the selected module |
-| **Global (inside a tool)** | `1` – `9` | Jump directly to module `MOD-01` .. `MOD-09` in the active pane (when outside text inputs) |
+| **Global (inside a tool)** | `1` – `9`, `0` | Jump directly to module `MOD-01` .. `MOD-10` in the active pane (when outside text inputs) |
 | | `Ctrl+Shift+D` | Toggle **Desktop Dual-Pane Split-Screen Mode** (`50/50` resizable side-by-side modules) |
-| | `←` / `→` (in Split View) | Switch active window between **Pane A** (`←`) and **Pane B** (`→`) so `1`–`9` & tool shortcuts control that window |
+| | `←` / `→` (in Split View) | Switch active window between **Pane A** (`←`) and **Pane B** (`→`) so `1`–`9`, `0` & tool shortcuts control that window |
 | | `ESC` | Blur focused text input (unlocking shortcuts), or return to the R136 Command Deck |
 | | `S` | Toggle synthesized clean Naval CIC sound effects ON / OFF |
 | | `Tab` / `Shift+Tab` | Step through buttons, secret rows, and diagnostic intel sections |
@@ -131,27 +135,28 @@ On desktop viewports (`>= 1024px`), TechTools supports running **two diagnostic 
 | | `-` / `+` | Decrease / increase password length or passphrase word count |
 | | `U` / `L` / `G` / `Y` / `X` | Toggle Upper, Lower, Digits, Symbols, or **`NO CONFUSE`** (`0/O, 1/l/I`) |
 | | `R` / `C` / `A` | Regenerate (`R`), Copy `#1` or focused row (`C`), Copy All (`A`) |
-| **MOD-02 (DNS & WHOIS)** | `Q` (or `/`) / `R` | Focus domain input (`Q`), Run/re-scan DNS & WHOIS (`R`) |
+| **MOD-02 (Speed Test)** | `R` / `A` / `C` / `M` | Start speed test (`R`), Abort (`A`), Copy results (`C`), Refresh edge node (`M`) |
+| **MOD-03 (DNS & WHOIS)** | `Q` (or `/`) / `R` | Focus domain input (`Q`), Run/re-scan DNS & WHOIS (`R`) |
 | | `G` / `F` / `U` | Select DNS resolver: Google `8.8.8.8` (`G`, default), Cloudflare `1.1.1.1` (`F`), Custom DNS (`U`) |
 | | `A` / `I` / `M` / `N` / `W` | Filter view: All, IP/PTR, MX/SPF/DMARC, NS/SOA/TXT, WHOIS |
 | | `V` | Toggle Raw WHOIS record |
-| **MOD-03 (What's My IP)** | `C` / `M` / `R` / `Q` / `V` | Copy IP (`C`), My IP (`M`), Re-scan (`R`), Focus target input (`Q`), Raw RIR (`V`) |
-| **MOD-04 (Cert Analyzer)** | `Q` (or `/`) / `R` | Focus cert textarea (`Q`), Analyze certificate/CSR/key (`R`) |
+| **MOD-04 (What's My IP)** | `C` / `M` / `R` / `Q` / `V` | Copy IP (`C`), My IP (`M`), Re-scan (`R`), Focus target input (`Q`), Raw RIR (`V`) |
+| **MOD-05 (Cert Analyzer)** | `Q` (or `/`) / `R` | Focus cert textarea (`Q`), Analyze certificate/CSR/key (`R`) |
 | | `X` | Export and copy full discovered certificate chain in Base64 PEM |
 | | `V` | Toggle OpenSSL ASN.1 decoded text view |
-| **MOD-05 (Mail Headers)** | `Q` (or `/`) / `R` | Focus header textarea (`Q`), Run header trace analysis (`R`) |
+| **MOD-06 (Mail Headers)** | `Q` (or `/`) / `R` | Focus header textarea (`Q`), Run header trace analysis (`R`) |
 | | `A` / `H` / `U` | View filter: All Intel (`A`), Message Hops Trace (`H`), SPF/DKIM/DMARC Audit (`U`) |
 | | `V` | Toggle raw email headers table |
-| **MOD-06 (URL Tester)** | `Q` (or `/`) / `P` / `R` | Focus URL input (`Q`), Focus Port input (`P`), Run external probe (`R`) |
+| **MOD-07 (URL Tester)** | `Q` (or `/`) / `P` / `R` | Focus URL input (`Q`), Focus Port input (`P`), Run external probe (`R`) |
 | | `M` / `F` / `L` | Toggle HTTP `GET`/`HEAD` (`M`), Follow `3xx` redirects (`F`), Cycle SSL mode (`L`) |
 | | `A` / `H` / `T` / `D` | View filter: All Intel (`A`), Connectivity & HTTP (`H`), SSL/TLS Cert (`T`), Headers (`D`) |
 | | `X` | Export and copy full live PEM certificate chain |
-| **MOD-07 (Subnet Calc)** | `Q` (or `/`) | Focus IPv4/IPv6 CIDR input |
+| **MOD-08 (Subnet Calc)** | `Q` (or `/`) | Focus IPv4/IPv6 CIDR input |
 | | `-` / `+` | Supernet (`-1` prefix bit) / Subnet (`+1` prefix bit) |
 | | `B` | Toggle bitwise binary breakdown table |
-| **MOD-08 (Auth Inspector)** | `Q` (or `/`) | Focus JWT / SAML token input |
+| **MOD-09 (Auth Inspector)** | `Q` (or `/`) | Focus JWT / SAML token input |
 | | `J` / `M` | Switch between JWT & OIDC Inspector (`J`) and SAML 2.0 XML Viewer (`M`) |
-| **MOD-09 (Sec Headers)** | `Q` (or `/`) / `R` / `F` | Focus URL input (`Q`), Evaluate headers (`R`), Toggle Follow `3xx` (`F`) |
+| **MOD-10 (Sec Headers)** | `Q` (or `/`) / `R` / `F` | Focus URL input (`Q`), Evaluate headers (`R`), Toggle Follow `3xx` (`F`) |
 | | `A` / `W` / `P` / `V` | Filter: All Checks (`A`), Warnings & Failures (`W`), CSP Matrix (`P`), Raw Headers (`V`) |
 
 ---
@@ -249,6 +254,10 @@ TechTools uses a plugin-style registry so new troubleshooting tools can be added
 
 ## Changelog
 
+- **`v0.6.0`** — **Internet Speed Navy Test (`MOD-02`) & 80s Cassette Deck Digital VU Meter:**
+  - Added **`MOD-02` — Internet Speed Navy Test** (`#/speed-test`, shortcut `[2]`), measuring median Ping & Jitter (`10` cache-busted probes), 4-stream `ReadableStream` Download Mbps, and 4-stream `XMLHttpRequest` Upload Mbps directly from the user's browser against the nearest Anycast CDN edge node (`speed.cloudflare.com`), discarding the first `1.5s` TCP slow-start window.
+  - Built an **80s Cassette Deck Digital VU Meter** (`CassetteVuMeter`) with dual stereo channels (`CH-L // RX DOWN`, `CH-R // TX UP`), 36 logarithmic LED/VFD segments, peak-hold decay, live SVG throughput chart, public IP / ISP / ASN / edge node telemetry, `AbortController` cancellation, and Text/JSON copy.
+  - Updated `server/server.mjs` CSP `connect-src` for `speed.cloudflare.com` and `ipapi.co`, fixed mobile tool-launch scroll-to-top, and packaged the updated `v0.6.0` browser extension.
 - **`v0.5.5`** — **DNSSEC `RRSIG` Signature & Expiration Telemetry (`MOD-02`):**
   - Enabled DNSSEC OK (`&do=true`) on DoH queries (`DNSKEY`, `DS`, and `SOA`) to inspect `RRSIG` (`type 46`) records alongside zone public keys.
   - Added per-key `RRSIG` rows on every `DNSKEY` post in **ZONE PUBLIC KEYS (`DNSKEY`)** showing which RRset(s) the key signs (`SIGNS: DNSKEY` / `SIGNS: SOA`) or whether it is a `STANDBY / ROLLOVER KEY`, exact UTC `SIGNED` (inception) and `EXPIRES` timestamps, `DNSKEY` RRset signature expiration, and a validity countdown badge (`✓ RRSIG VALID`, `⚠ EXPIRING SOON`, or `✕ RRSIG EXPIRED` with remaining days/hours and signature window length) to verify key rotation.

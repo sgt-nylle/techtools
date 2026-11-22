@@ -23,6 +23,7 @@ window.fetch = (input: RequestInfo | URL, init?: RequestInit): Promise<Response>
 
 /** Tools that need the TechTools API (everything else is 100% local). */
 export const ONLINE_TOOL_IDS = new Set([
+  'speed-test',
   'dns-inspector',
   'whats-my-ip',
   'cert-analyzer',

@@ -32,11 +32,11 @@ export interface SpeedTestConfig {
 }
 
 export const SPEED_TEST_CONFIG: SpeedTestConfig = {
-  pingCount: 10,
-  downloadDurationMs: 9000,
-  uploadDurationMs: 9000,
-  warmupDiscardMs: 1500,
-  parallelStreams: 4,
+  pingCount: 6,
+  downloadDurationMs: 7000,
+  uploadDurationMs: 7000,
+  warmupDiscardMs: 1200,
+  parallelStreams: 3,
   downloadBytesPerRequest: 25_000_000,
   uploadChunkBytes: 2_000_000,
   sampleIntervalMs: 120,
@@ -215,7 +215,36 @@ export async function fetchNetworkInfo(signal?: AbortSignal): Promise<NetworkInf
       if (isAbortError(probeErr)) throw probeErr;
     }
 
-    // Fallback 2: ipapi.co
+    // Fallback 2: TechTools /api/ip (works in both web app and browser extension)
+    try {
+      const apiRes = await fetch('/api/ip', { cache: 'no-store', signal });
+      if (apiRes.ok) {
+        const apiJson = (await apiRes.json()) as {
+          ip?: string;
+          network?: {
+            asn?: string;
+            asnHolder?: string;
+            organization?: string;
+            country?: string;
+          };
+        };
+        if (apiJson.ip) {
+          return {
+            ip: apiJson.ip,
+            asn: apiJson.network?.asn || '—',
+            isp: apiJson.network?.asnHolder || apiJson.network?.organization || 'Unknown ISP',
+            colo: 'EDGE',
+            city: '',
+            country: apiJson.network?.country || '',
+            source: 'cloudflare',
+          };
+        }
+      }
+    } catch (apiErr) {
+      if (isAbortError(apiErr)) throw apiErr;
+    }
+
+    // Fallback 3: ipapi.co
     const res = await fetch(SPEED_TEST_CONFIG.endpoints.fallbackIp, {
       cache: 'no-store',
       signal,

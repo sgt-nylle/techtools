@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "TechTools — Naval IT Diagnostics",
   "short_name": "TechTools",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Sysadmin toolbox: subnet calc, JWT/SAML inspector, DNS, certs, mail headers, URL probe. Offline-capable, keyboard-driven.",
   "minimum_chrome_version": "116",
   "icons": {

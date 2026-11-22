@@ -20,7 +20,7 @@ A modular clean, optimized Swedish Navy (*Kungliga Flottan*) IT troubleshooting 
 
 ---
 
-## Diagnostic Modules (`v0.6.1`)
+## Diagnostic Modules (`v0.6.2`)
 
 1. **`MOD-01` — Password & Token Generator (`#/password-generator`)**
    - **Generated 100% Locally in Your Browser (Not on the Server):** Uses client-side CSPRNG (`window.crypto.getRandomValues`) with unbiased rejection sampling — zero network traffic, zero server involvement, and zero logging.
@@ -254,6 +254,9 @@ TechTools uses a plugin-style registry so new troubleshooting tools can be added
 
 ## Changelog
 
+- **`v0.6.2`** — **Geo-Located M-Lab NDT7 Speed Test Engine & Web Worker Offloading (`MOD-02`):**
+  - Replaced single-point Cloudflare speed endpoint with **Measurement Lab (M-Lab) NDT7** (`locate.measurementlab.net/v2/nearest/ndt/ndt7`), automatically selecting the geographically closest IXP server to the user's location with kernel-level `TCPInfo.MinRTT` (Ping) and `TCPInfo.RTTVar` (Jitter) telemetry.
+  - Offloaded high-frequency NDT7 WebSocket download/upload streaming into a dedicated same-origin Web Worker (`ndt7Worker.ts`) so browser extension popups achieve full native wire speed without React UI-thread throttling.
 - **`v0.6.1`** — **Extension `MOD-02` Public IP / Edge Metadata Fix:**
   - Updated `fetchNetworkInfo()` in `MOD-02` (`speedTestEngine.ts`) to fall back to `speed.cloudflare.com/__down?bytes=0` CORS-exposed `cf-meta-*` headers (enriched with `/api/ip` for ISP holder) when `/meta` returns `403` from browser extension origins.
 - **`v0.6.0`** — **Internet Speed Navy Test (`MOD-02`) & 80s Cassette Deck Digital VU Meter:**

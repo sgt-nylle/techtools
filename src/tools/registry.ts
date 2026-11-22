@@ -8,6 +8,7 @@ import { UrlProbeTool } from './UrlProbeTool';
 import { SubnetTool } from './SubnetTool';
 import { AuthInspectorTool } from './AuthInspectorTool';
 import { SecurityHeadersTool } from './SecurityHeadersTool';
+import { SpeedTestTool } from './SpeedTestTool';
 
 export const TOOL_MODULES: ToolModule[] = [
   {
@@ -126,6 +127,19 @@ export const TOOL_MODULES: ToolModule[] = [
       'Audit and score target URL HTTP security headers against OWASP & naval compliance baselines. Evaluates HSTS, CSP directives (warning on unsafe-inline, unsafe-eval, and wildcards), X-Frame-Options, nosniff, Referrer-Policy, and Permissions-Policy.',
     capabilities: ['HSTS & Max-Age Verification', 'CSP unsafe-inline/eval Audit', 'XFO / nosniff / Referrer / Permissions', 'Terminal PASS / WARN / FAIL Score'],
     Component: SecurityHeadersTool,
+  },
+  {
+    id: 'speed-test',
+    code: 'MOD-10',
+    shortcut: '0',
+    title: 'CDN EDGE SPEED & VU METER',
+    shortTitle: 'SPEED TEST',
+    category: 'NETWORK',
+    badge: 'CDN • VU • Mbps',
+    description:
+      'Client-side Anycast CDN speed test measuring median ping, jitter, multi-stream download, and upload throughput directly from your browser with an 80s cassette-deck digital VU meter.',
+    capabilities: ['Anycast CDN Edge (No Server Bottleneck)', '80s Digital Peak VU Meter', '4-Stream Download & Upload', 'Live IP / ASN / Colo Telemetry'],
+    Component: SpeedTestTool,
   },
 ];
 

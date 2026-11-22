@@ -28,7 +28,7 @@ const SECURITY_CSP = [
   "style-src 'self' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com data:",
   "img-src 'self' data: https://subwrite.se https://techtools.subwrite.se",
-  "connect-src 'self' https://cloudflareinsights.com",
+  "connect-src 'self' https://cloudflareinsights.com https://speed.cloudflare.com https://ipapi.co",
   "media-src 'self' data:",
   "object-src 'none'",
   "base-uri 'self'",

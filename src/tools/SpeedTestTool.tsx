@@ -5,20 +5,26 @@ import { sound } from '../utils/audio';
 import { useIsPaneActive } from '../utils/paneContext';
 import {
   SPEED_TEST_CONFIG,
-  discoverBestNodes,
+  discoverClosestNodes,
   fetchNetworkInfo,
   formatSpeedTestError,
   runSpeedTest,
-  type DiscoveredNode,
   type LatencyResult,
   type NetworkInfo,
+  type SpeedTestNode,
   type SpeedTestPhase,
   type SpeedTestResult,
   type ThroughputSample,
   type TransferResult,
 } from './speedTestEngine';
 
-function buildSvgPolyline(samples: ThroughputSample[], maxMbps: number, maxElapsedMs: number, width: number, height: number): string {
+function buildSvgPolyline(
+  samples: ThroughputSample[],
+  maxMbps: number,
+  maxElapsedMs: number,
+  width: number,
+  height: number
+): string {
   if (samples.length === 0) return '';
   const safeMaxMbps = Math.max(10, maxMbps);
   const safeMaxMs = Math.max(1000, maxElapsedMs);
@@ -41,8 +47,7 @@ export const SpeedTestTool: React.FC = () => {
   const [networkInfo, setNetworkInfo] = useState<NetworkInfo | null>(null);
   const [networkLoading, setNetworkLoading] = useState<boolean>(true);
   const [networkError, setNetworkError] = useState<string | null>(null);
-  const [rankedNodes, setRankedNodes] = useState<DiscoveredNode[]>([]);
-  const [activeNode, setActiveNode] = useState<DiscoveredNode | null>(null);
+  const [activeNode, setActiveNode] = useState<SpeedTestNode | null>(null);
   const [nodeDiscovering, setNodeDiscovering] = useState<boolean>(true);
 
   const [pingMs, setPingMs] = useState<number | null>(null);
@@ -77,7 +82,7 @@ export const SpeedTestTool: React.FC = () => {
 
     const [netRes, nodesRes] = await Promise.allSettled([
       fetchNetworkInfo(),
-      discoverBestNodes(),
+      discoverClosestNodes(),
     ]);
 
     if (!mountedRef.current) return;
@@ -89,11 +94,9 @@ export const SpeedTestTool: React.FC = () => {
     }
 
     if (nodesRes.status === 'fulfilled' && nodesRes.value.length > 0) {
-      setRankedNodes(nodesRes.value);
       setActiveNode(nodesRes.value[0]);
       setPhase((prev) => (prev === 'error' ? 'idle' : prev));
     } else if (nodesRes.status === 'rejected') {
-      setRankedNodes([]);
       setActiveNode(null);
       setPhase('error');
       setError(formatSpeedTestError(nodesRes.reason));
@@ -109,7 +112,7 @@ export const SpeedTestTool: React.FC = () => {
 
     Promise.allSettled([
       fetchNetworkInfo(controller.signal),
-      discoverBestNodes(controller.signal),
+      discoverClosestNodes(controller.signal),
     ]).then(([netRes, nodesRes]) => {
       if (!mountedRef.current) return;
       if (netRes.status === 'fulfilled') {
@@ -119,7 +122,6 @@ export const SpeedTestTool: React.FC = () => {
       }
 
       if (nodesRes.status === 'fulfilled' && nodesRes.value.length > 0) {
-        setRankedNodes(nodesRes.value);
         setActiveNode(nodesRes.value[0]);
       } else if (
         nodesRes.status === 'rejected' &&
@@ -158,7 +160,7 @@ export const SpeedTestTool: React.FC = () => {
 
     sound.playRadarPing();
     setError(null);
-    setPhase('latency');
+    setPhase('download');
     setPhaseProgress(0);
 
     setPingMs(null);
@@ -187,10 +189,7 @@ export const SpeedTestTool: React.FC = () => {
           setNetworkError(null);
         }
       } catch (err) {
-        if (err instanceof DOMException && err.name === 'AbortError') {
-          return;
-        }
-        // Continue test even if metadata endpoint fails; __down/__up will surface real connectivity error if blocked
+        if (err instanceof DOMException && err.name === 'AbortError') return;
       }
     }
 
@@ -198,26 +197,20 @@ export const SpeedTestTool: React.FC = () => {
       const result = await runSpeedTest(
         controller.signal,
         {
-          onNodeSelected: (discovered) => {
+          onNodeSelected: (node) => {
             if (!mountedRef.current) return;
-            setActiveNode(discovered);
+            setActiveNode(node);
           },
           onPhaseChange: (nextPhase) => {
             if (!mountedRef.current) return;
             setPhase(nextPhase);
             setPhaseProgress(0);
           },
-          onPingSample: (sampleMs, idx, total) => {
-            if (!mountedRef.current) return;
-            setPingMs(Number(sampleMs.toFixed(1)));
-            setPhaseProgress(idx / total);
-          },
-          onLatencyComplete: (lat) => {
+          onLatencyUpdate: (lat) => {
             if (!mountedRef.current) return;
             setPingMs(lat.medianMs);
             setJitterMs(lat.jitterMs);
             setLatencyDetail(lat);
-            setPhaseProgress(1);
           },
           onDownloadSample: (live, avg, sample, progress) => {
             if (!mountedRef.current) return;
@@ -252,7 +245,6 @@ export const SpeedTestTool: React.FC = () => {
             setPhaseProgress(1);
           },
         },
-        rankedNodes,
         activeNetInfo,
         SPEED_TEST_CONFIG
       );
@@ -275,7 +267,7 @@ export const SpeedTestTool: React.FC = () => {
         abortRef.current = null;
       }
     }
-  }, [isRunning, networkInfo, rankedNodes]);
+  }, [isRunning, networkInfo]);
 
   const summaryText = useMemo(() => {
     const net = networkInfo;
@@ -283,15 +275,12 @@ export const SpeedTestTool: React.FC = () => {
     const ul = avgUpMbps !== null ? `${avgUpMbps.toFixed(2)} Mbps` : '—';
     const ping = pingMs !== null ? `${pingMs.toFixed(1)} ms` : '—';
     const jitter = jitterMs !== null ? `${jitterMs.toFixed(1)} ms` : '—';
-    const edgeLabel = activeNode
-      ? `${activeNode.node.name} (${activeNode.latencyMs} ms)`
-      : '—';
     return [
       'TECHTOOLS // INTERNET SPEED NAVY TEST',
       `Timestamp : ${lastResult?.timestamp || 'Live / In-Progress'}`,
       `Public IP : ${net?.ip || '—'}`,
       `ISP / ASN : ${net ? `${net.isp} (${net.asn})` : '—'}`,
-      `Edge Node : ${edgeLabel}`,
+      `Edge Node : ${activeNode ? `${activeNode.name} [${activeNode.machine}]` : '—'}`,
       `Download  : ${dl} (Peak ${peakDownMbps.toFixed(2)} Mbps)`,
       `Upload    : ${ul} (Peak ${peakUpMbps.toFixed(2)} Mbps)`,
       `Ping      : ${ping}`,
@@ -302,13 +291,14 @@ export const SpeedTestTool: React.FC = () => {
   const summaryJson = useMemo(() => {
     const payload = lastResult ?? {
       timestamp: null,
+      node: activeNode,
       network: networkInfo,
       latency: latencyDetail,
       download: downDetail ?? { avgMbps: avgDownMbps, peakMbps: peakDownMbps },
       upload: upDetail ?? { avgMbps: avgUpMbps, peakMbps: peakUpMbps },
     };
     return JSON.stringify(payload, null, 2);
-  }, [lastResult, networkInfo, latencyDetail, downDetail, upDetail, avgDownMbps, avgUpMbps, peakDownMbps, peakUpMbps]);
+  }, [lastResult, activeNode, networkInfo, latencyDetail, downDetail, upDetail, avgDownMbps, avgUpMbps, peakDownMbps, peakUpMbps]);
 
   const handleCopy = useCallback(
     async (mode: 'text' | 'json') => {
@@ -352,7 +342,7 @@ export const SpeedTestTool: React.FC = () => {
         e.preventDefault();
         void handleCopy('text');
       } else if (k === 'm' || e.code === 'KeyM') {
-        if (!isRunning && !networkLoading) {
+        if (!isRunning && !networkLoading && !nodeDiscovering) {
           e.preventDefault();
           sound.playClick();
           void loadNetworkMeta();
@@ -361,7 +351,7 @@ export const SpeedTestTool: React.FC = () => {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isPaneActive, isRunning, networkLoading, handleStartTest, handleAbort, handleCopy, loadNetworkMeta]);
+  }, [isPaneActive, isRunning, networkLoading, nodeDiscovering, handleStartTest, handleAbort, handleCopy, loadNetworkMeta]);
 
   const chartMaxMbps = useMemo(() => {
     const maxVal = Math.max(
@@ -415,7 +405,7 @@ export const SpeedTestTool: React.FC = () => {
               void loadNetworkMeta();
             }}
           >
-            {nodeDiscovering ? '⟳ RACING NODES...' : '⟳ REFRESH NODE [M]'}
+            {nodeDiscovering ? '⟳ LOCATING NODE...' : '⟳ REFRESH NODE [M]'}
           </button>
         </div>
 
@@ -442,7 +432,7 @@ export const SpeedTestTool: React.FC = () => {
         <div className="speed-progress-wrap clean-box" aria-label="Test progress">
           <div className="speed-progress-meta">
             <span>
-              ACTIVE PHASE: <strong className="text-cyan">{phase.toUpperCase()}</strong> ({SPEED_TEST_CONFIG.parallelStreams} STREAMS • ANYCAST EDGE)
+              ACTIVE PHASE: <strong className="text-cyan">{phase.toUpperCase()}</strong> ({activeNode?.name || 'LOCATING CLOSEST NODE'})
             </span>
             <span>{Math.round(phaseProgress * 100)}%</span>
           </div>
@@ -474,16 +464,16 @@ export const SpeedTestTool: React.FC = () => {
           <span className="tele-lbl">CDN EDGE NODE</span>
           <span className="tele-val">
             {nodeDiscovering
-              ? 'RACING NODES...'
+              ? 'LOCATING CLOSEST...'
               : activeNode
-                ? `${activeNode.node.name} (${activeNode.latencyMs} ms)`
+                ? activeNode.name
                 : 'No reachable node'}
           </span>
         </div>
         <div className="tele-cell">
           <span className="tele-lbl">TEST METHOD</span>
           <span className="tele-val status-ok">
-            {SPEED_TEST_CONFIG.parallelStreams}x PARALLEL {activeNode?.node.kind === 'cloudflare' ? 'CLOUDFLARE' : 'LIBRESPEED'} ({rankedNodes.length} NODES)
+            {activeNode?.kind === 'librespeed-http' ? 'HTTP FALLBACK (3x)' : 'M-LAB NDT7 (WSS)'}
           </span>
         </div>
       </div>
@@ -491,7 +481,7 @@ export const SpeedTestTool: React.FC = () => {
       {/* ERROR / BLOCKER ALERT */}
       {(error || networkError) && (
         <div className="clean-box alert-banner" role="alert">
-          <strong>⚠ CONNECTION / CORS NOTICE:</strong> {error || networkError}
+          <strong>⚠ CONNECTION NOTICE:</strong> {error || networkError}
         </div>
       )}
 
@@ -527,12 +517,12 @@ export const SpeedTestTool: React.FC = () => {
         </div>
 
         <div className={`speed-metric-card clean-box ${phase === 'latency' ? 'card-active-cyan' : ''}`}>
-          <span className="tele-lbl">PING (MEDIAN)</span>
+          <span className="tele-lbl">PING (MIN RTT)</span>
           <div className="speed-card-val status-ok">
             {pingMs !== null ? pingMs.toFixed(1) : '--.-'} <span className="speed-card-unit">ms</span>
           </div>
           <span className="speed-card-sub">
-            {latencyDetail ? `Min ${latencyDetail.minMs} / Max ${latencyDetail.maxMs} ms` : `${SPEED_TEST_CONFIG.pingCount} cache-busted probes`}
+            {latencyDetail ? `Min ${latencyDetail.minMs} / Max ${latencyDetail.maxMs} ms` : 'Kernel TCP RTT telemetry'}
           </span>
         </div>
 
@@ -541,7 +531,7 @@ export const SpeedTestTool: React.FC = () => {
           <div className="speed-card-val">
             {jitterMs !== null ? jitterMs.toFixed(1) : '--.-'} <span className="speed-card-unit">ms</span>
           </div>
-          <span className="speed-card-sub">Mean consecutive RTT delta</span>
+          <span className="speed-card-sub">TCP RTT variance (RTTVar)</span>
         </div>
       </div>
 
@@ -561,20 +551,22 @@ export const SpeedTestTool: React.FC = () => {
         </div>
 
         <div className="speed-chart-box">
-          <svg viewBox="0 0 640 120" className="speed-svg-chart" preserveAspectRatio="none" role="img" aria-label="Live download and upload throughput chart">
+          <svg
+            viewBox="0 0 640 120"
+            className="speed-svg-chart"
+            preserveAspectRatio="none"
+            role="img"
+            aria-label="Live download and upload throughput chart"
+          >
             <line x1="0" y1="30" x2="640" y2="30" className="chart-grid-line" />
             <line x1="0" y1="60" x2="640" y2="60" className="chart-grid-line" />
             <line x1="0" y1="90" x2="640" y2="90" className="chart-grid-line" />
-            {downPolyline && (
-              <polyline fill="none" className="chart-line-down" points={downPolyline} />
-            )}
-            {upPolyline && (
-              <polyline fill="none" className="chart-line-up" points={upPolyline} />
-            )}
+            {downPolyline && <polyline fill="none" className="chart-line-down" points={downPolyline} />}
+            {upPolyline && <polyline fill="none" className="chart-line-up" points={upPolyline} />}
           </svg>
           {downSamples.length === 0 && upSamples.length === 0 && (
             <div className="speed-chart-empty">
-              PRESS <strong>START TEST [R]</strong> TO MEASURE AGAINST NEAREST ANYCAST CDN EDGE
+              PRESS <strong>START TEST [R]</strong> TO MEASURE AGAINST CLOSEST GEO-LOCATED M-LAB NODE
             </div>
           )}
         </div>

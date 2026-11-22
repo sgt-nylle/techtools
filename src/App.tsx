@@ -97,6 +97,14 @@ export function App() {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
+  // Reset viewport scroll to top when switching tools or returning to Command Deck (fixes mobile landing at bottom)
+  useEffect(() => {
+    const id = window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [activeToolId]);
+
   const isSplitActive = Boolean(activeToolId && secondaryToolId && isDesktopViewport);
 
   const selectPrimaryTool = useCallback(

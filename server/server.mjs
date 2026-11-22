@@ -22,7 +22,7 @@ const MIME_TYPES = {
   '.ps1': 'text/plain; charset=utf-8',
 };
 
-const SECURITY_CSP = [
+const BASE_CSP_DIRECTIVES = [
   "default-src 'self'",
   "script-src 'self' https://static.cloudflareinsights.com",
   "style-src 'self' https://fonts.googleapis.com",
@@ -34,12 +34,17 @@ const SECURITY_CSP = [
   "base-uri 'self'",
   "form-action 'self'",
   "frame-ancestors 'none'",
-  "upgrade-insecure-requests"
-].join('; ');
+];
+
+const SECURITY_CSP_HTTPS = [...BASE_CSP_DIRECTIVES, 'upgrade-insecure-requests'].join('; ');
+const SECURITY_CSP_HTTP = BASE_CSP_DIRECTIVES.join('; ');
 
 const server = http.createServer(async (req, res) => {
-  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
-  res.setHeader('Content-Security-Policy', SECURITY_CSP);
+  const isHttps = req.headers['x-forwarded-proto'] === 'https';
+  if (isHttps) {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  }
+  res.setHeader('Content-Security-Policy', isHttps ? SECURITY_CSP_HTTPS : SECURITY_CSP_HTTP);
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');

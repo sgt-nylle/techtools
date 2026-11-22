@@ -2617,6 +2617,36 @@
   }
 }
 
+@media (max-width: 768px) {
+  .speed-test-panel > .speed-controls-bar {
+    order: 1;
+  }
+
+  .speed-test-panel > .speed-progress-wrap {
+    order: 2;
+  }
+
+  .speed-test-panel > .alert-banner {
+    order: 3;
+  }
+
+  .speed-test-panel > .vu-deck-chassis {
+    order: 4;
+  }
+
+  .speed-test-panel > .telemetry-strip {
+    order: 5;
+  }
+
+  .speed-test-panel > .speed-cards-grid {
+    order: 6;
+  }
+
+  .speed-test-panel > .clean-box:last-child {
+    order: 7;
+  }
+}
+
 @media (max-width: 520px) {
   .vu-scale-ruler {
     display: none;

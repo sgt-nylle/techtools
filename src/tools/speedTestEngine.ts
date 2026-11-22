@@ -1,10 +1,104 @@
 /**
- * Client-side CDN Edge Speed Test Engine.
+ * Resilient Multi-Node LibreSpeed-Compatible Speed Test Engine.
  *
- * Measures latency, jitter, download throughput, and upload throughput directly
- * from the user's browser against Cloudflare's Anycast CDN edge endpoints
- * (avoiding the app's own origin server as a bottleneck).
+ * Automatically races a registry of CORS-enabled public LibreSpeed nodes
+ * (plus an optional fallback), locks onto the lowest-latency reachable server,
+ * and seamlessly fails over to the next fastest verified node if a server
+ * drops or rate-limits mid-test.
  */
+
+export interface SpeedTestNode {
+  id: string;
+  name: string;
+  location: string;
+  region: 'EU' | 'US' | 'ANYCAST';
+  kind: 'librespeed' | 'cloudflare';
+  baseUrl: string;
+  pingPath: string;
+  dlPath: string;
+  ulPath: string;
+  /** LibreSpeed ckSize parameter (MB) for garbage.php */
+  ckSize?: number;
+}
+
+export interface DiscoveredNode {
+  node: SpeedTestNode;
+  latencyMs: number;
+}
+
+export const SPEED_TEST_NODES: SpeedTestNode[] = [
+  {
+    id: 'sharktech-ams',
+    name: 'Amsterdam, NL (Sharktech EU)',
+    location: 'Amsterdam, Netherlands',
+    region: 'EU',
+    kind: 'librespeed',
+    baseUrl: 'https://amsspeed.sharktech.net',
+    pingPath: 'backend/empty.php',
+    dlPath: 'backend/garbage.php',
+    ulPath: 'backend/empty.php',
+    ckSize: 25,
+  },
+  {
+    id: 'sharktech-chi',
+    name: 'Chicago, IL (Sharktech US-Central)',
+    location: 'Chicago, USA',
+    region: 'US',
+    kind: 'librespeed',
+    baseUrl: 'https://chispeed.sharktech.net',
+    pingPath: 'backend/empty.php',
+    dlPath: 'backend/garbage.php',
+    ulPath: 'backend/empty.php',
+    ckSize: 25,
+  },
+  {
+    id: 'sharktech-den',
+    name: 'Denver, CO (Sharktech US-Mountain)',
+    location: 'Denver, USA',
+    region: 'US',
+    kind: 'librespeed',
+    baseUrl: 'https://denspeed.sharktech.net',
+    pingPath: 'backend/empty.php',
+    dlPath: 'backend/garbage.php',
+    ulPath: 'backend/empty.php',
+    ckSize: 25,
+  },
+  {
+    id: 'sharktech-lax',
+    name: 'Los Angeles, CA (Sharktech US-West)',
+    location: 'Los Angeles, USA',
+    region: 'US',
+    kind: 'librespeed',
+    baseUrl: 'https://laxspeed.sharktech.net',
+    pingPath: 'backend/empty.php',
+    dlPath: 'backend/garbage.php',
+    ulPath: 'backend/empty.php',
+    ckSize: 25,
+  },
+  {
+    id: 'sharktech-las',
+    name: 'Las Vegas, NV (Sharktech US-West)',
+    location: 'Las Vegas, USA',
+    region: 'US',
+    kind: 'librespeed',
+    baseUrl: 'https://lasspeed.sharktech.net',
+    pingPath: 'backend/empty.php',
+    dlPath: 'backend/garbage.php',
+    ulPath: 'backend/empty.php',
+    ckSize: 25,
+  },
+  {
+    id: 'cloudflare-anycast',
+    name: 'Cloudflare Edge (Anycast Fallback)',
+    location: 'Nearest Anycast POP',
+    region: 'ANYCAST',
+    kind: 'cloudflare',
+    baseUrl: 'https://speed.cloudflare.com',
+    pingPath: '__down?bytes=0',
+    dlPath: '__down?bytes=25000000',
+    ulPath: '__up',
+  },
+];
 
 export interface SpeedTestConfig {
   /** Number of sequential cache-busted requests for Ping & Jitter. */
@@ -17,35 +111,23 @@ export interface SpeedTestConfig {
   warmupDiscardMs: number;
   /** Number of concurrent HTTP streams used to saturate the link. */
   parallelStreams: number;
-  /** Bytes requested per download stream iteration. */
-  downloadBytesPerRequest: number;
   /** Binary payload size (bytes) per upload POST request. */
   uploadChunkBytes: number;
   /** Sampling interval (ms) for live VU meter & chart updates. */
   sampleIntervalMs: number;
-  endpoints: {
-    meta: string;
-    down: string;
-    up: string;
-    fallbackIp: string;
-  };
+  /** Per-probe timeout (ms) during parallel node auto-discovery. */
+  discoveryTimeoutMs: number;
 }
 
 export const SPEED_TEST_CONFIG: SpeedTestConfig = {
-  pingCount: 6,
-  downloadDurationMs: 7000,
-  uploadDurationMs: 7000,
-  warmupDiscardMs: 1200,
-  parallelStreams: 3,
-  downloadBytesPerRequest: 25_000_000,
+  pingCount: 10,
+  downloadDurationMs: 8500,
+  uploadDurationMs: 8500,
+  warmupDiscardMs: 1500,
+  parallelStreams: 4,
   uploadChunkBytes: 2_000_000,
   sampleIntervalMs: 120,
-  endpoints: {
-    meta: 'https://speed.cloudflare.com/meta',
-    down: 'https://speed.cloudflare.com/__down',
-    up: 'https://speed.cloudflare.com/__up',
-    fallbackIp: 'https://ipapi.co/json/',
-  },
+  discoveryTimeoutMs: 3500,
 };
 
 export type SpeedTestPhase =
@@ -64,8 +146,7 @@ export interface NetworkInfo {
   colo: string;
   city: string;
   country: string;
-  region?: string;
-  source: 'cloudflare' | 'ipapi';
+  source: 'api' | 'ipapi';
 }
 
 export interface ThroughputSample {
@@ -91,6 +172,7 @@ export interface TransferResult {
 
 export interface SpeedTestResult {
   timestamp: string;
+  node: SpeedTestNode;
   network: NetworkInfo | null;
   latency: LatencyResult;
   download: TransferResult;
@@ -99,6 +181,7 @@ export interface SpeedTestResult {
 
 export interface SpeedTestCallbacks {
   onPhaseChange?: (phase: SpeedTestPhase) => void;
+  onNodeSelected?: (discovered: DiscoveredNode) => void;
   onPingSample?: (sampleMs: number, index: number, total: number) => void;
   onLatencyComplete?: (result: LatencyResult) => void;
   onDownloadSample?: (liveMbps: number, avgMbps: number, sample: ThroughputSample, progress: number) => void;
@@ -107,23 +190,15 @@ export interface SpeedTestCallbacks {
   onUploadComplete?: (result: TransferResult) => void;
 }
 
-/**
- * Classifies network/CORS/adblocker errors into a clear user-facing message.
- */
-export function formatSpeedTestError(err: unknown): string {
-  if (err instanceof DOMException && err.name === 'AbortError') {
-    return 'Speed test aborted by user.';
-  }
-  const msg = err instanceof Error ? err.message : String(err);
-  if (
-    msg.includes('Failed to fetch') ||
-    msg.includes('NetworkError') ||
-    msg.includes('Load failed') ||
-    msg.includes('CORS')
-  ) {
-    return 'Unable to reach CDN test endpoint (speed.cloudflare.com). A browser adblocker, privacy extension, or corporate firewall may be blocking the request.';
-  }
-  return msg || 'Speed test failed due to an unexpected network error.';
+function randParam(): string {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function buildUrl(baseUrl: string, pathWithQuery: string, extraParams: string): string {
+  const base = baseUrl.replace(/\/+$/, '');
+  const path = pathWithQuery.replace(/^\/+/, '');
+  const sep = path.includes('?') ? '&' : '?';
+  return `${base}/${path}${sep}${extraParams}`;
 }
 
 function isAbortError(err: unknown): boolean {
@@ -134,149 +209,168 @@ function isAbortError(err: unknown): boolean {
 }
 
 /**
- * Fetch client public IP, ISP/ASN, and nearest CDN edge node metadata.
- * Falls back to `speed.cloudflare.com/__down?bytes=0` CORS-exposed headers
- * (which work even from browser extension origins where `/meta` returns 403),
- * enriched with `/api/ip` for ISP holder name, and finally `ipapi.co`.
+ * Classifies network/CORS/adblocker errors into a clear user-facing message.
+ */
+export function formatSpeedTestError(err: unknown): string {
+  if (isAbortError(err)) {
+    return 'Speed test aborted by user.';
+  }
+  const msg = err instanceof Error ? err.message : String(err);
+  if (
+    msg.includes('Failed to fetch') ||
+    msg.includes('NetworkError') ||
+    msg.includes('Load failed') ||
+    msg.includes('CORS')
+  ) {
+    return 'All speed test nodes were unreachable or blocked (CORS, adblocker, privacy extension, or firewall).';
+  }
+  return msg || 'Speed test failed due to an unexpected network error.';
+}
+
+/**
+ * Fetch client public IP and ISP/ASN from TechTools `/api/ip` (works in both
+ * web app and browser extension via ext-fetch-shim), with `ipapi.co` fallback.
  */
 export async function fetchNetworkInfo(signal?: AbortSignal): Promise<NetworkInfo> {
   try {
-    const res = await fetch(`${SPEED_TEST_CONFIG.endpoints.meta}?t=${Date.now()}`, {
-      cache: 'no-store',
-      signal,
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = (await res.json()) as {
-      clientIp?: string;
-      asn?: number | string;
-      asOrganization?: string;
-      colo?: string;
-      city?: string;
-      country?: string;
-      region?: string;
-    };
-    return {
-      ip: data.clientIp || 'Unknown',
-      asn: data.asn ? `AS${String(data.asn).replace(/^AS/i, '')}` : '—',
-      isp: data.asOrganization || 'Unknown ISP',
-      colo: data.colo || 'EDGE',
-      city: data.city || '',
-      country: data.country || '',
-      region: data.region || '',
-      source: 'cloudflare',
-    };
+    const apiRes = await fetch('/api/ip', { cache: 'no-store', signal });
+    if (apiRes.ok) {
+      const apiJson = (await apiRes.json()) as {
+        ip?: string;
+        network?: {
+          asn?: string;
+          asnHolder?: string;
+          organization?: string;
+          country?: string;
+        };
+      };
+      if (apiJson.ip) {
+        return {
+          ip: apiJson.ip,
+          asn: apiJson.network?.asn || '—',
+          isp: apiJson.network?.asnHolder || apiJson.network?.organization || 'Unknown ISP',
+          colo: 'AUTO',
+          city: '',
+          country: apiJson.network?.country || '',
+          source: 'api',
+        };
+      }
+    }
   } catch (err) {
     if (isAbortError(err)) throw err;
-
-    // Fallback 1: Read CORS-exposed cf-meta-* headers from __down?bytes=0 (works in browser extensions)
-    try {
-      const probeRes = await fetch(`${SPEED_TEST_CONFIG.endpoints.down}?bytes=0&t=${Date.now()}`, {
-        cache: 'no-store',
-        signal,
-      });
-      if (probeRes.ok) {
-        const ip = probeRes.headers.get('cf-meta-ip') || '';
-        const rawAsn = probeRes.headers.get('cf-meta-asn') || probeRes.headers.get('asn') || '';
-        const colo = probeRes.headers.get('cf-meta-colo') || probeRes.headers.get('colo') || 'EDGE';
-        const city = probeRes.headers.get('cf-meta-city') || probeRes.headers.get('city') || '';
-        const country = probeRes.headers.get('cf-meta-country') || probeRes.headers.get('country') || '';
-
-        if (ip) {
-          let isp = '';
-          let asn = rawAsn ? `AS${rawAsn.replace(/^AS/i, '')}` : '—';
-          // Best-effort ISP lookup via TechTools /api/ip (already permitted in extension host_permissions)
-          try {
-            const apiRes = await fetch('/api/ip', { cache: 'no-store', signal });
-            if (apiRes.ok) {
-              const apiJson = (await apiRes.json()) as {
-                network?: { asn?: string; asnHolder?: string; organization?: string };
-              };
-              isp = apiJson.network?.asnHolder || apiJson.network?.organization || '';
-              if (asn === '—' && apiJson.network?.asn) {
-                asn = apiJson.network.asn;
-              }
-            }
-          } catch {
-            // Optional ISP enrichment; keep cf-meta-* data
-          }
-
-          return {
-            ip,
-            asn,
-            isp: isp || (asn !== '—' ? asn : 'Cloudflare Edge'),
-            colo,
-            city,
-            country,
-            source: 'cloudflare',
-          };
-        }
-      }
-    } catch (probeErr) {
-      if (isAbortError(probeErr)) throw probeErr;
-    }
-
-    // Fallback 2: TechTools /api/ip (works in both web app and browser extension)
-    try {
-      const apiRes = await fetch('/api/ip', { cache: 'no-store', signal });
-      if (apiRes.ok) {
-        const apiJson = (await apiRes.json()) as {
-          ip?: string;
-          network?: {
-            asn?: string;
-            asnHolder?: string;
-            organization?: string;
-            country?: string;
-          };
-        };
-        if (apiJson.ip) {
-          return {
-            ip: apiJson.ip,
-            asn: apiJson.network?.asn || '—',
-            isp: apiJson.network?.asnHolder || apiJson.network?.organization || 'Unknown ISP',
-            colo: 'EDGE',
-            city: '',
-            country: apiJson.network?.country || '',
-            source: 'cloudflare',
-          };
-        }
-      }
-    } catch (apiErr) {
-      if (isAbortError(apiErr)) throw apiErr;
-    }
-
-    // Fallback 3: ipapi.co
-    const res = await fetch(SPEED_TEST_CONFIG.endpoints.fallbackIp, {
-      cache: 'no-store',
-      signal,
-    });
-    if (!res.ok) {
-      throw new Error('Failed to fetch network metadata from CDN or fallback API.');
-    }
-    const data = (await res.json()) as {
-      ip?: string;
-      asn?: string;
-      org?: string;
-      city?: string;
-      country_name?: string;
-      country_code?: string;
-    };
-    return {
-      ip: data.ip || 'Unknown',
-      asn: data.asn || '—',
-      isp: data.org || 'Unknown ISP',
-      colo: 'AUTO',
-      city: data.city || '',
-      country: data.country_code || data.country_name || '',
-      source: 'ipapi',
-    };
   }
+
+  const res = await fetch('https://ipapi.co/json/', { cache: 'no-store', signal });
+  if (!res.ok) {
+    throw new Error('Failed to resolve public IP / ISP metadata.');
+  }
+  const data = (await res.json()) as {
+    ip?: string;
+    asn?: string;
+    org?: string;
+    city?: string;
+    country_code?: string;
+    country_name?: string;
+  };
+  return {
+    ip: data.ip || 'Unknown',
+    asn: data.asn || '—',
+    isp: data.org || 'Unknown ISP',
+    colo: 'AUTO',
+    city: data.city || '',
+    country: data.country_code || data.country_name || '',
+    source: 'ipapi',
+  };
+}
+
+/**
+ * Probe a single node 3 times to verify CORS + reachability and compute median RTT.
+ */
+async function probeSingleNode(
+  node: SpeedTestNode,
+  signal: AbortSignal | undefined,
+  timeoutMs: number
+): Promise<DiscoveredNode> {
+  const samples: number[] = [];
+
+  for (let i = 0; i < 3; i++) {
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    const timeoutController = new AbortController();
+    const timer = window.setTimeout(() => timeoutController.abort(), timeoutMs);
+    const onParentAbort = () => timeoutController.abort();
+    signal?.addEventListener('abort', onParentAbort, { once: true });
+
+    const url = buildUrl(node.baseUrl, node.pingPath, `r=${randParam()}`);
+    const t0 = performance.now();
+    try {
+      const res = await fetch(url, {
+        method: 'GET',
+        cache: 'no-store',
+        signal: timeoutController.signal,
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await res.arrayBuffer();
+      samples.push(Math.max(0.1, performance.now() - t0));
+    } finally {
+      window.clearTimeout(timer);
+      signal?.removeEventListener('abort', onParentAbort);
+    }
+  }
+
+  const sorted = [...samples].sort((a, b) => a - b);
+  return {
+    node,
+    latencyMs: Number(sorted[1].toFixed(1)),
+  };
+}
+
+/**
+ * Parallel ping race across SPEED_TEST_NODES. Filters out nodes that fail CORS,
+ * return non-2xx, or time out, and returns reachable nodes sorted by lowest median latency.
+ */
+export async function discoverBestNodes(
+  signal?: AbortSignal,
+  nodes: SpeedTestNode[] = SPEED_TEST_NODES,
+  config: SpeedTestConfig = SPEED_TEST_CONFIG
+): Promise<DiscoveredNode[]> {
+  const results = await Promise.allSettled(
+    nodes.map((node) => probeSingleNode(node, signal, config.discoveryTimeoutMs))
+  );
+
+  if (signal?.aborted) {
+    throw new DOMException('Aborted', 'AbortError');
+  }
+
+  const reachable: DiscoveredNode[] = [];
+  for (const r of results) {
+    if (r.status === 'fulfilled') {
+      reachable.push(r.value);
+    }
+  }
+
+  reachable.sort((a, b) => {
+    // Prefer LibreSpeed nodes over Cloudflare fallback when latency is comparable,
+    // otherwise sort strictly by lowest median latency.
+    if (a.node.kind !== b.node.kind) {
+      if (a.node.kind === 'cloudflare' && b.latencyMs < a.latencyMs + 120) return 1;
+      if (b.node.kind === 'cloudflare' && a.latencyMs < b.latencyMs + 120) return -1;
+    }
+    return a.latencyMs - b.latencyMs;
+  });
+
+  if (reachable.length === 0) {
+    throw new Error('Zero speed test nodes in the registry are reachable (CORS / network blocked).');
+  }
+
+  return reachable;
 }
 
 /**
  * Measure median RTT ping (ms) and jitter (mean consecutive variation)
- * using sequential cache-busted 0-byte GET requests.
+ * using 10 sequential cache-busted GET requests to <node>/empty.php?r=<rand>.
  */
 export async function measureLatency(
+  node: SpeedTestNode,
   signal: AbortSignal,
   config: SpeedTestConfig = SPEED_TEST_CONFIG,
   onPingSample?: (sampleMs: number, index: number, total: number) => void
@@ -285,13 +379,14 @@ export async function measureLatency(
 
   for (let i = 0; i < config.pingCount; i++) {
     if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
-    const url = `${config.endpoints.down}?bytes=0&t=${Date.now()}-${i}-${Math.random().toString(36).slice(2, 7)}`;
+    const url = buildUrl(node.baseUrl, node.pingPath, `r=${randParam()}`);
     const t0 = performance.now();
     const res = await fetch(url, {
       method: 'GET',
       cache: 'no-store',
       signal,
     });
+    if (!res.ok) throw new Error(`Ping HTTP ${res.status} on ${node.name}`);
     await res.arrayBuffer();
     const rtt = Math.max(0.1, performance.now() - t0);
     samplesMs.push(rtt);
@@ -335,10 +430,11 @@ function computeRollingMbps(
 }
 
 /**
- * Measure download throughput using parallel ReadableStream fetch workers.
- * Discards the initial warmupDiscardMs window (TCP slow-start) for final average.
+ * Measure download throughput using parallel ReadableStream fetch loops
+ * against <node>/garbage.php?ckSize=25&r=<rand>. Discards warmupDiscardMs slow-start.
  */
 export async function measureDownload(
+  node: SpeedTestNode,
   signal: AbortSignal,
   config: SpeedTestConfig = SPEED_TEST_CONFIG,
   onSample?: (liveMbps: number, avgMbps: number, sample: ThroughputSample, progress: number) => void
@@ -392,17 +488,20 @@ export async function measureDownload(
     }
   }, config.sampleIntervalMs);
 
-  const worker = async (workerIdx: number) => {
-    let iter = 0;
+  const worker = async () => {
     while (!phaseController.signal.aborted && !signal.aborted && performance.now() < endTime) {
-      const url = `${config.endpoints.down}?bytes=${config.downloadBytesPerRequest}&t=${Date.now()}-${workerIdx}-${iter++}`;
+      const extra =
+        node.kind === 'librespeed'
+          ? `ckSize=${node.ckSize ?? 25}&r=${randParam()}`
+          : `r=${randParam()}`;
+      const url = buildUrl(node.baseUrl, node.dlPath, extra);
       try {
         const res = await fetch(url, {
           method: 'GET',
           cache: 'no-store',
           signal: phaseController.signal,
         });
-        if (!res.ok) throw new Error(`Download HTTP ${res.status}`);
+        if (!res.ok) throw new Error(`Download HTTP ${res.status} on ${node.name}`);
         if (!res.body) throw new Error('ReadableStream not supported by browser.');
 
         const reader = res.body.getReader();
@@ -429,9 +528,7 @@ export async function measureDownload(
   };
 
   try {
-    await Promise.all(
-      Array.from({ length: config.parallelStreams }, (_, i) => worker(i))
-    );
+    await Promise.all(Array.from({ length: config.parallelStreams }, () => worker()));
   } finally {
     window.clearInterval(sampler);
     signal.removeEventListener('abort', onParentAbort);
@@ -466,7 +563,6 @@ export async function measureDownload(
 
 function buildRandomBlob(byteLength: number): Blob {
   const buf = new Uint8Array(byteLength);
-  // crypto.getRandomValues has a 65,536-byte limit per call
   const chunk = 65536;
   for (let offset = 0; offset < byteLength; offset += chunk) {
     const slice = buf.subarray(offset, Math.min(offset + chunk, byteLength));
@@ -477,9 +573,10 @@ function buildRandomBlob(byteLength: number): Blob {
 
 /**
  * Measure upload throughput using parallel XMLHttpRequest POST streams
- * with real-time upload progress events. Discards warmupDiscardMs slow-start.
+ * to <node>/empty.php?r=<rand>. Discards warmupDiscardMs slow-start.
  */
 export async function measureUpload(
+  node: SpeedTestNode,
   signal: AbortSignal,
   config: SpeedTestConfig = SPEED_TEST_CONFIG,
   onSample?: (liveMbps: number, avgMbps: number, sample: ThroughputSample, progress: number) => void
@@ -561,13 +658,13 @@ export async function measureUpload(
         if (xhr.status >= 200 && xhr.status < 300) {
           resolve();
         } else {
-          reject(new Error(`Upload HTTP ${xhr.status}`));
+          reject(new Error(`Upload HTTP ${xhr.status} on ${node.name}`));
         }
       });
 
       xhr.addEventListener('error', () => {
         abortSig.removeEventListener('abort', onAbort);
-        reject(new Error('Failed to fetch: upload connection blocked or reset.'));
+        reject(new Error(`Failed to fetch: upload blocked or reset on ${node.name}.`));
       });
 
       xhr.addEventListener('abort', () => {
@@ -579,10 +676,9 @@ export async function measureUpload(
       xhr.send(payloadBlob);
     });
 
-  const worker = async (workerIdx: number) => {
-    let iter = 0;
+  const worker = async () => {
     while (!phaseController.signal.aborted && !signal.aborted && performance.now() < endTime) {
-      const url = `${config.endpoints.up}?t=${Date.now()}-${workerIdx}-${iter++}`;
+      const url = buildUrl(node.baseUrl, node.ulPath, `r=${randParam()}`);
       try {
         await uploadOnce(url, phaseController.signal);
       } catch (err) {
@@ -595,9 +691,7 @@ export async function measureUpload(
   };
 
   try {
-    await Promise.all(
-      Array.from({ length: config.parallelStreams }, (_, i) => worker(i))
-    );
+    await Promise.all(Array.from({ length: config.parallelStreams }, () => worker()));
   } finally {
     window.clearInterval(sampler);
     signal.removeEventListener('abort', onParentAbort);
@@ -631,32 +725,56 @@ export async function measureUpload(
 }
 
 /**
- * Execute full speed test sequence: Latency -> Download -> Upload.
+ * Execute full speed test sequence with automatic fallback across verified nodes:
+ * if the active node fails mid-test (CORS, network drop, 429/5xx), automatically
+ * switches to the next fastest verified node and retries without crashing the UI.
  */
 export async function runSpeedTest(
   signal: AbortSignal,
   callbacks: SpeedTestCallbacks = {},
+  rankedNodes: DiscoveredNode[] = [],
   networkInfo: NetworkInfo | null = null,
   config: SpeedTestConfig = SPEED_TEST_CONFIG
 ): Promise<SpeedTestResult> {
-  callbacks.onPhaseChange?.('latency');
-  const latency = await measureLatency(signal, config, callbacks.onPingSample);
-  callbacks.onLatencyComplete?.(latency);
+  const candidates =
+    rankedNodes.length > 0
+      ? rankedNodes
+      : await discoverBestNodes(signal, SPEED_TEST_NODES, config);
 
-  callbacks.onPhaseChange?.('download');
-  const download = await measureDownload(signal, config, callbacks.onDownloadSample);
-  callbacks.onDownloadComplete?.(download);
+  let lastErr: unknown = null;
 
-  callbacks.onPhaseChange?.('upload');
-  const upload = await measureUpload(signal, config, callbacks.onUploadSample);
-  callbacks.onUploadComplete?.(upload);
+  for (const candidate of candidates) {
+    if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+    callbacks.onNodeSelected?.(candidate);
 
-  callbacks.onPhaseChange?.('complete');
-  return {
-    timestamp: new Date().toISOString(),
-    network: networkInfo,
-    latency,
-    download,
-    upload,
-  };
+    try {
+      callbacks.onPhaseChange?.('latency');
+      const latency = await measureLatency(candidate.node, signal, config, callbacks.onPingSample);
+      callbacks.onLatencyComplete?.(latency);
+
+      callbacks.onPhaseChange?.('download');
+      const download = await measureDownload(candidate.node, signal, config, callbacks.onDownloadSample);
+      callbacks.onDownloadComplete?.(download);
+
+      callbacks.onPhaseChange?.('upload');
+      const upload = await measureUpload(candidate.node, signal, config, callbacks.onUploadSample);
+      callbacks.onUploadComplete?.(upload);
+
+      callbacks.onPhaseChange?.('complete');
+      return {
+        timestamp: new Date().toISOString(),
+        node: candidate.node,
+        network: networkInfo,
+        latency,
+        download,
+        upload,
+      };
+    } catch (err) {
+      if (isAbortError(err)) throw err;
+      lastErr = err;
+      // Automatically fail over to the next fastest verified node
+    }
+  }
+
+  throw lastErr ?? new Error('Zero nodes in the speed test registry are reachable.');
 }

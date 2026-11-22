@@ -5,9 +5,11 @@ import { sound } from '../utils/audio';
 import { useIsPaneActive } from '../utils/paneContext';
 import {
   SPEED_TEST_CONFIG,
+  discoverBestNodes,
   fetchNetworkInfo,
   formatSpeedTestError,
   runSpeedTest,
+  type DiscoveredNode,
   type LatencyResult,
   type NetworkInfo,
   type SpeedTestPhase,
@@ -39,6 +41,9 @@ export const SpeedTestTool: React.FC = () => {
   const [networkInfo, setNetworkInfo] = useState<NetworkInfo | null>(null);
   const [networkLoading, setNetworkLoading] = useState<boolean>(true);
   const [networkError, setNetworkError] = useState<string | null>(null);
+  const [rankedNodes, setRankedNodes] = useState<DiscoveredNode[]>([]);
+  const [activeNode, setActiveNode] = useState<DiscoveredNode | null>(null);
+  const [nodeDiscovering, setNodeDiscovering] = useState<boolean>(true);
 
   const [pingMs, setPingMs] = useState<number | null>(null);
   const [jitterMs, setJitterMs] = useState<number | null>(null);
@@ -66,38 +71,68 @@ export const SpeedTestTool: React.FC = () => {
 
   const loadNetworkMeta = useCallback(async () => {
     setNetworkLoading(true);
+    setNodeDiscovering(true);
     setNetworkError(null);
-    try {
-      const info = await fetchNetworkInfo();
-      if (mountedRef.current) {
-        setNetworkInfo(info);
-      }
-    } catch (err) {
-      if (mountedRef.current) {
-        setNetworkError(formatSpeedTestError(err));
-      }
-    } finally {
-      if (mountedRef.current) {
-        setNetworkLoading(false);
-      }
+    setError(null);
+
+    const [netRes, nodesRes] = await Promise.allSettled([
+      fetchNetworkInfo(),
+      discoverBestNodes(),
+    ]);
+
+    if (!mountedRef.current) return;
+
+    if (netRes.status === 'fulfilled') {
+      setNetworkInfo(netRes.value);
+    } else {
+      setNetworkError(formatSpeedTestError(netRes.reason));
     }
+
+    if (nodesRes.status === 'fulfilled' && nodesRes.value.length > 0) {
+      setRankedNodes(nodesRes.value);
+      setActiveNode(nodesRes.value[0]);
+      setPhase((prev) => (prev === 'error' ? 'idle' : prev));
+    } else if (nodesRes.status === 'rejected') {
+      setRankedNodes([]);
+      setActiveNode(null);
+      setPhase('error');
+      setError(formatSpeedTestError(nodesRes.reason));
+    }
+
+    setNetworkLoading(false);
+    setNodeDiscovering(false);
   }, []);
 
   useEffect(() => {
     mountedRef.current = true;
     const controller = new AbortController();
-    fetchNetworkInfo(controller.signal)
-      .then((info) => {
-        if (mountedRef.current) setNetworkInfo(info);
-      })
-      .catch((err) => {
-        if (mountedRef.current && !(err instanceof DOMException && err.name === 'AbortError')) {
-          setNetworkError(formatSpeedTestError(err));
-        }
-      })
-      .finally(() => {
-        if (mountedRef.current) setNetworkLoading(false);
-      });
+
+    Promise.allSettled([
+      fetchNetworkInfo(controller.signal),
+      discoverBestNodes(controller.signal),
+    ]).then(([netRes, nodesRes]) => {
+      if (!mountedRef.current) return;
+      if (netRes.status === 'fulfilled') {
+        setNetworkInfo(netRes.value);
+      } else if (!(netRes.reason instanceof DOMException && netRes.reason.name === 'AbortError')) {
+        setNetworkError(formatSpeedTestError(netRes.reason));
+      }
+
+      if (nodesRes.status === 'fulfilled' && nodesRes.value.length > 0) {
+        setRankedNodes(nodesRes.value);
+        setActiveNode(nodesRes.value[0]);
+      } else if (
+        nodesRes.status === 'rejected' &&
+        !(nodesRes.reason instanceof DOMException && nodesRes.reason.name === 'AbortError')
+      ) {
+        setPhase('error');
+        setError(formatSpeedTestError(nodesRes.reason));
+      }
+
+      setNetworkLoading(false);
+      setNodeDiscovering(false);
+    });
+
     return () => {
       mountedRef.current = false;
       controller.abort();
@@ -163,6 +198,10 @@ export const SpeedTestTool: React.FC = () => {
       const result = await runSpeedTest(
         controller.signal,
         {
+          onNodeSelected: (discovered) => {
+            if (!mountedRef.current) return;
+            setActiveNode(discovered);
+          },
           onPhaseChange: (nextPhase) => {
             if (!mountedRef.current) return;
             setPhase(nextPhase);
@@ -213,6 +252,7 @@ export const SpeedTestTool: React.FC = () => {
             setPhaseProgress(1);
           },
         },
+        rankedNodes,
         activeNetInfo,
         SPEED_TEST_CONFIG
       );
@@ -235,7 +275,7 @@ export const SpeedTestTool: React.FC = () => {
         abortRef.current = null;
       }
     }
-  }, [isRunning, networkInfo]);
+  }, [isRunning, networkInfo, rankedNodes]);
 
   const summaryText = useMemo(() => {
     const net = networkInfo;
@@ -243,18 +283,21 @@ export const SpeedTestTool: React.FC = () => {
     const ul = avgUpMbps !== null ? `${avgUpMbps.toFixed(2)} Mbps` : '—';
     const ping = pingMs !== null ? `${pingMs.toFixed(1)} ms` : '—';
     const jitter = jitterMs !== null ? `${jitterMs.toFixed(1)} ms` : '—';
+    const edgeLabel = activeNode
+      ? `${activeNode.node.name} (${activeNode.latencyMs} ms)`
+      : '—';
     return [
-      'TECHTOOLS // CDN EDGE SPEED TEST',
+      'TECHTOOLS // INTERNET SPEED NAVY TEST',
       `Timestamp : ${lastResult?.timestamp || 'Live / In-Progress'}`,
       `Public IP : ${net?.ip || '—'}`,
       `ISP / ASN : ${net ? `${net.isp} (${net.asn})` : '—'}`,
-      `Edge Node : ${net ? `${net.colo} (${[net.city, net.country].filter(Boolean).join(', ') || 'Anycast'})` : '—'}`,
+      `Edge Node : ${edgeLabel}`,
       `Download  : ${dl} (Peak ${peakDownMbps.toFixed(2)} Mbps)`,
       `Upload    : ${ul} (Peak ${peakUpMbps.toFixed(2)} Mbps)`,
       `Ping      : ${ping}`,
       `Jitter    : ${jitter}`,
     ].join('\n');
-  }, [networkInfo, avgDownMbps, avgUpMbps, pingMs, jitterMs, peakDownMbps, peakUpMbps, lastResult]);
+  }, [networkInfo, activeNode, avgDownMbps, avgUpMbps, pingMs, jitterMs, peakDownMbps, peakUpMbps, lastResult]);
 
   const summaryJson = useMemo(() => {
     const payload = lastResult ?? {
@@ -366,13 +409,13 @@ export const SpeedTestTool: React.FC = () => {
           <button
             type="button"
             className="navy-btn"
-            disabled={isRunning || networkLoading}
+            disabled={isRunning || networkLoading || nodeDiscovering}
             onClick={() => {
               sound.playClick();
               void loadNetworkMeta();
             }}
           >
-            ⟳ REFRESH NODE [M]
+            {nodeDiscovering ? '⟳ RACING NODES...' : '⟳ REFRESH NODE [M]'}
           </button>
         </div>
 
@@ -430,15 +473,17 @@ export const SpeedTestTool: React.FC = () => {
         <div className="tele-cell">
           <span className="tele-lbl">CDN EDGE NODE</span>
           <span className="tele-val">
-            {networkInfo
-              ? `${networkInfo.colo}${networkInfo.city || networkInfo.country ? ` — ${[networkInfo.city, networkInfo.country].filter(Boolean).join(', ')}` : ''}`
-              : '—'}
+            {nodeDiscovering
+              ? 'RACING NODES...'
+              : activeNode
+                ? `${activeNode.node.name} (${activeNode.latencyMs} ms)`
+                : 'No reachable node'}
           </span>
         </div>
         <div className="tele-cell">
           <span className="tele-lbl">TEST METHOD</span>
           <span className="tele-val status-ok">
-            {SPEED_TEST_CONFIG.parallelStreams}x PARALLEL BROWSER→CDN
+            {SPEED_TEST_CONFIG.parallelStreams}x PARALLEL {activeNode?.node.kind === 'cloudflare' ? 'CLOUDFLARE' : 'LIBRESPEED'} ({rankedNodes.length} NODES)
           </span>
         </div>
       </div>

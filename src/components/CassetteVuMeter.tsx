@@ -53,15 +53,14 @@ function usePeakHold(valueMbps: number, active: boolean): number {
   }, [currentSeg]);
 
   useEffect(() => {
-    if (!active && currentSeg === 0 && decayedPeak === 0) return;
     const timer = window.setInterval(() => {
       if (Date.now() > holdUntilRef.current && peakRef.current > 0) {
         peakRef.current = peakRef.current - 1;
       }
-      setDecayedPeak(peakRef.current);
-    }, 90);
+      setDecayedPeak((prev) => (prev === peakRef.current ? prev : peakRef.current));
+    }, 100);
     return () => window.clearInterval(timer);
-  }, [active, currentSeg, decayedPeak]);
+  }, [active]);
 
   return Math.max(currentSeg, decayedPeak);
 }

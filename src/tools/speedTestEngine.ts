@@ -9,6 +9,8 @@
  * browser extensions without CORS preflight failures or CDN rate limits.
  */
 
+import type { Ndt7WorkerInMessage, Ndt7WorkerOutMessage } from './ndt7Worker';
+
 export interface SpeedTestNode {
   id: string;
   name: string;
@@ -39,7 +41,7 @@ export const SPEED_TEST_CONFIG: SpeedTestConfig = {
   downloadDurationMs: 7500,
   uploadDurationMs: 7500,
   warmupDiscardMs: 1500,
-  sampleIntervalMs: 120,
+  sampleIntervalMs: 160,
   connectTimeoutMs: 5000,
   mlabLocateUrl: 'https://locate.measurementlab.net/v2/nearest/ndt/ndt7',
 };
@@ -263,24 +265,94 @@ function computeRollingMbps(
   return (bytes * 8) / (spanSec * 1_000_000);
 }
 
-interface Ndt7ServerMessage {
-  TCPInfo?: {
-    RTT?: number;
-    MinRTT?: number;
-    RTTVar?: number;
-    BytesReceived?: number;
-    ElapsedTime?: number;
-  };
-  AppInfo?: {
-    ElapsedTime?: number;
-    NumBytes?: number;
-  };
+/**
+ * Runs an NDT7 Download or Upload phase inside a dedicated Web Worker thread
+ * so React/DOM rendering (especially in browser extension popups) never starves
+ * WebSocket receive/send buffers.
+ */
+function runNdt7PhaseInWorker(
+  direction: 'download' | 'upload',
+  node: SpeedTestNode,
+  signal: AbortSignal,
+  config: SpeedTestConfig,
+  onLatencyUpdate?: (lat: LatencyResult) => void,
+  onSample?: (liveMbps: number, avgMbps: number, sample: ThroughputSample, progress: number) => void
+): Promise<{ transfer: TransferResult; latency?: LatencyResult }> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) {
+      reject(new DOMException('Aborted', 'AbortError'));
+      return;
+    }
+
+    const worker = new Worker(new URL('./ndt7Worker.ts', import.meta.url), { type: 'module' });
+    let settled = false;
+
+    const cleanup = () => {
+      signal.removeEventListener('abort', onAbort);
+      worker.terminate();
+    };
+
+    const onAbort = () => {
+      if (settled) return;
+      settled = true;
+      try {
+        worker.postMessage({ type: 'abort' } satisfies Ndt7WorkerInMessage);
+      } catch {
+        // ignore
+      }
+      cleanup();
+      reject(new DOMException('Aborted', 'AbortError'));
+    };
+    signal.addEventListener('abort', onAbort, { once: true });
+
+    worker.onmessage = (ev: MessageEvent<Ndt7WorkerOutMessage>) => {
+      const msg = ev.data;
+      if (msg.type === 'latency' && msg.latency) {
+        onLatencyUpdate?.(msg.latency);
+      } else if (msg.type === 'sample' && msg.sample) {
+        onSample?.(
+          msg.liveMbps ?? msg.sample.mbps,
+          msg.avgMbps ?? msg.sample.mbps,
+          msg.sample,
+          msg.progress ?? 0
+        );
+      } else if (msg.type === 'done' && msg.result) {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        resolve({ transfer: msg.result, latency: msg.latency });
+      } else if (msg.type === 'error') {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        if (msg.aborted || signal.aborted) {
+          reject(new DOMException('Aborted', 'AbortError'));
+        } else {
+          reject(new Error(msg.error || `NDT7 ${direction} failed on ${node.name}`));
+        }
+      }
+    };
+
+    worker.onerror = (ev) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(new Error(ev.message || `Worker error during NDT7 ${direction}`));
+    };
+
+    const startMsg: Ndt7WorkerInMessage = {
+      type: direction === 'download' ? 'start-download' : 'start-upload',
+      url: direction === 'download' ? node.downloadUrl : node.uploadUrl,
+      nodeName: node.name,
+      durationMs: direction === 'download' ? config.downloadDurationMs : config.uploadDurationMs,
+      warmupDiscardMs: config.warmupDiscardMs,
+      sampleIntervalMs: config.sampleIntervalMs,
+      connectTimeoutMs: config.connectTimeoutMs,
+    };
+    worker.postMessage(startMsg);
+  });
 }
 
-/**
- * Measure Download throughput AND kernel TCP Ping/Jitter over M-Lab NDT7 WebSocket.
- * Guaranteed to terminate cleanly at `downloadDurationMs` via hard timers.
- */
 function measureNdt7Download(
   node: SpeedTestNode,
   signal: AbortSignal,
@@ -288,405 +360,23 @@ function measureNdt7Download(
   onLatencyUpdate?: (lat: LatencyResult) => void,
   onSample?: (liveMbps: number, avgMbps: number, sample: ThroughputSample, progress: number) => void
 ): Promise<{ download: TransferResult; latency: LatencyResult }> {
-  return new Promise((resolve, reject) => {
-    if (signal.aborted) {
-      reject(new DOMException('Aborted', 'AbortError'));
-      return;
-    }
-
-    const ws = new WebSocket(node.downloadUrl, 'net.measurementlab.ndt.v7');
-    ws.binaryType = 'arraybuffer';
-
-    const connectStart = performance.now();
-    let streamStart = 0;
-    let opened = false;
-    let settled = false;
-
-    let totalBytes = 0;
-    let warmupBytes = 0;
-    let warmupCaptured = false;
-    let peakMbps = 0;
-    const windowEvents: Array<{ time: number; bytes: number }> = [];
-    const samples: ThroughputSample[] = [];
-
-    const rttSamplesMs: number[] = [];
-    let minRttMs: number | null = null;
-    let rttVarMs: number | null = null;
-    let handshakeMs: number | null = null;
-
-    let samplerTimer: number | null = null;
-    let stopTimer: number | null = null;
-    let failsafeTimer: number | null = null;
-    let connectTimer: number | null = null;
-
-    const cleanup = () => {
-      if (samplerTimer !== null) window.clearInterval(samplerTimer);
-      if (stopTimer !== null) window.clearTimeout(stopTimer);
-      if (failsafeTimer !== null) window.clearTimeout(failsafeTimer);
-      if (connectTimer !== null) window.clearTimeout(connectTimer);
-      signal.removeEventListener('abort', onAbort);
-    };
-
-    const buildLatency = (): LatencyResult => {
-      const base = minRttMs ?? handshakeMs ?? 15;
-      const validSamples = rttSamplesMs.length > 0 ? rttSamplesMs : [base];
-      const sorted = [...validSamples].sort((a, b) => a - b);
-      const jitter = rttVarMs ?? 0;
-      return {
-        medianMs: Number(base.toFixed(1)),
-        jitterMs: Number(jitter.toFixed(1)),
-        minMs: Number(Math.min(base, sorted[0]).toFixed(1)),
-        maxMs: Number(sorted[sorted.length - 1].toFixed(1)),
-        samplesMs: validSamples.map((v) => Number(v.toFixed(1))),
-      };
-    };
-
-    const finishSuccess = () => {
-      if (settled) return;
-      settled = true;
-      cleanup();
-
-      const totalElapsedMs = Math.max(1, performance.now() - (streamStart || connectStart));
-      const measuredBytes =
-        warmupCaptured && totalElapsedMs > config.warmupDiscardMs
-          ? Math.max(0, totalBytes - warmupBytes)
-          : totalBytes;
-      const measuredSec =
-        warmupCaptured && totalElapsedMs > config.warmupDiscardMs
-          ? (totalElapsedMs - config.warmupDiscardMs) / 1000
-          : totalElapsedMs / 1000;
-      const avgMbps = (measuredBytes * 8) / (Math.max(0.1, measuredSec) * 1_000_000);
-
-      resolve({
-        download: {
-          avgMbps: Number(avgMbps.toFixed(2)),
-          peakMbps: Number(Math.max(peakMbps, avgMbps).toFixed(2)),
-          totalBytes,
-          durationMs: Math.round(totalElapsedMs),
-          samples,
-        },
-        latency: buildLatency(),
-      });
-    };
-
-    const failWith = (err: unknown) => {
-      if (settled) return;
-      settled = true;
-      cleanup();
-      try {
-        ws.close();
-      } catch {
-        // ignore
-      }
-      reject(err);
-    };
-
-    const onAbort = () => failWith(new DOMException('Aborted', 'AbortError'));
-    signal.addEventListener('abort', onAbort, { once: true });
-
-    connectTimer = window.setTimeout(() => {
-      if (!opened) {
-        failWith(new Error(`WebSocket connect timeout on ${node.name}`));
-      }
-    }, config.connectTimeoutMs);
-
-    ws.onopen = () => {
-      opened = true;
-      if (connectTimer !== null) window.clearTimeout(connectTimer);
-      streamStart = performance.now();
-      handshakeMs = Math.max(0.5, (streamStart - connectStart) / 2);
-      onLatencyUpdate?.(buildLatency());
-
-      samplerTimer = window.setInterval(() => {
-        const now = performance.now();
-        const elapsedMs = now - streamStart;
-        if (!warmupCaptured && elapsedMs >= config.warmupDiscardMs) {
-          warmupBytes = totalBytes;
-          warmupCaptured = true;
-        }
-        const liveMbps = computeRollingMbps(windowEvents, now);
-        if (liveMbps > peakMbps) peakMbps = liveMbps;
-
-        const effectiveBytes = warmupCaptured ? Math.max(0, totalBytes - warmupBytes) : totalBytes;
-        const effectiveSec = warmupCaptured
-          ? Math.max(0.1, (elapsedMs - config.warmupDiscardMs) / 1000)
-          : Math.max(0.1, elapsedMs / 1000);
-        const avgMbps = (effectiveBytes * 8) / (effectiveSec * 1_000_000);
-
-        const sample: ThroughputSample = {
-          elapsedMs: Math.round(elapsedMs),
-          mbps: Number(liveMbps.toFixed(2)),
-        };
-        samples.push(sample);
-        onSample?.(
-          Number(liveMbps.toFixed(2)),
-          Number(avgMbps.toFixed(2)),
-          sample,
-          Math.min(1, elapsedMs / config.downloadDurationMs)
-        );
-      }, config.sampleIntervalMs);
-
-      stopTimer = window.setTimeout(() => {
-        try {
-          ws.close(1000);
-        } catch {
-          // ignore
-        }
-        failsafeTimer = window.setTimeout(finishSuccess, 800);
-      }, config.downloadDurationMs);
-    };
-
-    ws.onmessage = (ev) => {
-      if (typeof ev.data === 'string') {
-        try {
-          const msg = JSON.parse(ev.data) as Ndt7ServerMessage;
-          if (msg.TCPInfo) {
-            if (typeof msg.TCPInfo.MinRTT === 'number' && msg.TCPInfo.MinRTT > 0) {
-              minRttMs = msg.TCPInfo.MinRTT / 1000;
-            }
-            if (typeof msg.TCPInfo.RTT === 'number' && msg.TCPInfo.RTT > 0) {
-              rttSamplesMs.push(msg.TCPInfo.RTT / 1000);
-            }
-            if (typeof msg.TCPInfo.RTTVar === 'number' && msg.TCPInfo.RTTVar >= 0) {
-              rttVarMs = msg.TCPInfo.RTTVar / 1000;
-            }
-            onLatencyUpdate?.(buildLatency());
-          }
-        } catch {
-          // ignore malformed telemetry frame
-        }
-      } else if (ev.data instanceof ArrayBuffer) {
-        const size = ev.data.byteLength;
-        if (size > 0) {
-          totalBytes += size;
-          windowEvents.push({ time: performance.now(), bytes: size });
-        }
-      }
-    };
-
-    ws.onclose = () => {
-      if (signal.aborted) {
-        failWith(new DOMException('Aborted', 'AbortError'));
-      } else if (!opened || totalBytes === 0) {
-        failWith(new Error(`WebSocket download closed without data on ${node.name}`));
-      } else {
-        finishSuccess();
-      }
-    };
-
-    ws.onerror = () => {
-      if (totalBytes > 0) {
-        finishSuccess();
-      } else {
-        failWith(new Error(`WebSocket download error on ${node.name}`));
-      }
-    };
-  });
+  return runNdt7PhaseInWorker('download', node, signal, config, onLatencyUpdate, onSample).then(
+    ({ transfer, latency }) => ({
+      download: transfer,
+      latency: latency ?? { medianMs: 0, jitterMs: 0, minMs: 0, maxMs: 0, samplesMs: [] },
+    })
+  );
 }
 
-/**
- * Measure Upload throughput over M-Lab NDT7 WebSocket.
- * Pumps 64 KB random frames while keeping bufferedAmount < 1 MB and terminates cleanly at `uploadDurationMs`.
- */
 function measureNdt7Upload(
   node: SpeedTestNode,
   signal: AbortSignal,
   config: SpeedTestConfig,
   onSample?: (liveMbps: number, avgMbps: number, sample: ThroughputSample, progress: number) => void
 ): Promise<TransferResult> {
-  return new Promise((resolve, reject) => {
-    if (signal.aborted) {
-      reject(new DOMException('Aborted', 'AbortError'));
-      return;
-    }
-
-    const chunk = new Uint8Array(65536);
-    crypto.getRandomValues(chunk);
-
-    const ws = new WebSocket(node.uploadUrl, 'net.measurementlab.ndt.v7');
-
-    let streamStart = 0;
-    let opened = false;
-    let pumping = false;
-    let settled = false;
-
-    let sentBytes = 0;
-    let prevDeliveredBytes = 0;
-    let warmupBytes = 0;
-    let warmupCaptured = false;
-    let peakMbps = 0;
-    let serverBytes = 0;
-    let serverElapsedUs = 0;
-
-    const windowEvents: Array<{ time: number; bytes: number }> = [];
-    const samples: ThroughputSample[] = [];
-
-    let pumpTimer: number | null = null;
-    let samplerTimer: number | null = null;
-    let stopTimer: number | null = null;
-    let failsafeTimer: number | null = null;
-    let connectTimer: number | null = null;
-
-    const cleanup = () => {
-      pumping = false;
-      if (pumpTimer !== null) window.clearTimeout(pumpTimer);
-      if (samplerTimer !== null) window.clearInterval(samplerTimer);
-      if (stopTimer !== null) window.clearTimeout(stopTimer);
-      if (failsafeTimer !== null) window.clearTimeout(failsafeTimer);
-      if (connectTimer !== null) window.clearTimeout(connectTimer);
-      signal.removeEventListener('abort', onAbort);
-    };
-
-    const finishSuccess = () => {
-      if (settled) return;
-      settled = true;
-      cleanup();
-
-      const totalElapsedMs = Math.max(1, performance.now() - (streamStart || performance.now()));
-      const deliveredBytes = Math.max(prevDeliveredBytes, sentBytes - ws.bufferedAmount);
-
-      let avgMbps: number;
-      if (serverBytes > 0 && serverElapsedUs > 0) {
-        avgMbps = (serverBytes * 8) / serverElapsedUs;
-      } else {
-        const measuredBytes =
-          warmupCaptured && totalElapsedMs > config.warmupDiscardMs
-            ? Math.max(0, deliveredBytes - warmupBytes)
-            : deliveredBytes;
-        const measuredSec =
-          warmupCaptured && totalElapsedMs > config.warmupDiscardMs
-            ? (totalElapsedMs - config.warmupDiscardMs) / 1000
-            : totalElapsedMs / 1000;
-        avgMbps = (measuredBytes * 8) / (Math.max(0.1, measuredSec) * 1_000_000);
-      }
-
-      resolve({
-        avgMbps: Number(avgMbps.toFixed(2)),
-        peakMbps: Number(Math.max(peakMbps, avgMbps).toFixed(2)),
-        totalBytes: serverBytes || deliveredBytes,
-        durationMs: Math.round(totalElapsedMs),
-        samples,
-      });
-    };
-
-    const failWith = (err: unknown) => {
-      if (settled) return;
-      settled = true;
-      cleanup();
-      try {
-        ws.close();
-      } catch {
-        // ignore
-      }
-      reject(err);
-    };
-
-    const onAbort = () => failWith(new DOMException('Aborted', 'AbortError'));
-    signal.addEventListener('abort', onAbort, { once: true });
-
-    connectTimer = window.setTimeout(() => {
-      if (!opened) {
-        failWith(new Error(`WebSocket upload connect timeout on ${node.name}`));
-      }
-    }, config.connectTimeoutMs);
-
-    const pump = () => {
-      if (!pumping || ws.readyState !== WebSocket.OPEN) return;
-      while (ws.bufferedAmount < 1024 * 1024) {
-        ws.send(chunk);
-        sentBytes += chunk.byteLength;
-      }
-      pumpTimer = window.setTimeout(pump, 10);
-    };
-
-    ws.onopen = () => {
-      opened = true;
-      if (connectTimer !== null) window.clearTimeout(connectTimer);
-      streamStart = performance.now();
-      pumping = true;
-      pump();
-
-      samplerTimer = window.setInterval(() => {
-        const now = performance.now();
-        const elapsedMs = now - streamStart;
-        const delivered = Math.max(prevDeliveredBytes, sentBytes - ws.bufferedAmount);
-        const delta = Math.max(0, delivered - prevDeliveredBytes);
-        prevDeliveredBytes = delivered;
-
-        if (delta > 0) {
-          windowEvents.push({ time: now, bytes: delta });
-        }
-        if (!warmupCaptured && elapsedMs >= config.warmupDiscardMs) {
-          warmupBytes = delivered;
-          warmupCaptured = true;
-        }
-
-        const liveMbps = computeRollingMbps(windowEvents, now);
-        if (liveMbps > peakMbps) peakMbps = liveMbps;
-
-        const effectiveBytes = warmupCaptured ? Math.max(0, delivered - warmupBytes) : delivered;
-        const effectiveSec = warmupCaptured
-          ? Math.max(0.1, (elapsedMs - config.warmupDiscardMs) / 1000)
-          : Math.max(0.1, elapsedMs / 1000);
-        const avgMbps =
-          serverBytes > 0 && serverElapsedUs > 0
-            ? (serverBytes * 8) / serverElapsedUs
-            : (effectiveBytes * 8) / (effectiveSec * 1_000_000);
-
-        const sample: ThroughputSample = {
-          elapsedMs: Math.round(elapsedMs),
-          mbps: Number(liveMbps.toFixed(2)),
-        };
-        samples.push(sample);
-        onSample?.(
-          Number(liveMbps.toFixed(2)),
-          Number(avgMbps.toFixed(2)),
-          sample,
-          Math.min(1, elapsedMs / config.uploadDurationMs)
-        );
-      }, config.sampleIntervalMs);
-
-      stopTimer = window.setTimeout(() => {
-        pumping = false;
-        try {
-          ws.close(1000);
-        } catch {
-          // ignore
-        }
-        failsafeTimer = window.setTimeout(finishSuccess, 800);
-      }, config.uploadDurationMs);
-    };
-
-    ws.onmessage = (ev) => {
-      if (typeof ev.data === 'string') {
-        try {
-          const msg = JSON.parse(ev.data) as Ndt7ServerMessage;
-          if (msg.TCPInfo?.BytesReceived) serverBytes = msg.TCPInfo.BytesReceived;
-          if (msg.TCPInfo?.ElapsedTime) serverElapsedUs = msg.TCPInfo.ElapsedTime;
-        } catch {
-          // ignore
-        }
-      }
-    };
-
-    ws.onclose = () => {
-      if (signal.aborted) {
-        failWith(new DOMException('Aborted', 'AbortError'));
-      } else if (!opened || (sentBytes === 0 && serverBytes === 0)) {
-        failWith(new Error(`WebSocket upload closed without data on ${node.name}`));
-      } else {
-        finishSuccess();
-      }
-    };
-
-    ws.onerror = () => {
-      if (sentBytes > 0 || serverBytes > 0) {
-        finishSuccess();
-      } else {
-        failWith(new Error(`WebSocket upload error on ${node.name}`));
-      }
-    };
-  });
+  return runNdt7PhaseInWorker('upload', node, signal, config, undefined, onSample).then(
+    ({ transfer }) => transfer
+  );
 }
 
 /**

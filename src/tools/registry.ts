@@ -1,5 +1,6 @@
 import type { ToolModule } from './types';
 import { PassGenTool } from './PassGenTool';
+import { SpeedTestTool } from './SpeedTestTool';
 import { DnsTool } from './DnsTool';
 import { MyIpTool } from './MyIpTool';
 import { CertAnalyzerTool } from './CertAnalyzerTool';
@@ -8,7 +9,6 @@ import { UrlProbeTool } from './UrlProbeTool';
 import { SubnetTool } from './SubnetTool';
 import { AuthInspectorTool } from './AuthInspectorTool';
 import { SecurityHeadersTool } from './SecurityHeadersTool';
-import { SpeedTestTool } from './SpeedTestTool';
 
 export const TOOL_MODULES: ToolModule[] = [
   {
@@ -25,9 +25,22 @@ export const TOOL_MODULES: ToolModule[] = [
     Component: PassGenTool,
   },
   {
-    id: 'dns-inspector',
+    id: 'speed-test',
     code: 'MOD-02',
     shortcut: '2',
+    title: 'INTERNET SPEED NAVY TEST',
+    shortTitle: 'SPEED TEST',
+    category: 'NETWORK',
+    badge: 'ISP • VU • Mbps',
+    description:
+      'Measure your real-world internet connection speed (download, upload, ping, and jitter) between your ISP and the wider internet via the nearest Anycast edge node, featuring an 80s cassette-deck digital VU meter.',
+    capabilities: ['ISP & Internet Throughput', '80s Digital Peak VU Meter', '4-Stream Download & Upload', 'Live IP / ASN / Edge Telemetry'],
+    Component: SpeedTestTool,
+  },
+  {
+    id: 'dns-inspector',
+    code: 'MOD-03',
+    shortcut: '3',
     title: 'DNS & DOMAIN REGISTRY INTEL',
     shortTitle: 'DNS & WHOIS',
     category: 'DNS & MAIL',
@@ -39,8 +52,8 @@ export const TOOL_MODULES: ToolModule[] = [
   },
   {
     id: 'whats-my-ip',
-    code: 'MOD-03',
-    shortcut: '3',
+    code: 'MOD-04',
+    shortcut: '4',
     title: "WHAT'S MY IP? & RANGE OWNER",
     shortTitle: "WHAT'S MY IP",
     category: 'NETWORK',
@@ -52,8 +65,8 @@ export const TOOL_MODULES: ToolModule[] = [
   },
   {
     id: 'cert-analyzer',
-    code: 'MOD-04',
-    shortcut: '4',
+    code: 'MOD-05',
+    shortcut: '5',
     title: 'CERTIFICATE & CSR ANALYZER',
     shortTitle: 'CERT ANALYZER',
     category: 'CRYPTO & SSL',
@@ -65,8 +78,8 @@ export const TOOL_MODULES: ToolModule[] = [
   },
   {
     id: 'mail-header-analyzer',
-    code: 'MOD-05',
-    shortcut: '5',
+    code: 'MOD-06',
+    shortcut: '6',
     title: 'EMAIL MESSAGE HEADER ANALYZER',
     shortTitle: 'MAIL HEADERS',
     category: 'MAIL SECURITY',
@@ -78,8 +91,8 @@ export const TOOL_MODULES: ToolModule[] = [
   },
   {
     id: 'url-tester',
-    code: 'MOD-06',
-    shortcut: '6',
+    code: 'MOD-07',
+    shortcut: '7',
     title: 'EXTERNAL ENDPOINT & TLS PROBE',
     shortTitle: 'URL TESTER',
     category: 'DIAGNOSTICS',
@@ -91,8 +104,8 @@ export const TOOL_MODULES: ToolModule[] = [
   },
   {
     id: 'subnet-calculator',
-    code: 'MOD-07',
-    shortcut: '7',
+    code: 'MOD-08',
+    shortcut: '8',
     title: 'SUBNET & SUPERNETTING CALCULATOR',
     shortTitle: 'SUBNET CALC',
     category: 'NETWORK',
@@ -104,8 +117,8 @@ export const TOOL_MODULES: ToolModule[] = [
   },
   {
     id: 'auth-inspector',
-    code: 'MOD-08',
-    shortcut: '8',
+    code: 'MOD-09',
+    shortcut: '9',
     title: 'JWT, OIDC & SAML AUTH INSPECTOR',
     shortTitle: 'JWT / SAML AUTH',
     category: 'SECURITY',
@@ -117,8 +130,8 @@ export const TOOL_MODULES: ToolModule[] = [
   },
   {
     id: 'security-headers',
-    code: 'MOD-09',
-    shortcut: '9',
+    code: 'MOD-10',
+    shortcut: '0',
     title: 'HTTP SECURITY HEADERS & CSP EVALUATOR',
     shortTitle: 'SEC HEADERS',
     category: 'SECURITY',
@@ -127,19 +140,6 @@ export const TOOL_MODULES: ToolModule[] = [
       'Audit and score target URL HTTP security headers against OWASP & naval compliance baselines. Evaluates HSTS, CSP directives (warning on unsafe-inline, unsafe-eval, and wildcards), X-Frame-Options, nosniff, Referrer-Policy, and Permissions-Policy.',
     capabilities: ['HSTS & Max-Age Verification', 'CSP unsafe-inline/eval Audit', 'XFO / nosniff / Referrer / Permissions', 'Terminal PASS / WARN / FAIL Score'],
     Component: SecurityHeadersTool,
-  },
-  {
-    id: 'speed-test',
-    code: 'MOD-10',
-    shortcut: '0',
-    title: 'CDN EDGE SPEED & VU METER',
-    shortTitle: 'SPEED TEST',
-    category: 'NETWORK',
-    badge: 'CDN • VU • Mbps',
-    description:
-      'Client-side Anycast CDN speed test measuring median ping, jitter, multi-stream download, and upload throughput directly from your browser with an 80s cassette-deck digital VU meter.',
-    capabilities: ['Anycast CDN Edge (No Server Bottleneck)', '80s Digital Peak VU Meter', '4-Stream Download & Upload', 'Live IP / ASN / Colo Telemetry'],
-    Component: SpeedTestTool,
   },
 ];
 

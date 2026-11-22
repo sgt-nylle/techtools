@@ -135,6 +135,9 @@ function isAbortError(err: unknown): boolean {
 
 /**
  * Fetch client public IP, ISP/ASN, and nearest CDN edge node metadata.
+ * Falls back to `speed.cloudflare.com/__down?bytes=0` CORS-exposed headers
+ * (which work even from browser extension origins where `/meta` returns 403),
+ * enriched with `/api/ip` for ISP holder name, and finally `ipapi.co`.
  */
 export async function fetchNetworkInfo(signal?: AbortSignal): Promise<NetworkInfo> {
   try {
@@ -164,7 +167,55 @@ export async function fetchNetworkInfo(signal?: AbortSignal): Promise<NetworkInf
     };
   } catch (err) {
     if (isAbortError(err)) throw err;
-    // Fallback to ipapi.co if Cloudflare /meta is unavailable
+
+    // Fallback 1: Read CORS-exposed cf-meta-* headers from __down?bytes=0 (works in browser extensions)
+    try {
+      const probeRes = await fetch(`${SPEED_TEST_CONFIG.endpoints.down}?bytes=0&t=${Date.now()}`, {
+        cache: 'no-store',
+        signal,
+      });
+      if (probeRes.ok) {
+        const ip = probeRes.headers.get('cf-meta-ip') || '';
+        const rawAsn = probeRes.headers.get('cf-meta-asn') || probeRes.headers.get('asn') || '';
+        const colo = probeRes.headers.get('cf-meta-colo') || probeRes.headers.get('colo') || 'EDGE';
+        const city = probeRes.headers.get('cf-meta-city') || probeRes.headers.get('city') || '';
+        const country = probeRes.headers.get('cf-meta-country') || probeRes.headers.get('country') || '';
+
+        if (ip) {
+          let isp = '';
+          let asn = rawAsn ? `AS${rawAsn.replace(/^AS/i, '')}` : '—';
+          // Best-effort ISP lookup via TechTools /api/ip (already permitted in extension host_permissions)
+          try {
+            const apiRes = await fetch('/api/ip', { cache: 'no-store', signal });
+            if (apiRes.ok) {
+              const apiJson = (await apiRes.json()) as {
+                network?: { asn?: string; asnHolder?: string; organization?: string };
+              };
+              isp = apiJson.network?.asnHolder || apiJson.network?.organization || '';
+              if (asn === '—' && apiJson.network?.asn) {
+                asn = apiJson.network.asn;
+              }
+            }
+          } catch {
+            // Optional ISP enrichment; keep cf-meta-* data
+          }
+
+          return {
+            ip,
+            asn,
+            isp: isp || (asn !== '—' ? asn : 'Cloudflare Edge'),
+            colo,
+            city,
+            country,
+            source: 'cloudflare',
+          };
+        }
+      }
+    } catch (probeErr) {
+      if (isAbortError(probeErr)) throw probeErr;
+    }
+
+    // Fallback 2: ipapi.co
     const res = await fetch(SPEED_TEST_CONFIG.endpoints.fallbackIp, {
       cache: 'no-store',
       signal,

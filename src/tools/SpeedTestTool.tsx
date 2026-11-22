@@ -287,29 +287,38 @@ export const SpeedTestTool: React.FC = () => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
       const target = e.target as HTMLElement | null;
-      const tag = target?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable) return;
+      const isTextInput =
+        (target?.tagName === 'INPUT' &&
+          (target as HTMLInputElement).type !== 'checkbox' &&
+          (target as HTMLInputElement).type !== 'range') ||
+        target?.tagName === 'TEXTAREA' ||
+        Boolean(target?.isContentEditable);
+      if (isTextInput) return;
 
-      if (e.key === 'r' || e.key === 'R') {
+      const k = e.key.toLowerCase();
+
+      if (k === 'r' || e.code === 'KeyR') {
         e.preventDefault();
         void handleStartTest();
-      } else if (e.key === 'a' || e.key === 'A') {
+      } else if (k === 'a' || e.code === 'KeyA') {
         if (isRunning) {
           e.preventDefault();
           handleAbort();
         }
-      } else if (e.key === 'c' || e.key === 'C') {
+      } else if (k === 'c' || e.code === 'KeyC') {
         e.preventDefault();
         void handleCopy('text');
-      } else if (e.key === 'm' || e.key === 'M') {
-        e.preventDefault();
-        sound.playClick();
-        void loadNetworkMeta();
+      } else if (k === 'm' || e.code === 'KeyM') {
+        if (!isRunning && !networkLoading) {
+          e.preventDefault();
+          sound.playClick();
+          void loadNetworkMeta();
+        }
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isPaneActive, isRunning, handleStartTest, handleAbort, handleCopy, loadNetworkMeta]);
+  }, [isPaneActive, isRunning, networkLoading, handleStartTest, handleAbort, handleCopy, loadNetworkMeta]);
 
   const chartMaxMbps = useMemo(() => {
     const maxVal = Math.max(

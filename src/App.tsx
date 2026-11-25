@@ -902,6 +902,12 @@ export function App() {
                 <code>X-Content-Type-Options: nosniff</code>, <code>Referrer-Policy</code>, and{' '}
                 <code>Permissions-Policy</code>).
               </li>
+              <li>
+                <strong>IP &amp; Domain Geolocation Radar</strong> — self-hosted GeoIP lookups (local MMDB, no third-party
+                APIs) for your IP, any IPv4/IPv6 address, or a domain&apos;s A/AAAA records, plotted on an animated SVG
+                radar map with Anycast/CDN flagging and live edge POP detection (<code>cf-ray</code>,{' '}
+                <code>x-amz-cf-pop</code>, <code>x-served-by</code>).
+              </li>
             </ul>
             <p className="dim-note">
               Open source on{' '}

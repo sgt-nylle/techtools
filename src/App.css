@@ -2663,3 +2663,424 @@
     gap: 8px;
   }
 }
+
+/* =========================================================================
+   MOD-11: IP & DOMAIN GEOLOCATION RADAR (self-hosted SVG PPI scope)
+   Every colour is derived from theme variables so bridge / navy / radar /
+   oled-black / paper-navy all render natively.
+   ========================================================================= */
+
+.geo-radar-panel {
+  container-type: inline-size;
+  container-name: georadar;
+}
+
+.geo-quick-targets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.geo-radar-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(280px, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+@container georadar (max-width: 860px) {
+  .geo-radar-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.geo-radar-scope {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.geo-scope-hdr {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.geo-scope-stage {
+  position: relative;
+  width: 100%;
+  border: var(--bw-2) solid var(--navy-border);
+  background: var(--navy-deep);
+  line-height: 0;
+}
+
+.geo-scope-overlay {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-arcade);
+  font-size: 10px;
+  line-height: 1.4;
+  padding: 4px 10px;
+  color: var(--navy-cyan);
+  background: rgba(var(--shade-rgb), 0.82);
+  border: 1px solid var(--navy-cyan);
+  animation: geoBlink 1.1s steps(2, start) infinite;
+  pointer-events: none;
+}
+
+@keyframes geoBlink {
+  to {
+    visibility: hidden;
+  }
+}
+
+.geo-scope-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--navy-dim);
+}
+
+.geo-scope-coord {
+  margin-left: auto;
+  color: var(--navy-cyan);
+  font-variant-numeric: tabular-nums;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  vertical-align: -1px;
+  margin-right: 4px;
+}
+
+.legend-target {
+  background: var(--navy-green);
+  box-shadow: 0 0 6px rgba(var(--green-rgb), 0.8);
+}
+
+.legend-edge {
+  background: var(--navy-gold);
+  border-radius: 1px;
+  transform: rotate(45deg) scale(0.85);
+}
+
+.legend-extra {
+  background: var(--navy-cyan);
+  width: 7px;
+  height: 7px;
+}
+
+.legend-line {
+  display: inline-block;
+  width: 22px;
+  border-top: 2px dashed var(--navy-gold);
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+/* ---------- SVG RADAR MAP ---------- */
+.radar-map-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 2 / 1;
+}
+
+.radar-ocean {
+  fill: var(--navy-inset);
+}
+
+.radar-frame {
+  fill: none;
+  stroke: var(--navy-border-bright);
+  stroke-width: 1;
+}
+
+.radar-graticule line {
+  stroke: var(--navy-cell-border);
+  stroke-width: 0.6;
+  vector-effect: non-scaling-stroke;
+}
+
+.radar-graticule .grat-minor {
+  stroke-dasharray: 2 4;
+  opacity: 0.6;
+}
+
+.radar-graticule .grat-major {
+  stroke: var(--navy-border);
+  opacity: 0.9;
+}
+
+.radar-graticule .grat-axis {
+  stroke: var(--navy-border-bright);
+  stroke-width: 1;
+}
+
+.radar-land {
+  fill: rgba(var(--cyan-rgb), 0.16);
+  stroke: var(--navy-cyan);
+  stroke-width: 0.7;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.radar-grat-labels text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  fill: var(--navy-muted);
+  opacity: 0.85;
+}
+
+.radar-range-ring {
+  fill: none;
+  stroke: rgba(var(--green-rgb), 0.28);
+  stroke-width: 0.8;
+  stroke-dasharray: 3 5;
+}
+
+.radar-sweep-rotor {
+  animation: radarSweep 4s linear infinite;
+}
+
+.radar-scanning .radar-sweep-rotor {
+  animation-duration: 1.6s;
+}
+
+@keyframes radarSweep {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.radar-sweep-stop-tail {
+  stop-color: var(--navy-green);
+  stop-opacity: 0;
+}
+
+.radar-sweep-stop-head {
+  stop-color: var(--navy-green);
+  stop-opacity: 0.38;
+}
+
+.radar-sweep-edge {
+  stroke: var(--navy-green);
+  stroke-width: 1.6;
+  opacity: 0.85;
+}
+
+.radar-crosshair line {
+  stroke: rgba(var(--green-rgb), 0.55);
+  stroke-width: 0.8;
+  stroke-dasharray: 6 4;
+}
+
+.radar-vector {
+  fill: none;
+  stroke: var(--navy-gold);
+  stroke-width: 2;
+  stroke-dasharray: 7 5;
+  animation: radarVectorFlow 1.2s linear infinite;
+}
+
+@keyframes radarVectorFlow {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+
+.radar-ping-ring {
+  fill: none;
+  stroke: var(--navy-green);
+  stroke-width: 2;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: radarPing 2.2s ease-out infinite;
+}
+
+.radar-ping-ring-delay {
+  animation-delay: 1.1s;
+}
+
+.radar-ping-ring-edge {
+  stroke: var(--navy-gold);
+  animation-duration: 1.8s;
+}
+
+@keyframes radarPing {
+  0% {
+    transform: scale(0.25);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+.radar-blip-core {
+  fill: var(--navy-green);
+  stroke: var(--navy-white);
+  stroke-width: 1;
+}
+
+.radar-reticle {
+  fill: none;
+  stroke: var(--navy-green);
+  stroke-width: 1.6;
+}
+
+.radar-edge-core {
+  fill: var(--navy-gold);
+  stroke: var(--navy-white);
+  stroke-width: 1;
+}
+
+.radar-extra circle {
+  fill: var(--navy-cyan);
+  stroke: var(--navy-white);
+  stroke-width: 0.6;
+  opacity: 0.9;
+}
+
+.radar-label {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  fill: var(--navy-green);
+  paint-order: stroke;
+  stroke: var(--navy-inset);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+
+.radar-label-edge {
+  fill: var(--navy-gold);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .radar-sweep-rotor,
+  .radar-ping-ring,
+  .radar-vector,
+  .geo-scope-overlay {
+    animation: none;
+  }
+}
+
+/* ---------- READOUT ---------- */
+.geo-readout {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.geo-contact-title {
+  font-family: var(--font-arcade);
+  font-size: 11px;
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+.geo-readout-list {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 5px 12px;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.geo-readout-list dt {
+  font-family: var(--font-arcade);
+  font-size: 8px;
+  line-height: 1.9;
+  color: var(--navy-dim);
+  white-space: nowrap;
+}
+
+.geo-readout-list dd {
+  margin: 0;
+  color: var(--navy-primary);
+  overflow-wrap: anywhere;
+}
+
+.geo-ip-chip {
+  display: inline-block;
+  margin: 0 6px 3px 0;
+  padding: 1px 6px;
+  background: var(--navy-inset);
+  border: 1px solid var(--navy-cell-border);
+}
+
+.geo-cc,
+.geo-src-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 5px;
+  font-family: var(--font-arcade);
+  font-size: 7.5px;
+  line-height: 1.9;
+  color: var(--navy-cyan);
+  border: 1px solid var(--navy-cyan);
+  vertical-align: 1px;
+}
+
+.geo-src-tag {
+  color: var(--navy-muted);
+  border-color: var(--navy-cell-border);
+}
+
+.geo-anycast-note {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--navy-amber);
+  border-left: 3px solid var(--navy-amber);
+  padding: 4px 8px;
+  background: var(--navy-inset);
+}
+
+.geo-ip-table-wrap {
+  overflow-x: auto;
+}
+
+.geo-ip-table th {
+  text-align: left;
+  font-family: var(--font-arcade);
+  font-size: 8px;
+  color: var(--navy-dim);
+  padding: 6px 8px;
+}
+
+.geo-ip-table td {
+  padding: 6px 8px;
+  vertical-align: top;
+}
+
+.geo-attribution {
+  font-size: 12px;
+}
+
+:root[data-flat] .geo-readout-list dt,
+:root[data-flat] .geo-ip-table th {
+  font-size: 10px;
+  font-weight: 700;
+}
+
+:root[data-flat] .geo-contact-title {
+  font-size: 13px;
+  font-weight: 700;
+}

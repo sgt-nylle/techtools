@@ -9,6 +9,7 @@ import { MailHeaderTool } from './MailHeaderTool';
 import { SubnetTool } from './SubnetTool';
 import { AuthInspectorTool } from './AuthInspectorTool';
 import { SecurityHeadersTool } from './SecurityHeadersTool';
+import { GeoRadarToolLazy } from './GeoRadarToolLazy';
 
 export const TOOL_MODULES: ToolModule[] = [
   {
@@ -130,6 +131,18 @@ export const TOOL_MODULES: ToolModule[] = [
       'Audit and score target URL HTTP security headers against OWASP & naval compliance baselines. Evaluates HSTS, CSP directives (warning on unsafe-inline, unsafe-eval, and wildcards), X-Frame-Options, nosniff, Referrer-Policy, and Permissions-Policy.',
     capabilities: ['HSTS & Max-Age Verification', 'CSP unsafe-inline/eval Audit', 'XFO / nosniff / Referrer / Permissions', 'Terminal PASS / WARN / FAIL Score'],
     Component: SecurityHeadersTool,
+  },
+  {
+    id: 'geo-radar',
+    code: 'MOD-11',
+    title: 'IP & DOMAIN GEOLOCATION RADAR',
+    shortTitle: 'GEO RADAR',
+    category: 'NETWORK',
+    badge: 'GEOIP • POP • RADAR',
+    description:
+      'Self-hosted GeoIP radar: plot your IP, any IPv4/IPv6 address, or every A/AAAA record of a domain on a zero-dependency SVG world map. Flags Anycast/CDN ASNs and detects the live CDN edge POP from cf-ray, x-amz-cf-pop and x-served-by headers.',
+    capabilities: ['Local MMDB GeoIP (No 3rd Party)', 'City / ASN / Timezone', 'Anycast & CDN Edge POP', 'Animated SVG Radar Map'],
+    Component: GeoRadarToolLazy,
   },
 ];
 

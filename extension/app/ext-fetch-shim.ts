@@ -29,4 +29,5 @@ export const ONLINE_TOOL_IDS = new Set([
   'cert-analyzer',
   'url-tester',
   'security-headers',
+  'geo-radar',
 ]);

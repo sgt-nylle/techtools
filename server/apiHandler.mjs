@@ -9,6 +9,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { execSync, execFile } from 'node:child_process';
 import { domainToASCII } from 'node:url';
+import { handleGeoLookup } from './geoRadar.mjs';
 
 const defaultResolver = new dns.promises.Resolver({ timeout: 3000, tries: 2 });
 defaultResolver.setServers(['8.8.8.8', '1.1.1.1', '9.9.9.9']);
@@ -2852,6 +2853,20 @@ export async function handleApiRequest(req, res) {
 
     if (pathname === '/api/probe' && req.method === 'POST') {
       const result = await handleUrlProbe(req);
+      sendJson(res, result.status, result.body);
+      return true;
+    }
+
+    if (pathname === '/api/geo' && req.method === 'GET') {
+      const target = urlObj.searchParams.get('target') || '';
+      const result = await handleGeoLookup(req, target, {
+        resolver: defaultResolver,
+        withTimeout,
+        extractClientIp,
+        isPublicRoutableIp,
+        isPrivateOrLoopbackIp,
+        discoverServerOutboundWanIp,
+      });
       sendJson(res, result.status, result.body);
       return true;
     }

@@ -13,6 +13,11 @@ dist-ssr
 .env
 .env.*
 
+# Self-hosted GeoIP databases (download with `npm run geoip:fetch`; large, licensed separately)
+data/geoip/
+*.mmdb
+*.mmdb.gz
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

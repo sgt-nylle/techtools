@@ -16,7 +16,9 @@
     "typecheck:ext": "tsc -p extension/tsconfig.json",
     "pack:ext": "bash scripts/pack-extension.sh",
     "release": "npm run build && npm run pack:ext",
-    "build:ext:firefox": "npm run build:ext && node scripts/make-firefox-manifest.mjs"
+    "build:ext:firefox": "npm run build:ext && node scripts/make-firefox-manifest.mjs",
+    "geoip:fetch": "bash scripts/fetch-geoip.sh",
+    "map:build": "node scripts/build-world-map.mjs"
   },
   "dependencies": {
     "react": "^19.2.8",

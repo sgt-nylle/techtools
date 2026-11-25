@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { handleApiRequest } from './apiHandler.mjs';
+import { warmGeoDatabases } from './geoRadar.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DIST_DIR = path.resolve(__dirname, '../dist');
@@ -84,4 +85,5 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, HOST, () => {
   console.log(`TechTools Naval Server listening on http://${HOST}:${PORT}`);
+  setImmediate(warmGeoDatabases);
 });

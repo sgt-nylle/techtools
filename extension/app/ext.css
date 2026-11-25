@@ -160,7 +160,7 @@ html.ext-panel #root {
 .ext-result-key {
   color: var(--navy-gold);
   font-weight: 700;
-  min-width: 26px;
+  min-width: 36px;
 }
 
 .ext-result-main {

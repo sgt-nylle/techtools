@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { TOOL_MODULES, getToolById } from '../../src/tools/registry';
+import { TOOL_MODULES, getToolById, getModuleBadgeNumber } from '../../src/tools/registry';
 import type { ToolModule } from '../../src/tools/types';
 import { THEMES, applyTheme, nextTheme, type ThemeId } from '../../src/utils/theme';
 import {
@@ -235,16 +235,25 @@ export function ExtensionApp() {
         return;
       }
 
-      if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (typing || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
 
-      // Digits 1-9 jump straight to a module (launcher: when search is empty; tool: always)
-      if (/^[1-9]$/.test(e.key) && (view.kind === 'tool' || !query)) {
-        const m = TOOL_MODULES.find((t) => t.shortcut === e.key);
-        if (m) {
-          e.preventDefault();
-          openTool(m.id);
+      // Inside a tool, Left/Right arrow keys switch to the previous/next module
+      if (view.kind === 'tool' && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        const el = e.target as HTMLElement | null;
+        const isArrowControl =
+          el?.tagName === 'SELECT' ||
+          (el?.tagName === 'INPUT' &&
+            ((el as HTMLInputElement).type === 'range' || (el as HTMLInputElement).type === 'radio'));
+        if (!isArrowControl) {
+          const idx = Math.max(0, TOOL_MODULES.findIndex((t) => t.id === view.id));
+          const delta = e.key === 'ArrowRight' ? 1 : -1;
+          const next = TOOL_MODULES[(idx + delta + TOOL_MODULES.length) % TOOL_MODULES.length];
+          if (next) {
+            e.preventDefault();
+            openTool(next.id);
+          }
+          return;
         }
-        return;
       }
 
       if (view.kind === 'launcher' && e.key === '/') {
@@ -267,12 +276,6 @@ export function ExtensionApp() {
       e.preventDefault();
       const pick = results[selected];
       if (pick) openTool(pick.id);
-    } else if (/^[1-9]$/.test(e.key) && !query && !e.altKey && !e.ctrlKey && !e.metaKey) {
-      const m = TOOL_MODULES.find((t) => t.shortcut === e.key);
-      if (m) {
-        e.preventDefault();
-        openTool(m.id);
-      }
     }
   };
 
@@ -308,7 +311,7 @@ export function ExtensionApp() {
             >
               {TOOL_MODULES.map((m) => (
                 <option key={m.id} value={m.id}>
-                  [{m.shortcut}] {m.shortTitle}
+                  [{getModuleBadgeNumber(m)}] {m.shortTitle}
                 </option>
               ))}
             </select>
@@ -382,7 +385,7 @@ export function ExtensionApp() {
               className="navy-input ext-search"
               type="text"
               value={query}
-              placeholder="Search…  (1-9 jump · ↑↓ · Enter)"
+              placeholder="Search…  (↑↓ · Enter)"
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={onSearchKeyDown}
               spellCheck={false}
@@ -399,7 +402,7 @@ export function ExtensionApp() {
                     onClick={() => openTool(m.id)}
                     onMouseEnter={() => setSelected(i)}
                   >
-                    <span className="ext-result-key">[{m.shortcut}]</span>
+                    <span className="ext-result-key">[{getModuleBadgeNumber(m)}]</span>
                     <span className="ext-result-main">
                       <strong>
                         {pinnedId === m.id ? '★ ' : ''}

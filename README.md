@@ -37,24 +37,24 @@ A modular clean, optimized Swedish Navy (*Kungliga Flottan*) IT troubleshooting 
    - **DNSSEC Zone Key (`DNSKEY`), `RRSIG` Expiration & Delegation Signer (`DS`) Analysis:** Queries `DNSKEY`, `DS`, and `SOA` records with `do=true` via DoH (`application/dns-json`), computes RFC 4034 Key Tags, identifies `KSK` (Flag 257) and `ZSK` (Flag 256) roles, maps cryptographic algorithms & digest types to plain text, verifies Chain-of-Trust linkage between parent `DS` records and zone `KSK` keys, and inspects **`RRSIG` signature inception (`SIGNED`) and expiration (`EXPIRES`) timestamps** per `DNSKEY` post to validate active key rotation vs. standby/rollover keys.
    - Automated **SPF** (`v=spf1`) and **DMARC** (`_dmarc`) email security posture auditing.
    - Live port-43 **WHOIS Domain Registration** lookup (supporting `.se`/`.nu` via `whois.iis.se`, Verisign, PIR, EURid, and automatic IANA TLD referral discovery).
-4. **`MOD-04` — What's My IP? & Range Owner (`#/whats-my-ip`)**
+4. **`MOD-04` — External Endpoint & TLS Probe — URL Tester (`#/url-tester`)**
+   - Tests how public corporate URLs, reverse proxies, and custom TCP ports (default `443`, `1–65535`) respond from the **external public internet** (bypassing internal corporate split-horizon DNS and outbound port blocks).
+   - **Active Sonar ICMP Ping (`PING OK`):** Fires a concurrent 3-pulse ICMP Echo probe (`min / avg / max ms`, packet loss %, and `TTL`) alongside TCP/TLS/HTTP probing.
+   - **Multi-Layer Telemetry:** Measures public DNS resolution (`8.8.8.8` / `1.1.1.1`), TCP 3-way handshake (`OPEN` vs `ECONNREFUSED` vs `ETIMEDOUT` firewall drop), TLS handshake, HTTP TTFB, status codes, HTML `<title>` / JSON preview, security headers (`HSTS`, `CSP`, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`), non-HTTP service banners (e.g. SSH/SMTP), and up to 5 HTTP `3xx` redirect hops.
+   - **Live SSL / TLS Certificate Inspection:** Inspects negotiated TLS protocol & cipher suite, CA trust store verification, SAN/CN hostname match, validity countdown, SHA-256 fingerprint, wire chain depth, and Base64 PEM / Full-Chain export.
+5. **`MOD-05` — What's My IP? & Range Owner (`#/whats-my-ip`)**
    - Displays caller's public IPv4/IPv6 address, reverse `PTR` hostname, routed BGP CIDR prefix, Autonomous System (`ASN` + ISP holder), and RIR allocation block owner/netname/country/abuse contact.
    - Includes an external IP/hostname lookup bar to inspect any third-party IP block.
-5. **`MOD-05` — Certificate & CSR Analyzer (`#/cert-analyzer`)**
+6. **`MOD-06` — Certificate & CSR Analyzer (`#/cert-analyzer`)**
    - Base64 / PEM certificate analyzer detecting X.509 certs, Certificate Signing Requests (CSR), and public keys.
    - Extracts Subject, Issuer, Serial, SHA-256 fingerprint, validity dates, days remaining, SAN names, Key Usage, and Extended Key Usage (Server/Client auth).
    - Verifies against system Trust Store and discovers full certificate chains via Authority Information Access (AIA) with full-chain export in Base64 PEM.
    - **Private Key Security Intercept Guard:** Rejects private keys with `"Security alert! We will not process private keys! Abandon Ship!"`.
    - Rejects non-cert payloads with `"Navy Cert Format Not DETECTED!"` and clears the input.
-6. **`MOD-06` — Email Message Header Analyzer (`#/mail-header-analyzer`)**
+7. **`MOD-07` — Email Message Header Analyzer (`#/mail-header-analyzer`)**
    - Analyzes raw RFC 5322 email headers and reconstructs full chronological transport traces with per-hop latency calculations, IP addresses, protocols, and TLS ciphers.
    - Audits SPF, DKIM (including selector, domain, and signature parameters), DMARC policy alignment, and ARC headers.
    - Rejects non-header payloads with `"Navy Mail Header Format Not DETECTED!"` and clears the input.
-7. **`MOD-07` — External Endpoint & TLS Probe — URL Tester (`#/url-tester`)**
-   - Tests how public corporate URLs, reverse proxies, and custom TCP ports (default `443`, `1–65535`) respond from the **external public internet** (bypassing internal corporate split-horizon DNS and outbound port blocks).
-   - **Active Sonar ICMP Ping (`PING OK`):** Fires a concurrent 3-pulse ICMP Echo probe (`min / avg / max ms`, packet loss %, and `TTL`) alongside TCP/TLS/HTTP probing.
-   - **Multi-Layer Telemetry:** Measures public DNS resolution (`8.8.8.8` / `1.1.1.1`), TCP 3-way handshake (`OPEN` vs `ECONNREFUSED` vs `ETIMEDOUT` firewall drop), TLS handshake, HTTP TTFB, status codes, HTML `<title>` / JSON preview, security headers (`HSTS`, `CSP`, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`), non-HTTP service banners (e.g. SSH/SMTP), and up to 5 HTTP `3xx` redirect hops.
-   - **Live SSL / TLS Certificate Inspection:** Inspects negotiated TLS protocol & cipher suite, CA trust store verification, SAN/CN hostname match, validity countdown, SHA-256 fingerprint, wire chain depth, and Base64 PEM / Full-Chain export.
 8. **`MOD-08` — Subnet & Supernetting Calculator — IPv4 / IPv6 (`#/subnet-calculator`)**
    - **100% Client-Side TypeScript BigInt Engine:** Instantaneous zero-network calculation for any IPv4 (`/0–/32`) or IPv6 (`/0–/128`) CIDR block (e.g. `10.120.4.0/22` or `2001:db8::/48`).
    - Computes Netmask, Wildcard mask, canonical Network address, Broadcast / last address, Usable host range, Total usable hosts, RFC scope classification, parent Supernet (`-1` bit), and full bitwise binary representation.
@@ -79,7 +79,7 @@ On desktop viewports (`>= 1024px`), TechTools supports running **two diagnostic 
 
 - **Launch / Toggle:** Press `Ctrl+Shift+D` or click **`◫ SPLIT VIEW [Ctrl+Shift+D]`** in the top command bar (or **`◫ + SPLIT PANE`** inside any active tool banner).
 - **Independent Instances & State:** **Pane A** (left) and **Pane B** (right) run independent React module instances with separate inputs, results, and per-pane module selector dropdowns.
-- **Arrow-Key Window Switching (`←` / `→`):** Press **`←` (`ArrowLeft`)** to focus **Pane A** or **`→` (`ArrowRight`)** (or `↑`/`↓`) to focus **Pane B**. Once a pane is active (`● ACTIVE WINDOW`), pressing **`1`–`9`** or any single-letter tool shortcut (`R`, `Q`, `C`, etc.) immediately operates on that active window.
+- **Arrow-Key Module & Pane Navigation:** Press **`←` / `→` / `↑` / `↓`** to switch tools in the active pane; press **`Shift+←`** to focus **Pane A** or **`Shift+→`** to focus **Pane B**. Once a pane is active (`● ACTIVE WINDOW`), arrow keys and any single-letter tool shortcut (`R`, `Q`, `C`, etc.) immediately operate on that active window.
 - **Resizable `50/50` Terminal Divider:** Drag the center `║` divider between `32%` and `68%` (double-click to reset to `50/50`), or click the **`[X]`** button on either pane to close it and return to single-module view.
 
 ---
@@ -121,11 +121,11 @@ On desktop viewports (`>= 1024px`), TechTools supports running **two diagnostic 
 
 | Context | Key | Action |
 | :--- | :--- | :--- |
-| **Command Deck** | `1` – `9`, `0` / `↑` `↓` `←` `→` / `Tab` | SELECT a module only (card is focused and scrolled into view) |
+| **Command Deck** | `↑` `↓` `←` `→` / `Tab` | SELECT a module only (card is focused and scrolled into view) |
 | | `Enter` | Launch the selected module |
-| **Global (inside a tool)** | `1` – `9`, `0` | Jump directly to module `MOD-01` .. `MOD-10` in the active pane (when outside text inputs) |
+| **Global (inside a tool)** | `↑` `↓` `←` `→` | Navigate and switch modules directly from the top module menu in the active pane (when outside text inputs / selects / sliders) |
 | | `Ctrl+Shift+D` | Toggle **Desktop Dual-Pane Split-Screen Mode** (`50/50` resizable side-by-side modules) |
-| | `←` / `→` (in Split View) | Switch active window between **Pane A** (`←`) and **Pane B** (`→`) so `1`–`9`, `0` & tool shortcuts control that window |
+| | `Shift+←` / `Shift+→` (in Split View) | Switch active window between **Pane A** (`Shift+←`) and **Pane B** (`Shift+→`) so arrow-key tool switching & tool shortcuts control that window |
 | | `ESC` | Blur focused text input (unlocking shortcuts), or return to the R136 Command Deck |
 | | `S` | Toggle synthesized clean Naval CIC sound effects ON / OFF |
 | | `Tab` / `Shift+Tab` | Step through buttons, secret rows, and diagnostic intel sections |
@@ -140,17 +140,17 @@ On desktop viewports (`>= 1024px`), TechTools supports running **two diagnostic 
 | | `G` / `F` / `U` | Select DNS resolver: Google `8.8.8.8` (`G`, default), Cloudflare `1.1.1.1` (`F`), Custom DNS (`U`) |
 | | `A` / `I` / `M` / `N` / `W` | Filter view: All, IP/PTR, MX/SPF/DMARC, NS/SOA/TXT, WHOIS |
 | | `V` | Toggle Raw WHOIS record |
-| **MOD-04 (What's My IP)** | `C` / `M` / `R` / `Q` / `V` | Copy IP (`C`), My IP (`M`), Re-scan (`R`), Focus target input (`Q`), Raw RIR (`V`) |
-| **MOD-05 (Cert Analyzer)** | `Q` (or `/`) / `R` | Focus cert textarea (`Q`), Analyze certificate/CSR/key (`R`) |
-| | `X` | Export and copy full discovered certificate chain in Base64 PEM |
-| | `V` | Toggle OpenSSL ASN.1 decoded text view |
-| **MOD-06 (Mail Headers)** | `Q` (or `/`) / `R` | Focus header textarea (`Q`), Run header trace analysis (`R`) |
-| | `A` / `H` / `U` | View filter: All Intel (`A`), Message Hops Trace (`H`), SPF/DKIM/DMARC Audit (`U`) |
-| | `V` | Toggle raw email headers table |
-| **MOD-07 (URL Tester)** | `Q` (or `/`) / `P` / `R` | Focus URL input (`Q`), Focus Port input (`P`), Run external probe (`R`) |
+| **MOD-04 (URL Tester)** | `Q` (or `/`) / `P` / `R` | Focus URL input (`Q`), Focus Port input (`P`), Run external probe (`R`) |
 | | `M` / `F` / `L` | Toggle HTTP `GET`/`HEAD` (`M`), Follow `3xx` redirects (`F`), Cycle SSL mode (`L`) |
 | | `A` / `H` / `T` / `D` | View filter: All Intel (`A`), Connectivity & HTTP (`H`), SSL/TLS Cert (`T`), Headers (`D`) |
 | | `X` | Export and copy full live PEM certificate chain |
+| **MOD-05 (What's My IP)** | `C` / `M` / `R` / `Q` / `V` | Copy IP (`C`), My IP (`M`), Re-scan (`R`), Focus target input (`Q`), Raw RIR (`V`) |
+| **MOD-06 (Cert Analyzer)** | `Q` (or `/`) / `R` | Focus cert textarea (`Q`), Analyze certificate/CSR/key (`R`) |
+| | `X` | Export and copy full discovered certificate chain in Base64 PEM |
+| | `V` | Toggle OpenSSL ASN.1 decoded text view |
+| **MOD-07 (Mail Headers)** | `Q` (or `/`) / `R` | Focus header textarea (`Q`), Run header trace analysis (`R`) |
+| | `A` / `H` / `U` | View filter: All Intel (`A`), Message Hops Trace (`H`), SPF/DKIM/DMARC Audit (`U`) |
+| | `V` | Toggle raw email headers table |
 | **MOD-08 (Subnet Calc)** | `Q` (or `/`) | Focus IPv4/IPv6 CIDR input |
 | | `-` / `+` | Supernet (`-1` prefix bit) / Subnet (`+1` prefix bit) |
 | | `B` | Toggle bitwise binary breakdown table |
@@ -240,7 +240,7 @@ TechTools uses a plugin-style registry so new troubleshooting tools can be added
 
 1. Create a React component in `src/tools/<YourTool>.tsx` (and, if server-side network probing is needed, add a route in `server/apiHandler.mjs`).
 2. Append a `ToolModule` entry to `TOOL_MODULES` in `src/tools/registry.ts`.
-3. The Command Deck cards, persistent top module bar, URL `#/<tool-id>` routing, and `[1–9]` keyboard shortcuts automatically register the new module.
+3. The Command Deck cards, persistent top module bar, URL `#/<tool-id>` routing, and arrow-key navigation automatically register the new module.
 
 ---
 

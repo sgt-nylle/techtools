@@ -1,11 +1,30 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { TOOL_MODULES, getToolById } from './tools/registry';
+import { TOOL_MODULES, getToolById, getModuleBadgeNumber } from './tools/registry';
 import { CommandDeck } from './components/CommandDeck';
 import { APP_VERSION } from './version';
 import { sound } from './utils/audio';
 import { THEMES, applyTheme, loadTheme, nextTheme, saveTheme, type ThemeId } from './utils/theme';
 import { PaneActiveContext } from './utils/paneContext';
 import './App.css';
+
+function stepGridIndex(
+  currentIdx: number,
+  key: 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown',
+  total: number,
+  cols: number
+): number {
+  if (total <= 0) return 0;
+  const safeCols = Math.max(1, cols);
+  if (key === 'ArrowRight') return (currentIdx + 1) % total;
+  if (key === 'ArrowLeft') return (currentIdx - 1 + total) % total;
+  if (key === 'ArrowDown') {
+    return currentIdx + safeCols < total ? currentIdx + safeCols : currentIdx % safeCols;
+  }
+  const col = currentIdx % safeCols;
+  return currentIdx - safeCols >= 0
+    ? currentIdx - safeCols
+    : col + Math.floor((total - 1 - col) / safeCols) * safeCols;
+}
 
 interface ParsedHashRoute {
   primaryId: string | null;
@@ -69,6 +88,8 @@ export function App() {
   const splitContainerRef = useRef<HTMLDivElement>(null);
   const paneARef = useRef<HTMLDivElement>(null);
   const paneBRef = useRef<HTMLDivElement>(null);
+  const navRef = useRef<HTMLElement>(null);
+  const navBtnRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   const switchFocusedPane = useCallback((targetPane: 'primary' | 'secondary') => {
     setFocusedPane((prev) => {
@@ -260,9 +281,10 @@ export function App() {
 
   // Global keyboard shortcuts:
   // - Ctrl+Shift+D -> Toggle Desktop Split-Screen / Dual-Pane Mode
-  // - ESC in text input -> blur input (unlocks single-letter shortcuts)
+  // - ESC in text input -> blur input (unlocks single-letter shortcuts & arrow nav)
   // - ESC outside text input -> return to Command Deck
-  // - [1..9] -> Jump to Module (routes to currently focused pane in Split View)
+  // - [◄►▲▼] (inside an open tool) -> Navigate and switch tools in the module bar (targets active pane in Split View)
+  // - [Shift+◄/►] (in Split View) -> Switch active focus between Pane A and Pane B
   // - [S] -> Toggle SFX
   // - [Alt+T] -> Cycle themes
   useEffect(() => {
@@ -280,7 +302,8 @@ export function App() {
       const isTextEntry =
         (target?.tagName === 'INPUT' &&
           (target as HTMLInputElement).type !== 'checkbox' &&
-          (target as HTMLInputElement).type !== 'range') ||
+          (target as HTMLInputElement).type !== 'range' &&
+          (target as HTMLInputElement).type !== 'radio') ||
         target?.tagName === 'TEXTAREA' ||
         target?.isContentEditable;
 
@@ -310,42 +333,73 @@ export function App() {
 
       if (isTextEntry || e.metaKey || e.ctrlKey || e.altKey) return;
 
-      // In Split View, ArrowLeft / ArrowRight (and ArrowUp / ArrowDown when not in a <select>)
-      // switches active focus between Pane A and Pane B so [1..9] and single-letter shortcuts
-      // immediately target the selected window.
-      if (isSplitActive && target?.tagName !== 'SELECT') {
-        if (e.key === 'ArrowLeft') {
-          e.preventDefault();
-          switchFocusedPane('primary');
-          return;
-        }
-        if (e.key === 'ArrowRight') {
-          e.preventDefault();
-          switchFocusedPane('secondary');
-          return;
-        }
-        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-          e.preventDefault();
-          switchFocusedPane(focusedPane === 'primary' ? 'secondary' : 'primary');
-          return;
-        }
-      }
-
-      if (e.key === 's' || e.key === 'S') {
+      if (!e.shiftKey && (e.key === 's' || e.key === 'S')) {
         e.preventDefault();
         setSoundEnabled(sound.toggle());
         return;
       }
 
-      // On the Command Deck, [1..N] only SELECTS (handled by CommandDeck; ENTER launches).
-      // Inside an open tool, [1..N] switches directly between modules in the focused pane.
+      // On the Command Deck, arrow keys select cards (handled by CommandDeck; ENTER launches).
+      // Inside an open tool, arrow keys navigate and switch tools in the module switcher menu.
       if (activeToolId === null) return;
 
-      const matched = TOOL_MODULES.find((m) => m.shortcut === e.key);
-      if (matched) {
+      const isArrowControl =
+        target?.tagName === 'SELECT' ||
+        (target?.tagName === 'INPUT' &&
+          ((target as HTMLInputElement).type === 'range' || (target as HTMLInputElement).type === 'radio'));
+
+      if (isArrowControl) return;
+
+      const isArrowKey =
+        e.key === 'ArrowLeft' ||
+        e.key === 'ArrowRight' ||
+        e.key === 'ArrowUp' ||
+        e.key === 'ArrowDown';
+
+      if (!isArrowKey) return;
+
+      // In Split View, Shift+Arrow switches active focus between Pane A and Pane B
+      if (isSplitActive && e.shiftKey) {
         e.preventDefault();
-        sound.playBlip();
-        selectToolForActivePane(matched.id);
+        if (e.key === 'ArrowLeft') {
+          switchFocusedPane('primary');
+        } else if (e.key === 'ArrowRight') {
+          switchFocusedPane('secondary');
+        } else {
+          switchFocusedPane(focusedPane === 'primary' ? 'secondary' : 'primary');
+        }
+        return;
+      }
+
+      if (e.shiftKey) return;
+
+      // Navigate and immediately switch tools in the top module switcher grid
+      const currentToolId = isSplitActive && focusedPane === 'secondary' ? secondaryToolId : activeToolId;
+      const currentIdx = Math.max(
+        0,
+        TOOL_MODULES.findIndex((m) => m.id === currentToolId)
+      );
+      const fallbackCols = window.innerWidth <= 560 ? 2 : 3;
+      const cols = navRef.current
+        ? Math.max(
+            1,
+            window
+              .getComputedStyle(navRef.current)
+              .gridTemplateColumns.trim()
+              .split(/\s+/)
+              .filter(Boolean).length || fallbackCols
+          )
+        : fallbackCols;
+      const nextIdx = stepGridIndex(currentIdx, e.key, TOOL_MODULES.length, cols);
+      const nextMod = TOOL_MODULES[nextIdx];
+      if (!nextMod) return;
+
+      e.preventDefault();
+      sound.playBlip();
+      const focusWasInNav = Boolean(navRef.current && target && navRef.current.contains(target));
+      selectToolForActivePane(nextMod.id);
+      if (focusWasInNav) {
+        navBtnRefs.current[nextIdx]?.focus({ preventScroll: true });
       }
     };
 
@@ -353,6 +407,7 @@ export function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [
     activeToolId,
+    secondaryToolId,
     isSplitActive,
     focusedPane,
     selectPrimaryTool,
@@ -470,16 +525,20 @@ export function App() {
           </div>
         </header>
 
-        {/* PERSISTENT 9-MODULE SWITCHER BAR (3x3 / 9-column responsive layout) */}
+        {/* PERSISTENT MODULE SWITCHER BAR (responsive grid, arrow-key navigable) */}
         {activeModule && (
-          <nav className="module-switcher-bar clean-box" aria-label="Diagnostic Modules">
-            {TOOL_MODULES.map((mod) => {
+          <nav ref={navRef} className="module-switcher-bar clean-box" aria-label="Diagnostic Modules">
+            {TOOL_MODULES.map((mod, idx) => {
               const isPrimary = activeToolId === mod.id;
               const isSecondary = isSplitActive && secondaryToolId === mod.id;
               const isCurrentFocusedTarget = highlightedNavToolId === mod.id;
+              const modNum = getModuleBadgeNumber(mod);
               return (
                 <button
                   key={mod.id}
+                  ref={(el) => {
+                    navBtnRefs.current[idx] = el;
+                  }}
                   type="button"
                   className={`mod-nav-btn ${isCurrentFocusedTarget ? 'active' : ''} ${
                     isSplitActive && (isPrimary || isSecondary) && !isCurrentFocusedTarget ? 'mod-open-other-pane' : ''
@@ -490,11 +549,11 @@ export function App() {
                   }}
                   title={
                     isSplitActive
-                      ? `Load ${mod.code}: ${mod.title} into active ${focusedPane.toUpperCase()} pane [${mod.shortcut}]`
-                      : `Switch to ${mod.code}: ${mod.title} [${mod.shortcut}]`
+                      ? `Load ${mod.code}: ${mod.title} into active ${focusedPane.toUpperCase()} pane (◄►▲▼ arrows)`
+                      : `Switch to ${mod.code}: ${mod.title} (◄►▲▼ arrows)`
                   }
                 >
-                  <span className="mod-key">[{mod.shortcut}]</span> {mod.shortTitle}
+                  <span className="mod-key">[{modNum}]</span> {mod.shortTitle}
                 </button>
               );
             })}
@@ -525,7 +584,7 @@ export function App() {
                     <div className="active-tool-banner split-pane-banner clean-box">
                       <div className="pane-banner-left">
                         <span className="tool-banner-code">
-                          PANE A [◄] {focusedPane === 'primary' ? '● ACTIVE WINDOW' : '○ PRESS [◄] TO FOCUS'} //{' '}
+                          PANE A [SHIFT+◄] {focusedPane === 'primary' ? '● ACTIVE WINDOW' : '○ PRESS [SHIFT+◄] TO FOCUS'} //{' '}
                           {activeModule.code}
                         </span>
                         <h2 className="tool-banner-title">{activeModule.title}</h2>
@@ -540,9 +599,9 @@ export function App() {
                             e.stopPropagation();
                             switchFocusedPane('primary');
                           }}
-                          title="Activate Pane A (Left Window) [◄ Left Arrow]"
+                          title="Activate Pane A (Left Window) [Shift+◄ Left Arrow]"
                         >
-                          {focusedPane === 'primary' ? '● ACTIVE [◄]' : '◄ FOCUS [◄]'}
+                          {focusedPane === 'primary' ? '● ACTIVE [SHIFT+◄]' : '◄ FOCUS [SHIFT+◄]'}
                         </button>
                         <label className="sr-only" htmlFor="pane-a-select">
                           Select Module for Pane A
@@ -560,7 +619,7 @@ export function App() {
                         >
                           {TOOL_MODULES.map((m) => (
                             <option key={m.id} value={m.id}>
-                              [{m.shortcut}] {m.code}: {m.shortTitle}
+                              {m.code}: {m.shortTitle}
                             </option>
                           ))}
                         </select>
@@ -602,7 +661,7 @@ export function App() {
                   <button
                     type="button"
                     className="divider-switch-btn"
-                    title={`Switch active window to ${focusedPane === 'primary' ? 'Pane B [►]' : 'Pane A [◄]'}`}
+                    title={`Switch active window to ${focusedPane === 'primary' ? 'Pane B [Shift+►]' : 'Pane A [Shift+◄]'}`}
                     onClick={(e) => {
                       e.stopPropagation();
                       switchFocusedPane(focusedPane === 'primary' ? 'secondary' : 'primary');
@@ -627,7 +686,7 @@ export function App() {
                     <div className="active-tool-banner split-pane-banner clean-box">
                       <div className="pane-banner-left">
                         <span className="tool-banner-code">
-                          PANE B [►] {focusedPane === 'secondary' ? '● ACTIVE WINDOW' : '○ PRESS [►] TO FOCUS'} //{' '}
+                          PANE B [SHIFT+►] {focusedPane === 'secondary' ? '● ACTIVE WINDOW' : '○ PRESS [SHIFT+►] TO FOCUS'} //{' '}
                           {secondaryModule.code}
                         </span>
                         <h2 className="tool-banner-title">{secondaryModule.title}</h2>
@@ -642,9 +701,9 @@ export function App() {
                             e.stopPropagation();
                             switchFocusedPane('secondary');
                           }}
-                          title="Activate Pane B (Right Window) [► Right Arrow]"
+                          title="Activate Pane B (Right Window) [Shift+► Right Arrow]"
                         >
-                          {focusedPane === 'secondary' ? '● ACTIVE [►]' : 'FOCUS [►] ►'}
+                          {focusedPane === 'secondary' ? '● ACTIVE [SHIFT+►]' : 'FOCUS [SHIFT+►] ►'}
                         </button>
                         <label className="sr-only" htmlFor="pane-b-select">
                           Select Module for Pane B
@@ -662,7 +721,7 @@ export function App() {
                         >
                           {TOOL_MODULES.map((m) => (
                             <option key={m.id} value={m.id}>
-                              [{m.shortcut}] {m.code}: {m.shortTitle}
+                              {m.code}: {m.shortTitle}
                             </option>
                           ))}
                         </select>
@@ -723,11 +782,11 @@ export function App() {
         {/* FOOTER CREDITS */}
         <footer className="clean-footer clean-box">
           <div className="footer-left">
-            <span>[ESC] DECK</span> | <span>[1–{TOOL_MODULES.length}] MODULES</span> |{' '}
+            <span>[ESC] DECK</span> | <span>[◄►▲▼] MODULES</span> |{' '}
             <span>[CTRL+SHIFT+D] SPLIT</span> |{' '}
             {isSplitActive && (
               <>
-                <span className="text-cyan">[◄/►] SWITCH PANE</span> |{' '}
+                <span className="text-cyan">[SHIFT+◄/►] SWITCH PANE</span> |{' '}
               </>
             )}
             <span>[TAB] SELECT + [C] COPY</span> | <span>[S] AUDIO</span> |{' '}
@@ -784,7 +843,7 @@ export function App() {
               >
                 techtools.subwrite.se
               </a>{' '}
-              is a free 9-module toolbox of everyday IT troubleshooting utilities wrapped in a navy retro systems
+              is a free {TOOL_MODULES.length}-module toolbox of everyday IT troubleshooting utilities wrapped in a navy retro systems
               aesthetic. Constructed as a sister ship to{' '}
               <a href="https://subwrite.se" className="provider-link" target="_blank" rel="noopener noreferrer">
                 subwrite.se
@@ -800,9 +859,18 @@ export function App() {
                 <strong>generated 100% locally in your browser and never on the server</strong>.
               </li>
               <li>
+                <strong>Internet Speed Navy Test</strong> — measure real-world ISP download, upload, ping, and jitter
+                via geo-located M-Lab NDT7 WebSockets with an 80s cassette-deck digital VU meter.
+              </li>
+              <li>
                 <strong>DNS &amp; WHOIS Lookup</strong> — A, AAAA, MX, NS, TXT, SOA, CAA and PTR records, DNSSEC zone
                 key (<code>DNSKEY</code> &amp; <code>DS</code> chain of trust) inspection, SPF and DMARC checks, and
                 domain registration info, queried via Google, Cloudflare or a custom DNS server.
+              </li>
+              <li>
+                <strong>URL Tester (External Endpoint &amp; TLS Probe)</strong> — test public corporate URLs, ICMP sonar
+                ping, and custom TCP ports (default 443) from outside internal firewalls, with HTTP response telemetry
+                and live SSL/TLS certificate inspection.
               </li>
               <li>
                 <strong>What&apos;s My IP</strong> — your public IP address with reverse DNS, ASN, BGP prefix and IP range
@@ -815,11 +883,6 @@ export function App() {
               <li>
                 <strong>Email Header Analyzer</strong> — trace message hops and delays and audit SPF, DKIM, DMARC and
                 ARC results.
-              </li>
-              <li>
-                <strong>URL Tester (External Endpoint &amp; TLS Probe)</strong> — test public corporate URLs, ICMP sonar
-                ping, and custom TCP ports (default 443) from outside internal firewalls, with HTTP response telemetry
-                and live SSL/TLS certificate inspection.
               </li>
               <li>
                 <strong>Subnet &amp; Supernetting Calculator (IPv4 / IPv6)</strong> — 100% client-side CIDR network

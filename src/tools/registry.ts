@@ -2,10 +2,10 @@ import type { ToolModule } from './types';
 import { PassGenTool } from './PassGenTool';
 import { SpeedTestTool } from './SpeedTestTool';
 import { DnsTool } from './DnsTool';
+import { UrlProbeTool } from './UrlProbeTool';
 import { MyIpTool } from './MyIpTool';
 import { CertAnalyzerTool } from './CertAnalyzerTool';
 import { MailHeaderTool } from './MailHeaderTool';
-import { UrlProbeTool } from './UrlProbeTool';
 import { SubnetTool } from './SubnetTool';
 import { AuthInspectorTool } from './AuthInspectorTool';
 import { SecurityHeadersTool } from './SecurityHeadersTool';
@@ -14,7 +14,6 @@ export const TOOL_MODULES: ToolModule[] = [
   {
     id: 'password-generator',
     code: 'MOD-01',
-    shortcut: '1',
     title: 'PASSWORD & TOKEN GENERATOR',
     shortTitle: 'PASS & TOKENS',
     category: 'SECURITY',
@@ -27,7 +26,6 @@ export const TOOL_MODULES: ToolModule[] = [
   {
     id: 'speed-test',
     code: 'MOD-02',
-    shortcut: '2',
     title: 'INTERNET SPEED NAVY TEST',
     shortTitle: 'SPEED TEST',
     category: 'NETWORK',
@@ -40,7 +38,6 @@ export const TOOL_MODULES: ToolModule[] = [
   {
     id: 'dns-inspector',
     code: 'MOD-03',
-    shortcut: '3',
     title: 'DNS & DOMAIN REGISTRY INTEL',
     shortTitle: 'DNS & WHOIS',
     category: 'DNS & MAIL',
@@ -51,9 +48,20 @@ export const TOOL_MODULES: ToolModule[] = [
     Component: DnsTool,
   },
   {
-    id: 'whats-my-ip',
+    id: 'url-tester',
     code: 'MOD-04',
-    shortcut: '4',
+    title: 'EXTERNAL ENDPOINT & TLS PROBE',
+    shortTitle: 'URL TESTER',
+    category: 'DIAGNOSTICS',
+    badge: 'PING • URL • TLS',
+    description:
+      'Test external corporate URLs, ICMP sonar ping, and custom TCP ports (default 443) from outside internal firewalls. Inspect HTTP responses, redirect chains, and live SSL/TLS certificate details.',
+    capabilities: ['Sonar ICMP Ping', 'WAN URL & Port (443)', 'HTTP Status & Redirects', 'Live SSL Cert & Chain'],
+    Component: UrlProbeTool,
+  },
+  {
+    id: 'whats-my-ip',
+    code: 'MOD-05',
     title: "WHAT'S MY IP? & RANGE OWNER",
     shortTitle: "WHAT'S MY IP",
     category: 'NETWORK',
@@ -65,8 +73,7 @@ export const TOOL_MODULES: ToolModule[] = [
   },
   {
     id: 'cert-analyzer',
-    code: 'MOD-05',
-    shortcut: '5',
+    code: 'MOD-06',
     title: 'CERTIFICATE & CSR ANALYZER',
     shortTitle: 'CERT ANALYZER',
     category: 'CRYPTO & SSL',
@@ -78,8 +85,7 @@ export const TOOL_MODULES: ToolModule[] = [
   },
   {
     id: 'mail-header-analyzer',
-    code: 'MOD-06',
-    shortcut: '6',
+    code: 'MOD-07',
     title: 'EMAIL MESSAGE HEADER ANALYZER',
     shortTitle: 'MAIL HEADERS',
     category: 'MAIL SECURITY',
@@ -90,22 +96,8 @@ export const TOOL_MODULES: ToolModule[] = [
     Component: MailHeaderTool,
   },
   {
-    id: 'url-tester',
-    code: 'MOD-07',
-    shortcut: '7',
-    title: 'EXTERNAL ENDPOINT & TLS PROBE',
-    shortTitle: 'URL TESTER',
-    category: 'DIAGNOSTICS',
-    badge: 'PING • URL • TLS',
-    description:
-      'Test external corporate URLs, ICMP sonar ping, and custom TCP ports (default 443) from outside internal firewalls. Inspect HTTP responses, redirect chains, and live SSL/TLS certificate details.',
-    capabilities: ['Sonar ICMP Ping', 'WAN URL & Port (443)', 'HTTP Status & Redirects', 'Live SSL Cert & Chain'],
-    Component: UrlProbeTool,
-  },
-  {
     id: 'subnet-calculator',
     code: 'MOD-08',
-    shortcut: '8',
     title: 'SUBNET & SUPERNETTING CALCULATOR',
     shortTitle: 'SUBNET CALC',
     category: 'NETWORK',
@@ -118,7 +110,6 @@ export const TOOL_MODULES: ToolModule[] = [
   {
     id: 'auth-inspector',
     code: 'MOD-09',
-    shortcut: '9',
     title: 'JWT, OIDC & SAML AUTH INSPECTOR',
     shortTitle: 'JWT / SAML AUTH',
     category: 'SECURITY',
@@ -131,7 +122,6 @@ export const TOOL_MODULES: ToolModule[] = [
   {
     id: 'security-headers',
     code: 'MOD-10',
-    shortcut: '0',
     title: 'HTTP SECURITY HEADERS & CSP EVALUATOR',
     shortTitle: 'SEC HEADERS',
     category: 'SECURITY',
@@ -146,4 +136,8 @@ export const TOOL_MODULES: ToolModule[] = [
 export function getToolById(id: string | null | undefined): ToolModule | undefined {
   if (!id) return undefined;
   return TOOL_MODULES.find((t) => t.id === id);
+}
+
+export function getModuleBadgeNumber(mod: ToolModule): string {
+  return mod.code.replace(/^MOD-/, '');
 }

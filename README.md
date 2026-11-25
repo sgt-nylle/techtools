@@ -20,7 +20,7 @@ A modular clean, optimized Swedish Navy (*Kungliga Flottan*) IT troubleshooting 
 
 ---
 
-## Diagnostic Modules (`v0.6.2`)
+## Diagnostic Modules (`v0.6.3`)
 
 1. **`MOD-01` — Password & Token Generator (`#/password-generator`)**
    - **Generated 100% Locally in Your Browser (Not on the Server):** Uses client-side CSPRNG (`window.crypto.getRandomValues`) with unbiased rejection sampling — zero network traffic, zero server involvement, and zero logging.
@@ -254,6 +254,9 @@ TechTools uses a plugin-style registry so new troubleshooting tools can be added
 
 ## Changelog
 
+- **`v0.6.3`** — **URL Tester Reorder (`MOD-04`) & Scalable Arrow-Key Module Navigation:**
+  - Moved **URL Tester** (`#/url-tester`) from `MOD-07` to **`MOD-04`** directly after **`MOD-03` DNS & WHOIS**, bumping What's My IP (`MOD-05`), Cert Analyzer (`MOD-06`), and Mail Headers (`MOD-07`) forward to group site and DNS diagnostics together.
+  - Replaced fixed `0–9` digit shortcuts with scalable 2D arrow-key (`←` `→` `↑` `↓`) navigation across the module switcher bar when a tool is open (and on the Command Deck), uniform `[01]`–`[10]` badges, `Shift+←` / `Shift+→` pane switching in Desktop Split View, and `←` / `→` tool switching in the browser extension.
 - **`v0.6.2`** — **Geo-Located M-Lab NDT7 Speed Test Engine & Web Worker Offloading (`MOD-02`):**
   - Replaced single-point Cloudflare speed endpoint with **Measurement Lab (M-Lab) NDT7** (`locate.measurementlab.net/v2/nearest/ndt/ndt7`), automatically selecting the geographically closest IXP server to the user's location with kernel-level `TCPInfo.MinRTT` (Ping) and `TCPInfo.RTTVar` (Jitter) telemetry.
   - Offloaded high-frequency NDT7 WebSocket download/upload streaming into a dedicated same-origin Web Worker (`ndt7Worker.ts`) so browser extension popups achieve full native wire speed without React UI-thread throttling.

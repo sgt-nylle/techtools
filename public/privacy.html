@@ -12,12 +12,14 @@
   <body>
     <main>
       <h1>Privacy Policy</h1>
-      <p class="meta">TechTools (techtools.subwrite.se) and the TechTools browser extension · Last updated: 11 November 2026</p>
+      <p class="meta">TechTools (techtools.subwrite.se) and the TechTools browser extension · Last updated: 25 November 2026</p>
 
       <div class="summary">
         <strong>In short:</strong> TechTools has no accounts, no advertising and no tracking scripts of its own in the app or
-        the extension. Four tools run entirely on your device. The five &ldquo;online&rdquo; tools send what you type to
-        our server to produce a result. Like any web service, our servers see your IP address and keep standard access logs.
+        the extension. Four tools run entirely on your device. The seven &ldquo;online&rdquo; tools send what you type to
+        our server to produce a result (the Speed Test also talks directly to Measurement Lab test servers). IP
+        geolocation is done with databases stored on our own server &ndash; no third-party geolocation service is used.
+        Like any web service, our servers see your IP address and keep standard access logs.
       </div>
 
       <h2>Who we are</h2>
@@ -41,6 +43,8 @@
       </p>
       <table>
         <tr><th>Tool</th><th>What is sent</th><th>Also passed to</th></tr>
+        <tr><td>Internet Speed Test</td><td>Your IP address (to show your ISP, location and test node)</td><td>Your browser connects directly to the nearest <a href="https://www.measurementlab.net/privacy/">Measurement Lab (M-Lab)</a> NDT7 server, with a LibreSpeed fallback server; <a href="https://ipapi.co/privacy/">ipapi.co</a> for ISP details. <strong>M-Lab publishes every test result, including the IP address used, as open data.</strong></td></tr>
+        <tr><td>IP &amp; Domain Geolocation Radar</td><td>Your IP address, or the IP address / domain you look up</td><td>No geolocation service &ndash; locations come from databases stored on our server (<a href="https://db-ip.com">DB-IP</a>). For domains: public DNS resolvers, and one <code>HEAD</code> request to that domain to read its CDN edge headers.</td></tr>
         <tr><td>DNS &amp; WHOIS</td><td>Domain name, chosen resolver</td><td>Public DNS resolvers (Google, Cloudflare or the one you choose) and WHOIS registries</td></tr>
         <tr><td>What&rsquo;s My IP / range owner</td><td>Your IP address, or the IP/host you look up</td><td>Public routing and registry data sources (e.g. RIPEstat, regional registries)</td></tr>
         <tr><td>Certificate &amp; CSR Analyzer</td><td>The certificate/CSR text you paste (private keys are blocked in your browser before sending)</td><td>Issuer certificate servers, to build the chain</td></tr>
@@ -55,6 +59,7 @@
         <li><strong>Access logs:</strong> our web server keeps standard access logs for operations, security and aggregate usage statistics. For online tools the requested address can include the value you looked up. Logs are kept only as long as needed for these purposes.</li>
         <li><strong>Cloudflare:</strong> the site is served through Cloudflare (CDN and security), which processes requests under its own <a href="https://www.cloudflare.com/privacypolicy/">privacy policy</a> and may keep aggregate traffic statistics.</li>
         <li>We do not collect names, email addresses or other account data, and we do not sell or share data for advertising.</li>
+        <li><strong>Geolocation data:</strong> IP locations are approximate (city level) and come from the free DB-IP Lite databases (CC BY 4.0), which we download monthly and keep on our server. Looking up an address does not send it to DB-IP or anyone else.</li>
       </ul>
 
       <h2>Browser extension</h2>
@@ -62,7 +67,7 @@
         <li><strong>Storage:</strong> the extension saves your preferences (default tool, start mode, color theme) in your browser&rsquo;s local extension storage. They are not sent to us.</li>
         <li><strong>Right-click action:</strong> text you select is used only when you choose &ldquo;Inspect with TechTools&rdquo;. It is held locally for a few seconds to open the matching tool and then deleted. It is sent to our server only if you then run one of the online tools above.</li>
         <li><strong>No page access:</strong> the extension does not read the pages you visit, your browsing history or your keystrokes, and it does not run on other websites.</li>
-        <li><strong>Network access:</strong> the only site the extension contacts is <code>techtools.subwrite.se</code>.</li>
+        <li><strong>Network access:</strong> the extension contacts <code>techtools.subwrite.se</code>. Only when you run the Speed Test does it also connect to Measurement Lab / LibreSpeed test servers and ipapi.co, as described above.</li>
         <li><strong>No remote code:</strong> all code ships inside the extension package.</li>
       </ul>
 

@@ -4,10 +4,15 @@
 > **IT Network TechTools for Navy Sailors!**
 
 > [!TIP]
+> **🛰 NEW in `v0.7.0` — IP & Domain Geolocation Radar (`MOD-03`):** geolocate your own IP, any IPv4/IPv6 address, or **every A/AAAA record of a domain** on an animated retro **radar map** — and see the **CDN edge POP that actually serves you** (e.g. Cloudflare `ARN` → Stockholm) instead of the Anycast HQ in the registry. 100% **self-hosted GeoIP** (local DB-IP / GeoLite2 MMDB, ~7 µs lookups), Anycast/CDN ASN flagging, zero map tiles or third-party trackers.  
+> ➡️ **[Launch the Geo Radar](https://techtools.subwrite.se/#/geo-radar)** · **[how it works ↓](#diagnostic-modules-v070)**
+
+> [!TIP]
 > **🧩 NEW — Browser Extension, now live on the Chrome Web Store & Microsoft Edge Add-ons:** take TechTools with you as a toolbar popup or a **docked side panel** next to your Azure / vCenter / AWS / GitHub dashboards. Fuzzy-search launcher, a pinnable **default tool**, 5 themes, offline tools, and right-click **“Inspect with TechTools”** on selected text.  
 > ➡️ **[Get it on the Chrome Web Store](https://chromewebstore.google.com/detail/techtools-%E2%80%94-naval-it-diag/jkpojohaddlefcjgmkcnjnaclbjfobmi)** *(Chrome, Chromium, Brave, Vivaldi, Opera, Arc)* · **[Get it on Microsoft Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/techtools-%E2%80%94-naval-it-diag/phoogogpdkknpjedkmogpfkdoljgngmd)** *(Edge)* · **[install & docs ↓](#browser-extension-chrome--edge--brave--firefox)**
 
 [![Launch TechTools](https://img.shields.io/badge/LAUNCH_APP-techtools.subwrite.se-2563eb?style=for-the-badge&logo=googlechrome&logoColor=white)](https://techtools.subwrite.se)
+[![Geo Radar](https://img.shields.io/badge/NEW-GEO_RADAR_(MOD--03)-22c55e?style=for-the-badge&logo=openstreetmap&logoColor=white)](https://techtools.subwrite.se/#/geo-radar)
 [![Get it on Chrome Web Store](https://img.shields.io/badge/CHROME_WEB_STORE-Install_TechTools-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/techtools-%E2%80%94-naval-it-diag/jkpojohaddlefcjgmkcnjnaclbjfobmi)
 [![Get it on Microsoft Edge Add-ons](https://img.shields.io/badge/EDGE_ADD--ONS-Install_TechTools-0078d4?style=for-the-badge&logo=microsoftedge&logoColor=white)](https://microsoftedge.microsoft.com/addons/detail/techtools-%E2%80%94-naval-it-diag/phoogogpdkknpjedkmogpfkdoljgngmd)
 [![Browser Extension](https://img.shields.io/badge/DOCS-Browser_Extension-16a34a?style=for-the-badge&logo=googlechrome&logoColor=white)](#browser-extension-chrome--edge--brave--firefox)
@@ -20,7 +25,7 @@ A modular clean, optimized Swedish Navy (*Kungliga Flottan*) IT troubleshooting 
 
 ---
 
-## Diagnostic Modules (`v0.6.3`)
+## Diagnostic Modules (`v0.7.0`)
 
 1. **`MOD-01` — Password & Token Generator (`#/password-generator`)**
    - **Generated 100% Locally in Your Browser (Not on the Server):** Uses client-side CSPRNG (`window.crypto.getRandomValues`) with unbiased rejection sampling — zero network traffic, zero server involvement, and zero logging.
@@ -285,11 +290,12 @@ TechTools uses a plugin-style registry so new troubleshooting tools can be added
 
 ## Changelog
 
-- **Unreleased (`dev`)** — **IP & Domain Geolocation Radar (`MOD-03`), module reorder:**
+- **`v0.7.0`** — **IP & Domain Geolocation Radar (`MOD-03`), module reorder:**
   - Placed the Geo Radar at **`MOD-03`** next to the network tools, bumping DNS & WHOIS → `MOD-04`, URL Tester → `MOD-05`, What's My IP → `MOD-06`, Cert Analyzer → `MOD-07`, Mail Headers → `MOD-08`, Subnet Calc → `MOD-09`, JWT / SAML → `MOD-10`, Sec Headers → `MOD-11`.
   - New self-hosted `/api/geo` endpoint with a zero-dependency in-memory MMDB reader (DB-IP Lite / GeoLite2), domain A/AAAA fan-out, 1.5 s IP-pinned `HEAD` edge POP detection (`cf-ray`, `x-amz-cf-pop`, `x-served-by`, `x-vercel-id`, `fly-request-id`) with an IATA POP directory, and Anycast/CDN ASN flagging.
   - New theme-aware equirectangular SVG radar map (Natural Earth 110m, antimeridian-safe) with sweep, ping blip, crosshair and HQ ↔ POP vector; lazy-loaded so the main bundle stays unchanged. No new CSP origins.
-  - Added `npm run geoip:fetch` and `npm run map:build` scripts.
+  - Added `npm run geoip:fetch` and `npm run map:build` scripts, plus a monthly `techtools-geoip` systemd timer (`deploy/systemd/`).
+  - Privacy policy updated with the Speed Test (M-Lab) and Geo Radar data flows; browser extension `v0.7.0` ships the Geo Radar as an ONLINE tool.
 - **`v0.6.3`** — **URL Tester Reorder (`MOD-04`) & Scalable Arrow-Key Module Navigation:**
   - Moved **URL Tester** (`#/url-tester`) from `MOD-07` to **`MOD-04`** directly after **`MOD-03` DNS & WHOIS**, bumping What's My IP (`MOD-05`), Cert Analyzer (`MOD-06`), and Mail Headers (`MOD-07`) forward to group site and DNS diagnostics together.
   - Replaced fixed `0–9` digit shortcuts with scalable 2D arrow-key (`←` `→` `↑` `↓`) navigation across the module switcher bar when a tool is open (and on the Command Deck), uniform `[01]`–`[10]` badges, `Shift+←` / `Shift+→` pane switching in Desktop Split View, and `←` / `→` tool switching in the browser extension.

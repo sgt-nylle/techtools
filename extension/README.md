@@ -77,8 +77,9 @@ the tool's first input; for lookup tools press `Enter` to run.
 ## Offline vs. online
 
 * **LOCAL** (work offline): Pass & Tokens, Mail Headers, Subnet Calc, JWT/SAML.
-* **ONLINE** (need `https://techtools.subwrite.se/api/*`, allowed via `host_permissions`): DNS & WHOIS,
-  What's My IP, Cert Analyzer, URL Tester, Sec Headers.
+* **ONLINE** (need `https://techtools.subwrite.se/api/*`, allowed via `host_permissions`): Speed Test,
+  Geo Radar, DNS & WHOIS, What's My IP, Cert Analyzer, URL Tester, Sec Headers. (The Speed Test additionally
+  connects straight to the nearest Measurement Lab test server.)
 
 ## Known limitations / follow-ups
 

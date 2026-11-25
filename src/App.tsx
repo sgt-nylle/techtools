@@ -891,6 +891,11 @@ export function App() {
                 ARC results.
               </li>
               <li>
+                <strong>Mail TLS Tester</strong> — resolve a domain&apos;s MX hosts and watch a live SMTP{' '}
+                <code>STARTTLS</code> negotiation: certificate presence, self-signed vs. externally trusted, hostname match,
+                expiry, protocol and cipher, plus MTA-STS, TLS-RPT and DANE checks. No mail is sent.
+              </li>
+              <li>
                 <strong>Subnet &amp; Supernetting Calculator (IPv4 / IPv6)</strong> — 100% client-side CIDR network
                 calculator with netmask, wildcard, usable host range, bitwise binary representation, reverse DNS PTR
                 generator (<code>in-addr.arpa</code> / <code>ip6.arpa</code>), and interactive subnet carving.

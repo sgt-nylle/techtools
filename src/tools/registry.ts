@@ -6,6 +6,7 @@ import { UrlProbeTool } from './UrlProbeTool';
 import { MyIpTool } from './MyIpTool';
 import { CertAnalyzerTool } from './CertAnalyzerTool';
 import { MailHeaderTool } from './MailHeaderTool';
+import { MailTlsToolLazy } from './MailTlsToolLazy';
 import { SubnetTool } from './SubnetTool';
 import { AuthInspectorTool } from './AuthInspectorTool';
 import { SecurityHeadersTool } from './SecurityHeadersTool';
@@ -109,8 +110,20 @@ export const TOOL_MODULES: ToolModule[] = [
     Component: MailHeaderTool,
   },
   {
-    id: 'subnet-calculator',
+    id: 'mail-tls',
     code: 'MOD-09',
+    title: 'MAIL TLS TESTER (SMTP STARTTLS)',
+    shortTitle: 'MAIL TLS TESTER',
+    category: 'MAIL SECURITY',
+    badge: 'MX • STARTTLS • CERT',
+    description:
+      'Resolve a domain\'s MX hosts and negotiate SMTP STARTTLS (or SMTPS) live in a streaming terminal. Reports whether a certificate is presented, self-signed vs. externally trusted, hostname match, expiry, protocol, cipher and key exchange, plus MTA-STS, TLS-RPT and DANE policy.',
+    capabilities: ['Live SMTP / TLS Transcript', 'MX Priority Fan-Out (25 / 587 / 465)', 'Self-Signed vs. Trusted Cert', 'MTA-STS • TLS-RPT • DANE'],
+    Component: MailTlsToolLazy,
+  },
+  {
+    id: 'subnet-calculator',
+    code: 'MOD-10',
     title: 'SUBNET & SUPERNETTING CALCULATOR',
     shortTitle: 'SUBNET CALC',
     category: 'NETWORK',
@@ -122,7 +135,7 @@ export const TOOL_MODULES: ToolModule[] = [
   },
   {
     id: 'auth-inspector',
-    code: 'MOD-10',
+    code: 'MOD-11',
     title: 'JWT, OIDC & SAML AUTH INSPECTOR',
     shortTitle: 'JWT / SAML AUTH',
     category: 'SECURITY',
@@ -134,7 +147,7 @@ export const TOOL_MODULES: ToolModule[] = [
   },
   {
     id: 'security-headers',
-    code: 'MOD-11',
+    code: 'MOD-12',
     title: 'HTTP SECURITY HEADERS & CSP EVALUATOR',
     shortTitle: 'SEC HEADERS',
     category: 'SECURITY',

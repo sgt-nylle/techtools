@@ -30,4 +30,5 @@ export const ONLINE_TOOL_IDS = new Set([
   'url-tester',
   'security-headers',
   'geo-radar',
+  'mail-tls',
 ]);

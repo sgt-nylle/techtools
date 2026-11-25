@@ -10,6 +10,7 @@ import crypto from 'node:crypto';
 import { execSync, execFile } from 'node:child_process';
 import { domainToASCII } from 'node:url';
 import { handleGeoLookup } from './geoRadar.mjs';
+import { handleMailTlsStream } from './mailTls.mjs';
 
 const defaultResolver = new dns.promises.Resolver({ timeout: 3000, tries: 2 });
 defaultResolver.setServers(['8.8.8.8', '1.1.1.1', '9.9.9.9']);
@@ -2857,6 +2858,17 @@ export async function handleApiRequest(req, res) {
       return true;
     }
 
+    if (pathname === '/api/mailtls' && req.method === 'GET') {
+      await handleMailTlsStream(req, res, urlObj, {
+        resolver: defaultResolver,
+        extractClientIp,
+        isPublicRoutableIp,
+        extractLiveTlsCertificate,
+        queryDohRecord,
+      });
+      return true;
+    }
+
     if (pathname === '/api/geo' && req.method === 'GET') {
       const target = urlObj.searchParams.get('target') || '';
       const result = await handleGeoLookup(req, target, {
@@ -2875,6 +2887,11 @@ export async function handleApiRequest(req, res) {
     return true;
   } catch (err) {
     console.error('API Error:', err);
+    if (res.headersSent) {
+      // Streaming endpoints (e.g. /api/mailtls SSE) may fail after headers are flushed — just close the stream.
+      if (!res.writableEnded) res.end();
+      return true;
+    }
     sendJson(res, 500, { error: 'Internal diagnostic console error' });
     return true;
   }

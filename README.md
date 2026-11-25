@@ -21,7 +21,7 @@
 A modular clean, optimized Swedish Navy (*Kungliga Flottan*) IT troubleshooting web suite designed as a companion subsite to [subwrite.se](https://subwrite.se), featuring a custom pixel-art SVG sprite of the iconic *Norrköping*-class (*Spica II*) fast-attack missile boat **Robotbåt R136 HMS Västervik**. Launch and use the full suite directly in your browser at **[https://techtools.subwrite.se](https://techtools.subwrite.se)**.
 
 > [!IMPORTANT]
-> **100% Local Password, Token & Enterprise Auth Processing (Never on the Server):** All passwords, passphrases, UUIDs, cryptographic keys, and API tokens in `MOD-01`, as well as all IPv4/IPv6 CIDR calculations in `MOD-09` and all **JWT, OIDC, and SAML 2.0 authentication tokens** in `MOD-10`, are generated or decoded **strictly inside your own browser**. No generated secret or pasted enterprise bearer token / SAML assertion is ever transmitted to, logged by, or processed on the server.
+> **100% Local Password, Token & Enterprise Auth Processing (Never on the Server):** All passwords, passphrases, UUIDs, cryptographic keys, and API tokens in `MOD-01`, as well as all IPv4/IPv6 CIDR calculations in `MOD-10` and all **JWT, OIDC, and SAML 2.0 authentication tokens** in `MOD-11`, are generated or decoded **strictly inside your own browser**. No generated secret or pasted enterprise bearer token / SAML assertion is ever transmitted to, logged by, or processed on the server.
 
 ---
 
@@ -68,18 +68,24 @@ A modular clean, optimized Swedish Navy (*Kungliga Flottan*) IT troubleshooting 
    - Analyzes raw RFC 5322 email headers and reconstructs full chronological transport traces with per-hop latency calculations, IP addresses, protocols, and TLS ciphers.
    - Audits SPF, DKIM (including selector, domain, and signature parameters), DMARC policy alignment, and ARC headers.
    - Rejects non-header payloads with `"Navy Mail Header Format Not DETECTED!"` and clears the input.
-9. **`MOD-09` — Subnet & Supernetting Calculator — IPv4 / IPv6 (`#/subnet-calculator`)**
+9. **`MOD-09` — Mail TLS Tester — SMTP STARTTLS Probe (`#/mail-tls`)**
+   - **Live Negotiation Feed:** Streams a checktls-style transcript (Server-Sent Events) of every step — MX lookup, TCP connect, `220` banner, `EHLO`, `STARTTLS`, TLS handshake, `EHLO` over TLS and `QUIT` — with millisecond timestamps and `C:` / `S:` direction markers. **No mail is ever sent.**
+   - **MX Fan-Out:** Resolves MX records (RFC 7505 null-MX and RFC 5321 implicit-MX aware) and tests the 3 most preferred hosts on TCP/25, or a direct host on `587` (submission, STARTTLS) / `465` (SMTPS, implicit TLS).
+   - **TLS & Certificate Verdict:** Certificate presented, **self-signed vs. externally trusted** (public CA chain), hostname/SAN match, expiry countdown, key strength, protocol (TLS 1.2+), cipher suite, key-exchange group (incl. post-quantum `X25519MLKEM768`) and handshake time — scored into a 0–100 confidence grade per MX (overall = weakest MX).
+   - **Domain Transport Policy:** MTA-STS (`_mta-sts` TXT + HTTPS policy fetch, mode and MX coverage), TLS-RPT (`_smtp._tls`) and DANE TLSA (`_25._tcp.<mx>`, DNSSEC AD flag).
+   - **Safety:** SSRF guard on every resolved MX IP, one concurrent test per client IP, global slot limit, 80 s time budget, sockets torn down when the browser disconnects.
+10. **`MOD-10` — Subnet & Supernetting Calculator — IPv4 / IPv6 (`#/subnet-calculator`)**
    - **100% Client-Side TypeScript BigInt Engine:** Instantaneous zero-network calculation for any IPv4 (`/0–/32`) or IPv6 (`/0–/128`) CIDR block (e.g. `10.120.4.0/22` or `2001:db8::/48`).
    - Computes Netmask, Wildcard mask, canonical Network address, Broadcast / last address, Usable host range, Total usable hosts, RFC scope classification, parent Supernet (`-1` bit), and full bitwise binary representation.
    - **Reverse DNS PTR Generator:** Automatically builds `in-addr.arpa` (including RFC 2317 classless delegation) for IPv4 and full 32-nibble `ip6.arpa` zones/records for IPv6.
    - **Interactive Subnet Divider & Carving Visualizer:** Quick slider & preset buttons to subdivide any network block into smaller subnets (e.g. splitting a `/22` into four `/24` blocks) with one-click drill-down.
-10. **`MOD-10` — JWT, OIDC & SAML Auth Inspector (`#/auth-inspector`)**
+11. **`MOD-11` — JWT, OIDC & SAML Auth Inspector (`#/auth-inspector`)**
    - **100% Client-Side Decoder:** Zero external API calls or server transmission to safeguard sensitive enterprise bearer tokens and SAML assertions.
    - Decodes JOSE Header, Claims Payload, and cryptographic Signature length/hex preview for JWT & OIDC tokens.
    - **Human-Readable Timestamps:** Converts `iat`, `nbf`, `exp`, and `auth_time` to local & UTC time with live status badges (`ACTIVE (expires in 48m)` or `EXPIRED`).
    - **Microsoft Entra ID / OIDC Claim Highlighter:** Formats and highlights `upn`, `oid`, `tid`, `roles`, `groups`, `scp`, `amr`, and translates well-known Entra Directory Role Template GUIDs (`wids`).
    - **SAML 2.0 Response XML Viewer:** Decodes Base64 / URL-encoded `SAMLResponse` payloads, extracts Issuer, Subject `NameID`, Conditions window, AttributeStatement claims, and pretty-prints the XML document.
-11. **`MOD-11` — HTTP Security Headers & CSP Evaluator (`#/security-headers`)**
+12. **`MOD-12` — HTTP Security Headers & CSP Evaluator (`#/security-headers`)**
    - Evaluates target URL HTTP response headers via the backend fetch/probe pipeline and computes a `0–100` compliance score (`GRADE A+` to `F`).
    - Audits and scores **HSTS** (`Strict-Transport-Security`), **CSP** (`Content-Security-Policy` with explicit warnings for `'unsafe-inline'`, `'unsafe-eval'`, and wildcard `*` origins), **`X-Frame-Options`** / `frame-ancestors`, **`X-Content-Type-Options: nosniff`**, **`Referrer-Policy`**, and **`Permissions-Policy`**.
    - Displays results as a retro terminal compliance checklist with `PASS` / `WARN` / `FAIL` badges, remediation guidance, and a parsed CSP Directive Matrix.
@@ -96,17 +102,17 @@ On desktop viewports (`>= 1024px`), TechTools supports running **two diagnostic 
 
 ---
 
-## Module Input Requirements & Technical Reference (`MOD-09`, `MOD-10`, `MOD-11`)
+## Module Input Requirements & Technical Reference (`MOD-10`, `MOD-11`, `MOD-12`)
 
-### `MOD-09` — Subnet & Supernetting Calculator (IPv4 / IPv6)
+### `MOD-10` — Subnet & Supernetting Calculator (IPv4 / IPv6)
 - **Execution Model:** 100% client-side TypeScript `BigInt` bitwise arithmetic (`0` network calls).
 - **Input Requirements:**
   - **IPv4 CIDR:** Dotted-quad IPv4 address with optional `/0`–`/32` prefix (defaults to `/24` if omitted), e.g. `10.120.4.0/22`, `192.168.1.50/26`, `100.64.0.0/10`. Supports RFC 3021 `/31` point-to-point links and `/32` host routes.
   - **IPv6 CIDR:** Compressed (`::`), expanded, or IPv4-mapped IPv6 address with optional `/0`–`/128` prefix (defaults to `/64` if omitted), e.g. `2001:db8::/48`, `2001:db8:85a3::8a2e:370:7334/64`.
 - **Generated Telemetry:** Canonical CIDR, Netmask, Wildcard mask (for router ACLs/OSPF), Network & Broadcast/Last addresses, Usable host range & count, parent Supernet (`-1` bit), bitwise binary table (`[B]`), reverse DNS `in-addr.arpa` / nibble `ip6.arpa` PTR records, and interactive child subnet carving (`1` to `6` extra prefix bits, up to `64` child blocks).
 
-### `MOD-10` — JWT, OIDC & SAML Auth Inspector
-- **Execution Model & Privacy Requirement:** **100% client-side browser decoding** (`atob` + `TextDecoder` + `DOMParser`). Enterprise access tokens, ID tokens, and SAML assertions often carry live session privileges or PII and **must never be sent to external decoding APIs**. `MOD-10` processes tokens strictly in local browser memory with zero network traffic.
+### `MOD-11` — JWT, OIDC & SAML Auth Inspector
+- **Execution Model & Privacy Requirement:** **100% client-side browser decoding** (`atob` + `TextDecoder` + `DOMParser`). Enterprise access tokens, ID tokens, and SAML assertions often carry live session privileges or PII and **must never be sent to external decoding APIs**. `MOD-11` processes tokens strictly in local browser memory with zero network traffic.
 - **JWT & OIDC Input Requirements (`[J]` Mode):**
   - Accepts standard RFC 7519 **JWS Compact Serialization** tokens consisting of 3 dot-separated Base64URL segments (`header.payload.signature`) or 2-segment unsigned tokens (`header.payload`), with or without a leading `Bearer ` prefix.
   - **Note on JWE (Encrypted Tokens):** Opaque or JWE-encrypted tokens (5 dot-separated segments) cannot be plaintext-decoded without the recipient private decryption key.
@@ -116,7 +122,7 @@ On desktop viewports (`>= 1024px`), TechTools supports running **two diagnostic 
   - Accepts **Base64-encoded** `SAMLResponse` payloads, **URL-encoded** `SAMLResponse=...` HTTP POST body parameters, or **raw SAML 2.0 XML** (`<samlp:Response>` or `<saml:Assertion>`).
   - Extracts `Issuer`, `Destination`, `InResponseTo`, `StatusCode`, Subject `NameID`, `Conditions` (`NotBefore` / `NotOnOrAfter` with live validity status), `AudienceRestriction`, all `<saml:AttributeStatement>` claims, and pretty-prints the XML document.
 
-### `MOD-11` — HTTP Security Headers & CSP Evaluator
+### `MOD-12` — HTTP Security Headers & CSP Evaluator
 - **Execution Model:** Queries the target URL via the hardened backend `/api/probe` pipeline (enforcing `isPublicRoutableIp` SSRF protection on both the initial target and up to 5 HTTP `3xx` redirects).
 - **Input Requirements:** Any publicly routable corporate URL or hostname (defaults to HTTPS port `443`). Private RFC 1918, loopback, and link-local addresses are blocked by the SSRF guard.
 - **Scoring & Compliance Matrix (`0–100` Points, `GRADE A+` to `F`):**
@@ -165,12 +171,15 @@ On desktop viewports (`>= 1024px`), TechTools supports running **two diagnostic 
 | **MOD-08 (Mail Headers)** | `Q` (or `/`) / `R` | Focus header textarea (`Q`), Run header trace analysis (`R`) |
 | | `A` / `H` / `U` | View filter: All Intel (`A`), Message Hops Trace (`H`), SPF/DKIM/DMARC Audit (`U`) |
 | | `V` | Toggle raw email headers table |
-| **MOD-09 (Subnet Calc)** | `Q` (or `/`) | Focus IPv4/IPv6 CIDR input |
+| **MOD-09 (Mail TLS)** | `Q` (or `/`) / `R` / `A` | Focus domain input (`Q`), Run TLS test (`R`), Abort running probe (`A`) |
+| | `P` / `D` | Cycle port `25` → `587` → `465` (`P`), Toggle DIRECT HOST mode (`D`) |
+| | `T` / `C` | Copy raw negotiation transcript (`T`), Copy full TLS report (`C`) |
+| **MOD-10 (Subnet Calc)** | `Q` (or `/`) | Focus IPv4/IPv6 CIDR input |
 | | `-` / `+` | Supernet (`-1` prefix bit) / Subnet (`+1` prefix bit) |
 | | `B` | Toggle bitwise binary breakdown table |
-| **MOD-10 (Auth Inspector)** | `Q` (or `/`) | Focus JWT / SAML token input |
+| **MOD-11 (Auth Inspector)** | `Q` (or `/`) | Focus JWT / SAML token input |
 | | `J` / `M` | Switch between JWT & OIDC Inspector (`J`) and SAML 2.0 XML Viewer (`M`) |
-| **MOD-11 (Sec Headers)** | `Q` (or `/`) / `R` / `F` | Focus URL input (`Q`), Evaluate headers (`R`), Toggle Follow `3xx` (`F`) |
+| **MOD-12 (Sec Headers)** | `Q` (or `/`) / `R` / `F` | Focus URL input (`Q`), Evaluate headers (`R`), Toggle Follow `3xx` (`F`) |
 | | `A` / `W` / `P` / `V` | Filter: All Checks (`A`), Warnings & Failures (`W`), CSP Matrix (`P`), Raw Headers (`V`) |
 
 ---
@@ -289,6 +298,10 @@ TechTools uses a plugin-style registry so new troubleshooting tools can be added
 ---
 
 ## Changelog
+
+- **Unreleased (`dev`)** — **Mail TLS Tester (`MOD-09`):**
+  - New `/api/mailtls` Server-Sent-Events endpoint (`server/mailTls.mjs`) streaming a live SMTP / STARTTLS / SMTPS negotiation transcript per MX host, with certificate trust (self-signed vs. public CA), hostname, expiry, key strength, protocol / cipher / key-exchange checks, 0–100 grading, and MTA-STS / TLS-RPT / DANE policy audit. Never sends mail.
+  - Inserted at `MOD-09` after Mail Headers; Subnet Calc → `MOD-10`, JWT / SAML → `MOD-11`, Sec Headers → `MOD-12`.
 
 - **`v0.7.0`** — **IP & Domain Geolocation Radar (`MOD-03`), module reorder:**
   - Placed the Geo Radar at **`MOD-03`** next to the network tools, bumping DNS & WHOIS → `MOD-04`, URL Tester → `MOD-05`, What's My IP → `MOD-06`, Cert Analyzer → `MOD-07`, Mail Headers → `MOD-08`, Subnet Calc → `MOD-09`, JWT / SAML → `MOD-10`, Sec Headers → `MOD-11`.

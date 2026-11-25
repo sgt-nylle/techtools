@@ -16,7 +16,7 @@
 
       <div class="summary">
         <strong>In short:</strong> TechTools has no accounts, no advertising and no tracking scripts of its own in the app or
-        the extension. Four tools run entirely on your device. The seven &ldquo;online&rdquo; tools send what you type to
+        the extension. Four tools run entirely on your device. The eight &ldquo;online&rdquo; tools send what you type to
         our server to produce a result (the Speed Test also talks directly to Measurement Lab test servers). IP
         geolocation is done with databases stored on our own server &ndash; no third-party geolocation service is used.
         Like any web service, our servers see your IP address and keep standard access logs.
@@ -48,6 +48,7 @@
         <tr><td>DNS &amp; WHOIS</td><td>Domain name, chosen resolver</td><td>Public DNS resolvers (Google, Cloudflare or the one you choose) and WHOIS registries</td></tr>
         <tr><td>What&rsquo;s My IP / range owner</td><td>Your IP address, or the IP/host you look up</td><td>Public routing and registry data sources (e.g. RIPEstat, regional registries)</td></tr>
         <tr><td>Certificate &amp; CSR Analyzer</td><td>The certificate/CSR text you paste (private keys are blocked in your browser before sending)</td><td>Issuer certificate servers, to build the chain</td></tr>
+        <tr><td>Mail TLS Tester</td><td>The domain, e-mail domain or mail server you enter, and the port</td><td>Public DNS resolvers (MX, MTA-STS, TLS-RPT, DANE records) and the domain&rsquo;s mail servers, which our server connects to (it introduces itself as <code>techtools.subwrite.se</code>, negotiates TLS and disconnects &ndash; no e-mail is sent). If published, the domain&rsquo;s MTA-STS policy is fetched from <code>mta-sts.&lt;domain&gt;</code>.</td></tr>
         <tr><td>URL &amp; TLS Probe</td><td>The URL or host you enter</td><td>The target host you asked us to probe</td></tr>
         <tr><td>HTTP Security Headers</td><td>The URL you enter</td><td>The target host you asked us to probe</td></tr>
       </table>

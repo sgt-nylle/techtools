@@ -3084,3 +3084,389 @@
   font-size: 13px;
   font-weight: 700;
 }
+
+/* =========================================================================
+   MOD-09: MAIL TLS TESTER (live SMTP STARTTLS negotiation terminal)
+   ========================================================================= */
+
+.mail-tls-panel {
+  container-type: inline-size;
+  container-name: mailtls;
+}
+
+.navy-btn.btn-danger {
+  border-color: var(--navy-red);
+  color: var(--navy-red);
+}
+
+.navy-btn.btn-danger:hover:not(:disabled) {
+  background-color: var(--navy-red);
+  color: var(--navy-white);
+}
+
+.mtls-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin-top: 8px;
+}
+
+.mtls-direct-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-arcade);
+  font-size: 9px;
+  color: var(--navy-dim);
+  cursor: pointer;
+  margin-left: 6px;
+}
+
+.mtls-no-mail-note {
+  margin-left: auto;
+  font-size: 12px;
+}
+
+.mtls-overview {
+  display: grid;
+  grid-template-columns: minmax(180px, 230px) minmax(0, 1fr);
+  gap: 12px;
+}
+
+@container mailtls (max-width: 720px) {
+  .mtls-overview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .mtls-no-mail-note {
+    margin-left: 0;
+  }
+}
+
+.mtls-verdict {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+  border-width: var(--bw-3);
+}
+
+.mtls-grade {
+  font-family: var(--font-arcade);
+  font-size: 42px;
+  line-height: 1.1;
+  color: var(--navy-white);
+}
+
+.mtls-grade-a .mtls-grade,
+.mtls-grade-pill.mtls-grade-a {
+  color: var(--navy-green);
+}
+
+.mtls-grade-c .mtls-grade,
+.mtls-grade-pill.mtls-grade-c {
+  color: var(--navy-amber);
+}
+
+.mtls-grade-f .mtls-grade,
+.mtls-grade-pill.mtls-grade-f {
+  color: var(--navy-red);
+}
+
+.mtls-verdict.mtls-grade-a {
+  border-color: var(--navy-green);
+}
+
+.mtls-verdict.mtls-grade-c {
+  border-color: var(--navy-amber);
+}
+
+.mtls-verdict.mtls-grade-f {
+  border-color: var(--navy-red);
+}
+
+.mtls-scorebar {
+  width: 100%;
+  height: 8px;
+  background: var(--navy-inset);
+  border: 1px solid var(--navy-cell-border);
+}
+
+.mtls-scorebar i {
+  display: block;
+  height: 100%;
+  background: currentColor;
+  color: var(--navy-cyan);
+  transition: width 0.6s ease;
+}
+
+.mtls-grade-a .mtls-scorebar i {
+  color: var(--navy-green);
+}
+
+.mtls-grade-c .mtls-scorebar i {
+  color: var(--navy-amber);
+}
+
+.mtls-grade-f .mtls-scorebar i {
+  color: var(--navy-red);
+}
+
+.mtls-score-text {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--navy-dim);
+}
+
+.mtls-mx-table-wrap {
+  overflow-x: auto;
+  min-width: 0;
+}
+
+.mtls-mx-table th {
+  text-align: left;
+  font-family: var(--font-arcade);
+  font-size: 8px;
+  color: var(--navy-dim);
+  padding: 6px 8px;
+  white-space: nowrap;
+}
+
+.mtls-mx-table td {
+  padding: 6px 8px;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.mtls-grade-pill {
+  font-family: var(--font-arcade);
+  font-size: 11px;
+}
+
+/* ---------- live terminal (always dark, phosphor style, tinted by theme) ---------- */
+.mtls-terminal-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mtls-terminal-hdr {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mtls-rec {
+  color: var(--navy-red);
+  margin-left: 8px;
+  animation: geoBlink 1s steps(2, start) infinite;
+}
+
+.mtls-terminal {
+  height: 360px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 10px 12px;
+  background: #050a10;
+  border: var(--bw-2) solid var(--navy-border);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.45;
+  color: #c9d6e3;
+  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.65);
+}
+
+:root[data-theme='radar'] .mtls-terminal,
+:root[data-theme='amber-phosphor'] .mtls-terminal {
+  background: #000;
+  color: #ffb000;
+}
+
+.mtls-line {
+  display: grid;
+  grid-template-columns: max-content 3.2ch minmax(0, 1fr);
+  gap: 8px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.mtls-ts {
+  color: #5b6b7d;
+}
+
+.mtls-dir {
+  font-weight: 700;
+  text-align: center;
+}
+
+.mtls-c .mtls-dir,
+.mtls-c .mtls-text {
+  color: #67e8f9;
+}
+
+.mtls-s .mtls-dir {
+  color: #a3e635;
+}
+
+.mtls-s .mtls-text {
+  color: #d9f99d;
+}
+
+.mtls-tls .mtls-dir,
+.mtls-tls .mtls-text {
+  color: #c4b5fd;
+}
+
+.mtls-ok .mtls-dir,
+.mtls-ok .mtls-text {
+  color: #4ade80;
+}
+
+.mtls-warn .mtls-dir,
+.mtls-warn .mtls-text {
+  color: #fbbf24;
+}
+
+.mtls-err .mtls-dir,
+.mtls-err .mtls-text {
+  color: #f87171;
+}
+
+.mtls-i .mtls-text {
+  color: #94a3b8;
+}
+
+:root[data-theme='radar'] .mtls-line .mtls-text,
+:root[data-theme='radar'] .mtls-line .mtls-dir,
+:root[data-theme='amber-phosphor'] .mtls-line .mtls-text,
+:root[data-theme='amber-phosphor'] .mtls-line .mtls-dir {
+  color: #ffb000;
+}
+
+:root[data-theme='radar'] .mtls-err .mtls-text,
+:root[data-theme='radar'] .mtls-err .mtls-dir {
+  color: #ff5a3c;
+}
+
+:root[data-theme='radar'] .mtls-ok .mtls-text,
+:root[data-theme='radar'] .mtls-ok .mtls-dir {
+  color: #33ff33;
+}
+
+.mtls-term-idle {
+  color: #5b6b7d;
+}
+
+.mtls-cursor {
+  display: inline-block;
+  color: #4ade80;
+  animation: geoBlink 0.9s steps(2, start) infinite;
+}
+
+/* ---------- per-host detail ---------- */
+.mtls-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.9fr) minmax(0, 1.4fr);
+  gap: 12px;
+}
+
+@container mailtls (max-width: 760px) {
+  .mtls-detail-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.mtls-checks {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.mtls-checks li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.mtls-badge {
+  display: inline-block;
+  min-width: 42px;
+  text-align: center;
+  font-family: var(--font-arcade);
+  font-size: 8px;
+  padding: 2px 4px;
+  border: 1px solid currentColor;
+}
+
+.mtls-badge-pass {
+  color: var(--navy-green);
+}
+
+.mtls-badge-warn {
+  color: var(--navy-amber);
+}
+
+.mtls-badge-fail {
+  color: var(--navy-red);
+}
+
+.mtls-check-detail {
+  font-size: 12px;
+}
+
+.mtls-host-error {
+  margin-top: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.mtls-caps {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mtls-cap {
+  display: inline-block;
+  margin: 0 5px 4px 0;
+  padding: 1px 6px;
+  font-size: 12px;
+  background: var(--navy-inset);
+  border: 1px solid var(--navy-cell-border);
+}
+
+.mtls-cap-hot {
+  border-color: var(--navy-green);
+  color: var(--navy-green);
+}
+
+:root[data-flat] .mtls-mx-table th,
+:root[data-flat] .mtls-badge {
+  font-size: 10px;
+  font-weight: 700;
+}
+
+:root[data-flat] .mtls-direct-toggle {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.mtls-grade-na .mtls-grade,
+.mtls-grade-pill.mtls-grade-na {
+  color: var(--navy-amber);
+}
+
+.mtls-verdict.mtls-grade-na {
+  border-color: var(--navy-amber);
+  border-style: dashed;
+}

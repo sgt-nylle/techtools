@@ -1,6 +1,6 @@
 import React, { Suspense, lazy } from 'react';
 
-// Code-split: the radar (and its ~57 KiB Natural Earth land path) only loads when MOD-11 is opened.
+// Code-split: the radar (and its ~73 KiB Natural Earth land path) only loads when MOD-03 is opened.
 const GeoRadarTool = lazy(() => import('./GeoRadarTool'));
 
 export const GeoRadarToolLazy: React.FC = () => (

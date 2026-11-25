@@ -863,6 +863,12 @@ export function App() {
                 via geo-located M-Lab NDT7 WebSockets with an 80s cassette-deck digital VU meter.
               </li>
               <li>
+                <strong>IP &amp; Domain Geolocation Radar</strong> — self-hosted GeoIP lookups (local MMDB, no third-party
+                APIs) for your IP, any IPv4/IPv6 address, or a domain&apos;s A/AAAA records, plotted on an animated SVG
+                radar map with Anycast/CDN flagging and live edge POP detection (<code>cf-ray</code>,{' '}
+                <code>x-amz-cf-pop</code>, <code>x-served-by</code>).
+              </li>
+              <li>
                 <strong>DNS &amp; WHOIS Lookup</strong> — A, AAAA, MX, NS, TXT, SOA, CAA and PTR records, DNSSEC zone
                 key (<code>DNSKEY</code> &amp; <code>DS</code> chain of trust) inspection, SPF and DMARC checks, and
                 domain registration info, queried via Google, Cloudflare or a custom DNS server.
@@ -901,12 +907,6 @@ export function App() {
                 <code>unsafe-inline</code> / <code>unsafe-eval</code> / wildcard warnings, <code>X-Frame-Options</code>,{' '}
                 <code>X-Content-Type-Options: nosniff</code>, <code>Referrer-Policy</code>, and{' '}
                 <code>Permissions-Policy</code>).
-              </li>
-              <li>
-                <strong>IP &amp; Domain Geolocation Radar</strong> — self-hosted GeoIP lookups (local MMDB, no third-party
-                APIs) for your IP, any IPv4/IPv6 address, or a domain&apos;s A/AAAA records, plotted on an animated SVG
-                radar map with Anycast/CDN flagging and live edge POP detection (<code>cf-ray</code>,{' '}
-                <code>x-amz-cf-pop</code>, <code>x-served-by</code>).
               </li>
             </ul>
             <p className="dim-note">

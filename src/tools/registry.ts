@@ -37,8 +37,20 @@ export const TOOL_MODULES: ToolModule[] = [
     Component: SpeedTestTool,
   },
   {
-    id: 'dns-inspector',
+    id: 'geo-radar',
     code: 'MOD-03',
+    title: 'IP & DOMAIN GEOLOCATION RADAR',
+    shortTitle: 'GEO RADAR',
+    category: 'NETWORK',
+    badge: 'GEOIP • POP • RADAR',
+    description:
+      'Self-hosted GeoIP radar: plot your IP, any IPv4/IPv6 address, or every A/AAAA record of a domain on a zero-dependency SVG world map. Flags Anycast/CDN ASNs and detects the live CDN edge POP from cf-ray, x-amz-cf-pop and x-served-by headers.',
+    capabilities: ['Local MMDB GeoIP (No 3rd Party)', 'City / ASN / Timezone', 'Anycast & CDN Edge POP', 'Animated SVG Radar Map'],
+    Component: GeoRadarToolLazy,
+  },
+  {
+    id: 'dns-inspector',
+    code: 'MOD-04',
     title: 'DNS & DOMAIN REGISTRY INTEL',
     shortTitle: 'DNS & WHOIS',
     category: 'DNS & MAIL',
@@ -50,7 +62,7 @@ export const TOOL_MODULES: ToolModule[] = [
   },
   {
     id: 'url-tester',
-    code: 'MOD-04',
+    code: 'MOD-05',
     title: 'EXTERNAL ENDPOINT & TLS PROBE',
     shortTitle: 'URL TESTER',
     category: 'DIAGNOSTICS',
@@ -62,7 +74,7 @@ export const TOOL_MODULES: ToolModule[] = [
   },
   {
     id: 'whats-my-ip',
-    code: 'MOD-05',
+    code: 'MOD-06',
     title: "WHAT'S MY IP? & RANGE OWNER",
     shortTitle: "WHAT'S MY IP",
     category: 'NETWORK',
@@ -74,7 +86,7 @@ export const TOOL_MODULES: ToolModule[] = [
   },
   {
     id: 'cert-analyzer',
-    code: 'MOD-06',
+    code: 'MOD-07',
     title: 'CERTIFICATE & CSR ANALYZER',
     shortTitle: 'CERT ANALYZER',
     category: 'CRYPTO & SSL',
@@ -86,7 +98,7 @@ export const TOOL_MODULES: ToolModule[] = [
   },
   {
     id: 'mail-header-analyzer',
-    code: 'MOD-07',
+    code: 'MOD-08',
     title: 'EMAIL MESSAGE HEADER ANALYZER',
     shortTitle: 'MAIL HEADERS',
     category: 'MAIL SECURITY',
@@ -98,7 +110,7 @@ export const TOOL_MODULES: ToolModule[] = [
   },
   {
     id: 'subnet-calculator',
-    code: 'MOD-08',
+    code: 'MOD-09',
     title: 'SUBNET & SUPERNETTING CALCULATOR',
     shortTitle: 'SUBNET CALC',
     category: 'NETWORK',
@@ -110,7 +122,7 @@ export const TOOL_MODULES: ToolModule[] = [
   },
   {
     id: 'auth-inspector',
-    code: 'MOD-09',
+    code: 'MOD-10',
     title: 'JWT, OIDC & SAML AUTH INSPECTOR',
     shortTitle: 'JWT / SAML AUTH',
     category: 'SECURITY',
@@ -122,7 +134,7 @@ export const TOOL_MODULES: ToolModule[] = [
   },
   {
     id: 'security-headers',
-    code: 'MOD-10',
+    code: 'MOD-11',
     title: 'HTTP SECURITY HEADERS & CSP EVALUATOR',
     shortTitle: 'SEC HEADERS',
     category: 'SECURITY',
@@ -131,18 +143,6 @@ export const TOOL_MODULES: ToolModule[] = [
       'Audit and score target URL HTTP security headers against OWASP & naval compliance baselines. Evaluates HSTS, CSP directives (warning on unsafe-inline, unsafe-eval, and wildcards), X-Frame-Options, nosniff, Referrer-Policy, and Permissions-Policy.',
     capabilities: ['HSTS & Max-Age Verification', 'CSP unsafe-inline/eval Audit', 'XFO / nosniff / Referrer / Permissions', 'Terminal PASS / WARN / FAIL Score'],
     Component: SecurityHeadersTool,
-  },
-  {
-    id: 'geo-radar',
-    code: 'MOD-11',
-    title: 'IP & DOMAIN GEOLOCATION RADAR',
-    shortTitle: 'GEO RADAR',
-    category: 'NETWORK',
-    badge: 'GEOIP • POP • RADAR',
-    description:
-      'Self-hosted GeoIP radar: plot your IP, any IPv4/IPv6 address, or every A/AAAA record of a domain on a zero-dependency SVG world map. Flags Anycast/CDN ASNs and detects the live CDN edge POP from cf-ray, x-amz-cf-pop and x-served-by headers.',
-    capabilities: ['Local MMDB GeoIP (No 3rd Party)', 'City / ASN / Timezone', 'Anycast & CDN Edge POP', 'Animated SVG Radar Map'],
-    Component: GeoRadarToolLazy,
   },
 ];
 

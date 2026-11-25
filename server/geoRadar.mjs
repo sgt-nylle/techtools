@@ -1,5 +1,5 @@
 /**
- * MOD-11 BACKEND: SELF-HOSTED IP & DOMAIN GEOLOCATION RADAR (/api/geo)
+ * MOD-03 BACKEND: SELF-HOSTED IP & DOMAIN GEOLOCATION RADAR (/api/geo)
  *
  * - Local in-memory MMDB lookups (MaxMind GeoLite2 or DB-IP Lite City + ASN) — no third-party GeoIP APIs.
  * - Domain targets: local A / AAAA resolution, per-IP geolocation, plus a 1.5s IP-pinned HEAD probe to read

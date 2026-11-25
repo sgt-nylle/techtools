@@ -1,0 +1,13 @@
+[Unit]
+Description=Monthly TechTools GeoIP refresh (DB-IP publishes a new Lite build on the 1st)
+
+[Timer]
+# 3rd of each month at 04:30 (+ up to 1h jitter) leaves margin after DB-IP's monthly release.
+OnCalendar=*-*-03 04:30:00
+RandomizedDelaySec=1h
+# Catch up on the next boot if the Pi/VPS was off at the scheduled time.
+Persistent=true
+Unit=techtools-geoip.service
+
+[Install]
+WantedBy=timers.target

@@ -182,6 +182,12 @@ npm run map:build      # (dev only) regenerates src/tools/geo/worldLand.ts from 
 - Prefer MaxMind? Drop `GeoLite2-City.mmdb` / `GeoLite2-ASN.mmdb` into the same folder — they take precedence.
 - Databases are loaded into memory at boot (~130 MiB for DB-IP City Lite) and hot-reloaded when the file changes (checked every 10 min). Refresh monthly with `npm run geoip:fetch`.
 - **Deployment:** copy `data/geoip/*.mmdb` to `/var/www/techtools/data/geoip/` (or set `GEOIP_DIR` in the systemd unit). Without databases the endpoint returns `503 GEOIP_DB_MISSING` and the rest of the app is unaffected.
+- **Monthly auto-refresh:** `deploy/systemd/techtools-geoip.{service,timer}` runs `scripts/fetch-geoip.sh` on the 3rd of each month at 04:30 (+ up to 1 h jitter, `Persistent=true`). Install as a user unit (expects the app in `~/techtools`; requires `loginctl enable-linger`):
+  ```bash
+  cp deploy/systemd/techtools-geoip.* ~/.config/systemd/user/
+  systemctl --user daemon-reload && systemctl --user enable --now techtools-geoip.timer
+  ```
+  The running server hot-reloads the new files automatically — no service restart required.
 - Attribution: *IP Geolocation by [DB-IP](https://db-ip.com)* (CC BY 4.0) is shown in the tool; map data © Natural Earth (public domain).
 
 ---

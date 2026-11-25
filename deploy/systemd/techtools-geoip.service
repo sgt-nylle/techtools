@@ -1,0 +1,13 @@
+[Unit]
+Description=TechTools GeoIP refresh (DB-IP Lite City + ASN MMDB)
+Documentation=https://github.com/sgt-nylle/techtools#self-hosted-geoip-databases-mod-11
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/techtools
+ExecStart=/bin/bash %h/techtools/scripts/fetch-geoip.sh
+# The running techtools.service hot-reloads the new .mmdb files (mtime check every 10 min) — no restart needed.
+Nice=10
+IOSchedulingClass=idle

@@ -26,7 +26,7 @@ const TOTAL_BUDGET_MS = 80_000;
 const HEARTBEAT_MS = 10_000;
 const MAX_ACTIVE_GLOBAL = 4;
 const BLOCKED_INTERNAL_SUFFIXES = ['.local', '.internal', '.lan', '.home.arpa', '.localhost', '.corp', '.intranet'];
-const USER_AGENT = 'SubWrite-TechTools-MailTLS/0.7.0 (+https://techtools.subwrite.se)';
+const USER_AGENT = 'SubWrite-TechTools-MailTLS/0.8.0 (+https://techtools.subwrite.se)';
 
 const activeByIp = new Map();
 let activeGlobal = 0;

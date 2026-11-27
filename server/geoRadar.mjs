@@ -27,7 +27,7 @@ const EDGE_PROBE_TIMEOUT_MS = 1500;
 const MAX_TARGET_IPS = 12;
 const PTR_LOOKUP_LIMIT = 4;
 const BLOCKED_INTERNAL_SUFFIXES = ['.local', '.internal', '.lan', '.home.arpa', '.localhost', '.corp', '.intranet'];
-const USER_AGENT = 'SubWrite-TechTools-GeoRadar/0.7.0 (+https://techtools.subwrite.se)';
+const USER_AGENT = 'SubWrite-TechTools-GeoRadar/0.8.0 (+https://techtools.subwrite.se)';
 
 // ============================================================================
 // DATABASE LOADING (in-memory, hot-reloaded when the .mmdb file mtime changes)

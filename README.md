@@ -4,15 +4,16 @@
 > **IT Network TechTools for Navy Sailors!**
 
 > [!TIP]
-> **🛰 NEW in `v0.7.0` — IP & Domain Geolocation Radar (`MOD-03`):** geolocate your own IP, any IPv4/IPv6 address, or **every A/AAAA record of a domain** on an animated retro **radar map** — and see the **CDN edge POP that actually serves you** (e.g. Cloudflare `ARN` → Stockholm) instead of the Anycast HQ in the registry. 100% **self-hosted GeoIP** (local DB-IP / GeoLite2 MMDB, ~7 µs lookups), Anycast/CDN ASN flagging, zero map tiles or third-party trackers.  
-> ➡️ **[Launch the Geo Radar](https://techtools.subwrite.se/#/geo-radar)** · **[how it works ↓](#diagnostic-modules-v070)**
+> **🔐 NEW in `v0.8.0` — Mail TLS Tester (`MOD-09`):** stream a live checktls-style **SMTP / STARTTLS / SMTPS** negotiation transcript across a domain's MX hosts on port `25`, `587`, or `465` — inspecting X.509 certificate CA trust, SAN/CN match, key strength, TLS version/cipher, **MTA-STS**, **TLS-RPT**, and DNSSEC-validated **DANE TLSA** records (`0–100` grade, zero mail sent).  
+> ➡️ **[Launch Mail TLS Tester](https://techtools.subwrite.se/#/mail-tls)** · **[Launch Geo Radar (`MOD-03`)](https://techtools.subwrite.se/#/geo-radar)** · **[all modules ↓](#diagnostic-modules-v080)**
 
 > [!TIP]
 > **🧩 NEW — Browser Extension, now live on the Chrome Web Store & Microsoft Edge Add-ons:** take TechTools with you as a toolbar popup or a **docked side panel** next to your Azure / vCenter / AWS / GitHub dashboards. Fuzzy-search launcher, a pinnable **default tool**, 5 themes, offline tools, and right-click **“Inspect with TechTools”** on selected text.  
 > ➡️ **[Get it on the Chrome Web Store](https://chromewebstore.google.com/detail/techtools-%E2%80%94-naval-it-diag/jkpojohaddlefcjgmkcnjnaclbjfobmi)** *(Chrome, Chromium, Brave, Vivaldi, Opera, Arc)* · **[Get it on Microsoft Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/techtools-%E2%80%94-naval-it-diag/phoogogpdkknpjedkmogpfkdoljgngmd)** *(Edge)* · **[install & docs ↓](#browser-extension-chrome--edge--brave--firefox)**
 
 [![Launch TechTools](https://img.shields.io/badge/LAUNCH_APP-techtools.subwrite.se-2563eb?style=for-the-badge&logo=googlechrome&logoColor=white)](https://techtools.subwrite.se)
-[![Geo Radar](https://img.shields.io/badge/NEW-GEO_RADAR_(MOD--03)-22c55e?style=for-the-badge&logo=openstreetmap&logoColor=white)](https://techtools.subwrite.se/#/geo-radar)
+[![Mail TLS Tester](https://img.shields.io/badge/NEW-MAIL_TLS_(MOD--09)-10b981?style=for-the-badge&logo=letsencrypt&logoColor=white)](https://techtools.subwrite.se/#/mail-tls)
+[![Geo Radar](https://img.shields.io/badge/GEO_RADAR-(MOD--03)-22c55e?style=for-the-badge&logo=openstreetmap&logoColor=white)](https://techtools.subwrite.se/#/geo-radar)
 [![Get it on Chrome Web Store](https://img.shields.io/badge/CHROME_WEB_STORE-Install_TechTools-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/techtools-%E2%80%94-naval-it-diag/jkpojohaddlefcjgmkcnjnaclbjfobmi)
 [![Get it on Microsoft Edge Add-ons](https://img.shields.io/badge/EDGE_ADD--ONS-Install_TechTools-0078d4?style=for-the-badge&logo=microsoftedge&logoColor=white)](https://microsoftedge.microsoft.com/addons/detail/techtools-%E2%80%94-naval-it-diag/phoogogpdkknpjedkmogpfkdoljgngmd)
 [![Browser Extension](https://img.shields.io/badge/DOCS-Browser_Extension-16a34a?style=for-the-badge&logo=googlechrome&logoColor=white)](#browser-extension-chrome--edge--brave--firefox)
@@ -25,7 +26,7 @@ A modular clean, optimized Swedish Navy (*Kungliga Flottan*) IT troubleshooting 
 
 ---
 
-## Diagnostic Modules (`v0.7.0`)
+## Diagnostic Modules (`v0.8.0`)
 
 1. **`MOD-01` — Password & Token Generator (`#/password-generator`)**
    - **Generated 100% Locally in Your Browser (Not on the Server):** Uses client-side CSPRNG (`window.crypto.getRandomValues`) with unbiased rejection sampling — zero network traffic, zero server involvement, and zero logging.
@@ -299,7 +300,7 @@ TechTools uses a plugin-style registry so new troubleshooting tools can be added
 
 ## Changelog
 
-- **Unreleased (`dev`)** — **Mail TLS Tester (`MOD-09`):**
+- **`v0.8.0`** — **Mail TLS Tester (`MOD-09`) & Dedicated Port-25 Probe Worker:**
   - New `/api/mailtls` Server-Sent-Events endpoint (`server/mailTls.mjs`) streaming a live SMTP / STARTTLS / SMTPS negotiation transcript per MX host, with certificate trust (self-signed vs. public CA), hostname, expiry, key strength, protocol / cipher / key-exchange checks, 0–100 grading, and MTA-STS / TLS-RPT / DANE policy audit. Never sends mail.
   - Optional private Port-25 probe worker (`server/probeWorker.mjs`, `deploy/systemd/techtools-probe.service`) for providers that block outbound TCP/25 on the primary web host: binds only to a private tunnel/loopback interface, authenticates requests via constant-time `X-TT-Internal-Auth` (`TT_INTERNODE_SECRET`), and streams `/api/mailtls` + port-25 `/api/probe` queries (`TT_PROD02_PROBE_URL`, `MAILTLS_EHLO_NAME`).
   - Inserted at `MOD-09` after Mail Headers; Subnet Calc → `MOD-10`, JWT / SAML → `MOD-11`, Sec Headers → `MOD-12`.

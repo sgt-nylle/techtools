@@ -2607,7 +2607,7 @@ function buildDisplayUrl(scheme, hostname, port, pathWithQuery) {
   return `${scheme}://${hostPart}${isDefaultPort ? '' : `:${port}`}${pathWithQuery}`;
 }
 
-async function handleUrlProbe(req) {
+async function handleUrlProbe(req, clientIp = '') {
   const startedAt = Date.now();
   const body = await readRequestBodyJson(req);
 
@@ -2621,6 +2621,11 @@ async function handleUrlProbe(req) {
   const parsedTarget = parseProbeUrlAndPort(rawUrl, portOverride);
   if (parsedTarget.error) {
     return { status: 400, body: { error: parsedTarget.error } };
+  }
+
+  const internodeCfg = getInternodeConfig();
+  if (internodeCfg && parsedTarget.port === 25) {
+    return proxyInternodeJsonPost('/api/probe', body, clientIp, internodeCfg);
   }
 
   const MAX_REDIRECTS = 5;
@@ -2775,6 +2780,191 @@ async function handleUrlProbe(req) {
 }
 
 // ============================================================================
+// INTERNODE PORT-25 / MAIL-TLS PROBE DELEGATION (PROD -> TT-PROD02 OVER WIREGUARD)
+// ============================================================================
+function getInternodeConfig() {
+  if (process.env.TT_IS_PROBE_WORKER === '1') return null;
+  const baseUrl = (process.env.TT_PROD02_PROBE_URL || '').trim();
+  const secret = (process.env.TT_INTERNODE_SECRET || '').trim();
+  if (!baseUrl || !secret) return null;
+  return { baseUrl, secret };
+}
+
+function proxyInternodeJsonPost(pathname, bodyObj, clientIp, cfg) {
+  return new Promise((resolve) => {
+    let targetUrl;
+    try {
+      targetUrl = new URL(pathname, cfg.baseUrl);
+    } catch {
+      resolve({ status: 502, body: { error: 'Remote port-25 probe worker is misconfigured.' } });
+      return;
+    }
+
+    const payload = JSON.stringify(bodyObj || {});
+    const transport = targetUrl.protocol === 'https:' ? https : http;
+    const upReq = transport.request(
+      targetUrl,
+      {
+        method: 'POST',
+        timeout: 25_000,
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Content-Length': Buffer.byteLength(payload),
+          Accept: 'application/json',
+          'X-Real-IP': clientIp || '',
+          'X-TT-Internal-Auth': cfg.secret,
+        },
+      },
+      (upRes) => {
+        let raw = '';
+        upRes.setEncoding('utf8');
+        upRes.on('data', (chunk) => {
+          if (raw.length < 512_000) raw += chunk;
+        });
+        upRes.on('end', () => {
+          const code = upRes.statusCode || 502;
+          if (code === 200 || code === 400 || code === 429) {
+            try {
+              resolve({ status: code, body: JSON.parse(raw) });
+              return;
+            } catch {
+              // Fall through to generic 502
+            }
+          }
+          resolve({ status: 502, body: { error: 'Port-25 probe worker is temporarily unavailable. Try again shortly.' } });
+        });
+      }
+    );
+
+    upReq.on('socket', (sock) => sock.setNoDelay(true));
+    upReq.on('timeout', () => {
+      upReq.destroy(Object.assign(new Error('timeout'), { code: 'ETIMEDOUT' }));
+    });
+    upReq.on('error', (err) => {
+      console.error('[internode-probe] upstream failed:', err?.code || 'ERR');
+      resolve({ status: 502, body: { error: 'Port-25 probe worker is temporarily unavailable. Try again shortly.' } });
+    });
+
+    upReq.write(payload);
+    upReq.end();
+  });
+}
+
+function proxyInternodeSse(req, res, urlObj, clientIp, cfg) {
+  return new Promise((resolve) => {
+    let targetUrl;
+    try {
+      targetUrl = new URL(`${urlObj.pathname}${urlObj.search}`, cfg.baseUrl);
+    } catch {
+      sendJson(res, 502, { error: 'Mail TLS probe worker is misconfigured.' });
+      resolve();
+      return;
+    }
+
+    let settled = false;
+    const done = () => {
+      if (settled) return;
+      settled = true;
+      resolve();
+    };
+
+    const transport = targetUrl.protocol === 'https:' ? https : http;
+    const upReq = transport.request(
+      targetUrl,
+      {
+        method: 'GET',
+        headers: {
+          Accept: 'text/event-stream',
+          'X-Real-IP': clientIp || '',
+          'X-TT-Internal-Auth': cfg.secret,
+        },
+      },
+      (upRes) => {
+        clearTimeout(connectTimer);
+        const code = upRes.statusCode || 502;
+
+        if (code !== 200) {
+          let errBuf = '';
+          upRes.setEncoding('utf8');
+          upRes.on('data', (chunk) => {
+            if (errBuf.length < 16_384) errBuf += chunk;
+          });
+          upRes.on('end', () => {
+            if (code === 400 || code === 429 || code === 503) {
+              try {
+                const parsed = JSON.parse(errBuf);
+                sendJson(res, code, { error: String(parsed.error || 'Mail TLS request rejected.') });
+                done();
+                return;
+              } catch {
+                // Fall through to generic 502
+              }
+            }
+            sendJson(res, 502, { error: 'Mail TLS probe worker is temporarily unavailable. Try again shortly.' });
+            done();
+          });
+          return;
+        }
+
+        res.writeHead(200, {
+          'Content-Type': 'text/event-stream; charset=utf-8',
+          'Cache-Control': 'no-cache, no-store, no-transform',
+          'Content-Encoding': 'identity',
+          'X-Accel-Buffering': 'no',
+          Connection: 'keep-alive',
+        });
+        res.flushHeaders?.();
+        upRes.socket?.setNoDelay?.(true);
+
+        upRes.on('data', (chunk) => {
+          if (!res.writableEnded) {
+            res.write(chunk);
+          }
+        });
+        upRes.on('end', () => {
+          if (!res.writableEnded) res.end();
+          done();
+        });
+        upRes.on('error', () => {
+          if (!res.writableEnded) res.end();
+          done();
+        });
+      }
+    );
+
+    const connectTimer = setTimeout(() => {
+      upReq.destroy(Object.assign(new Error('connect timeout'), { code: 'ETIMEDOUT' }));
+    }, 6000);
+
+    upReq.on('socket', (sock) => {
+      sock.setNoDelay(true);
+      sock.setTimeout(90_000, () => upReq.destroy(Object.assign(new Error('idle timeout'), { code: 'ETIMEDOUT' })));
+    });
+
+    req.on('close', () => {
+      clearTimeout(connectTimer);
+      if (!res.writableEnded) {
+        upReq.destroy();
+      }
+      done();
+    });
+
+    upReq.on('error', (err) => {
+      clearTimeout(connectTimer);
+      console.error('[mailtls-proxy] upstream failed:', err?.code || 'ERR');
+      if (!res.headersSent) {
+        sendJson(res, 502, { error: 'Mail TLS probe worker is temporarily unavailable. Try again shortly.' });
+      } else if (!res.writableEnded) {
+        res.end();
+      }
+      done();
+    });
+
+    upReq.end();
+  });
+}
+
+// ============================================================================
 // MAIN MODULAR API HANDLER (Shared by Vite Dev & Production Node Server)
 // ============================================================================
 function sanitizeBigInt(val) {
@@ -2853,12 +3043,17 @@ export async function handleApiRequest(req, res) {
     }
 
     if (pathname === '/api/probe' && req.method === 'POST') {
-      const result = await handleUrlProbe(req);
+      const result = await handleUrlProbe(req, clientIp);
       sendJson(res, result.status, result.body);
       return true;
     }
 
     if (pathname === '/api/mailtls' && req.method === 'GET') {
+      const internodeCfg = getInternodeConfig();
+      if (internodeCfg) {
+        await proxyInternodeSse(req, res, urlObj, clientIp, internodeCfg);
+        return true;
+      }
       await handleMailTlsStream(req, res, urlObj, {
         resolver: defaultResolver,
         extractClientIp,

@@ -11,6 +11,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "start": "node server/server.mjs",
+    "start:probe": "node server/probeWorker.mjs",
     "build:ext": "vite build --config vite.extension.config.ts",
     "watch:ext": "vite build --config vite.extension.config.ts --watch",
     "typecheck:ext": "tsc -p extension/tsconfig.json",

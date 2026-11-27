@@ -1,0 +1,24 @@
+[Unit]
+Description=TechTools Port-25 / Mail-TLS Internal Probe Worker (TT-PROD02)
+After=network-online.target wg-quick@wg0.service
+Wants=network-online.target wg-quick@wg0.service
+
+[Service]
+Type=simple
+User=techtools
+Group=techtools
+WorkingDirectory=/var/www/techtools
+EnvironmentFile=/etc/techtools/internode.env
+ExecStart=/usr/bin/node /var/www/techtools/server/probeWorker.mjs
+Restart=always
+RestartSec=3
+
+# Hardening & 1-vCPU memory guardrails
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+MemoryMax=256M
+
+[Install]
+WantedBy=multi-user.target

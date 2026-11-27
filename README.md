@@ -301,6 +301,7 @@ TechTools uses a plugin-style registry so new troubleshooting tools can be added
 
 - **Unreleased (`dev`)** — **Mail TLS Tester (`MOD-09`):**
   - New `/api/mailtls` Server-Sent-Events endpoint (`server/mailTls.mjs`) streaming a live SMTP / STARTTLS / SMTPS negotiation transcript per MX host, with certificate trust (self-signed vs. public CA), hostname, expiry, key strength, protocol / cipher / key-exchange checks, 0–100 grading, and MTA-STS / TLS-RPT / DANE policy audit. Never sends mail.
+  - Optional private Port-25 probe worker (`server/probeWorker.mjs`, `deploy/systemd/techtools-probe.service`) for providers that block outbound TCP/25 on the primary web host: binds only to a private tunnel/loopback interface, authenticates requests via constant-time `X-TT-Internal-Auth` (`TT_INTERNODE_SECRET`), and streams `/api/mailtls` + port-25 `/api/probe` queries (`TT_PROD02_PROBE_URL`, `MAILTLS_EHLO_NAME`).
   - Inserted at `MOD-09` after Mail Headers; Subnet Calc → `MOD-10`, JWT / SAML → `MOD-11`, Sec Headers → `MOD-12`.
 
 - **`v0.7.0`** — **IP & Domain Geolocation Radar (`MOD-03`), module reorder:**

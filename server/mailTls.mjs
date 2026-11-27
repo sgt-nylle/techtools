@@ -16,7 +16,7 @@ import tls from 'node:tls';
 import https from 'node:https';
 import { domainToASCII } from 'node:url';
 
-const EHLO_NAME = 'techtools.subwrite.se';
+const EHLO_NAME = (process.env.MAILTLS_EHLO_NAME || 'techtools.subwrite.se').trim();
 const ALLOWED_PORTS = new Set([25, 587, 465]);
 const MAX_MX_HOSTS = 3;
 const CONNECT_TIMEOUT_MS = 8000;
